@@ -31,9 +31,9 @@
 /* Migration countdown */
 .migration-bar-wrap { display: flex; flex-direction: column; gap: 5px; }
 .migration-bar { height: 6px; background: var(--bg3); border: 1px solid var(--border); overflow: hidden; }
-.migration-fill { height: 100%; background: var(--green); transition: width 0.4s ease; }
+.migration-fill { height: 100%; background: #4ade80; transition: width 0.4s ease; }
 .migration-meta { display: flex; justify-content: space-between; align-items: center; }
-.migration-pct { font-size: 12px; font-weight: 600; color: var(--green); font-family: var(--mono); }
+.migration-pct { font-size: 12px; font-weight: 600; color: #4ade80; font-family: var(--mono); }
 .migration-eta { font-size: 12px; color: var(--text-muted); font-family: var(--mono); }
 
 /* Dev history */
@@ -41,11 +41,11 @@
   display: flex; gap: 8px; align-items: flex-start;
   padding: 8px 10px; border-left: 2px solid;
 }
-.dev-clean  { border-color: var(--green);  background: var(--green-bg); }
+.dev-clean  { border-color: #4ade80;  background: rgba(74,222,128,0.07); }
 .dev-warn   { border-color: var(--yellow); background: rgba(251,191,36,0.05); }
 .dev-danger { border-color: var(--red);    background: var(--red-bg); }
 .dev-history-icon { font-size: 12px; flex-shrink: 0; margin-top: 1px; }
-.dev-clean  .dev-history-icon { color: var(--green); }
+.dev-clean  .dev-history-icon { color: #4ade80; }
 .dev-warn   .dev-history-icon { color: var(--yellow); }
 .dev-danger .dev-history-icon { color: var(--red); }
 .dev-history-text { font-size: 12px; line-height: 1.5; color: var(--text-dim); }

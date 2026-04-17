@@ -16,7 +16,7 @@ export default function HolderChart({ snapshot: s }) {
     return (
       <div className="tip">
         <div>{d.address?.slice(0,8)}...{d.address?.slice(-4)}</div>
-        <div style={{ color: 'var(--green)', marginTop: 2 }}>{d.pct}%</div>
+        <div style={{ color: '#4ade80', marginTop: 2 }}>{d.pct}%</div>
         {d.isDev && <div style={{ color: 'var(--red)', fontSize: 10 }}>DEV</div>}
       </div>
     )
@@ -42,7 +42,7 @@ export default function HolderChart({ snapshot: s }) {
               <Tooltip content={<Tip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
               <Bar dataKey="pct" radius={[2,2,0,0]}>
                 {chartData.map((e, i) => (
-                  <Cell key={i} fill={e.isDev ? '#ef4444' : e.pct > 10 ? '#eab308' : '#22c55e'} opacity={0.85} />
+                  <Cell key={i} fill={e.isDev ? '#ef4444' : e.pct > 10 ? '#eab308' : '#4ade80'} opacity={0.85} />
                 ))}
               </Bar>
             </BarChart>

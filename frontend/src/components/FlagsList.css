@@ -6,11 +6,11 @@
   border: 1px solid;
 }
 
-.bundle-ok { border-color: rgba(167,139,250,0.3); background: var(--green-bg); }
+.bundle-ok { border-color: rgba(74,222,128,0.3); background: rgba(74,222,128,0.07); }
 .bundle-warn { border-color: rgba(239,68,68,0.3); background: var(--red-bg); }
 
 .bundle-icon { font-size: 16px; }
-.bundle-ok .bundle-icon { color: var(--green); }
+.bundle-ok .bundle-icon { color: #4ade80; }
 .bundle-warn .bundle-icon { color: var(--red); }
 
 .bundle-status {
@@ -56,7 +56,7 @@
 }
 
 .flag-warn { background: var(--red-bg); border-color: var(--red-dim); color: var(--text); }
-.flag-bull { background: var(--green-bg); border-color: var(--green-dim); color: var(--text); }
+.flag-bull { background: rgba(74,222,128,0.07); border-color: #22c55e; color: var(--text); }
 .flag-neutral { background: var(--bg3); border-color: var(--border2); color: var(--text-dim); }
 
 .flag-icon {
@@ -66,7 +66,7 @@
 }
 
 .flag-warn .flag-icon { color: var(--red); }
-.flag-bull .flag-icon { color: var(--green); }
+.flag-bull .flag-icon { color: #4ade80; }
 .flag-neutral .flag-icon { color: var(--text-muted); }
 
 .summary-bars { display: flex; flex-direction: column; gap: 7px; }

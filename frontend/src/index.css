@@ -41,3 +41,13 @@ body {
 @keyframes fadeIn  { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 @keyframes spin    { to { transform: rotate(360deg); } }
 @keyframes pulse   { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
+
+/* ── Color utility overrides ─────────────────────────────
+   .c-green always means "good/safe/positive" = true green
+   regardless of the --green brand color (which is purple)
+   ──────────────────────────────────────────────────────── */
+.c-green  { color: #4ade80 !important; }
+.c-blue   { color: #60a5fa !important; }
+.c-purple { color: #a78bfa !important; }
+.c-red    { color: #f87171 !important; }
+.c-yellow { color: #fbbf24 !important; }

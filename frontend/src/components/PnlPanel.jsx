@@ -13,7 +13,7 @@ export default function PnlPanel({ prediction: p }) {
 
   return (
     <div className="panel">
-      {row('Conservative', s.conservative, 'var(--green)')}
+      {row('Conservative', s.conservative, '#4ade80')}
       {row('Moderate',     s.moderate,     '#f97316')}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0' }}>
         <span style={{ fontSize:10, letterSpacing:'1.5px', color:'var(--text-muted)', textTransform:'uppercase' }}>Aggressive</span>

@@ -11,13 +11,13 @@ const fmtUSD = (n) => {
 
 const momentumColor = (m) => ({
   dead: 'var(--text-muted)', weak: 'var(--text-dim)',
-  building: 'var(--yellow)', strong: 'var(--green)', parabolic: 'var(--green)'
+  building: 'var(--yellow)', strong: '#4ade80', parabolic: '#4ade80'
 })[m] || 'var(--text-dim)'
 
 const purityScore = (risk) => Math.max(0, 100 - (risk || 0))
-const purityColor = (p) => p >= 70 ? 'var(--green)' : p >= 40 ? 'var(--yellow)' : 'var(--red)'
-const rugColor    = (r) => r >= 70 ? 'var(--red)'   : r >= 40 ? 'var(--yellow)' : 'var(--green)'
-const bundleColor = (b) => b >= 60 ? 'var(--red)'   : b >= 30 ? 'var(--yellow)' : 'var(--green)'
+const purityColor = (p) => p >= 70 ? '#4ade80' : p >= 40 ? 'var(--yellow)' : 'var(--red)'
+const rugColor    = (r) => r >= 70 ? 'var(--red)'   : r >= 40 ? 'var(--yellow)' : '#4ade80'
+const bundleColor = (b) => b >= 60 ? 'var(--red)'   : b >= 30 ? 'var(--yellow)' : '#4ade80'
 
 const isRugged = (p, s) => {
   const collapsed = s?.mc_collapse_detected ?? false
@@ -107,7 +107,7 @@ function CircleSmall({ score, label, color }) {
 }
 
 function ProbBar({ label, value }) {
-  const color = value >= 50 ? 'var(--green)' : value >= 25 ? 'var(--yellow)' : 'var(--red)'
+  const color = value >= 50 ? '#4ade80' : value >= 25 ? 'var(--yellow)' : 'var(--red)'
   return (
     <div className="prob-row">
       <span className="prob-label">{label}</span>

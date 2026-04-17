@@ -94,8 +94,8 @@ export default function Leaderboard() {
                   <div style={{ display:'flex', gap:4, marginBottom:12 }}>
                     <button onClick={() => setPnlSection('high')} style={{
                       background: pnlSection === 'high' ? '#1a1a1a' : 'none',
-                      border: '1px solid', borderColor: pnlSection === 'high' ? 'var(--green)' : '#222',
-                      borderRadius: 4, color: pnlSection === 'high' ? 'var(--green)' : '#555',
+                      border: '1px solid', borderColor: pnlSection === 'high' ? '#4ade80' : '#222',
+                      borderRadius: 4, color: pnlSection === 'high' ? '#4ade80' : '#555',
                       fontFamily: 'inherit', fontSize: 11, padding: '6px 14px', cursor: 'pointer',
                     }}>
                       🏆 Highest PnL

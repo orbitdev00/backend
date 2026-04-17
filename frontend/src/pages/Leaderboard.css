@@ -43,3 +43,7 @@
   .lb-row > span:last-child { display: none; }
   .lb-head > span:last-child { display: none; }
 }
+
+/* Highest PnL tab — stays green since it's a positive indicator */
+.lb-pnl-toggle .lb-tab.active.pnl-high { border-color: #4ade80; color: #4ade80; }
+.lb-tab.active { background: #1a1a1a; color: #fff; }

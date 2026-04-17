@@ -9,8 +9,9 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import NavBar from './components/NavBar'
 import StarField from './components/StarField'
 import CollapsiblePanel from './components/CollapsiblePanel'
-import kikoPfp from "./orbitPfp.js";
+import kikoPfp from './kikoPfp.js'
 import { useAuth } from './context/AuthContext'
+import Landing from './pages/Landing'
 import { useStreamAnalysis } from './hooks/useStreamAnalysis'
 import Login from './pages/Login'
 import SignUp from './pages/SignUp'
@@ -144,7 +145,7 @@ export default function App() {
     streamAnalyze(reanalyzeMint)
   }, [searchParams])
 
-  const [authPage, setAuthPage]         = useState('login')
+  const [authPage, setAuthPage]         = useState('landing')
   const [showAccountMenu, setShowAccountMenu] = useState(false)
   const [isTrial, setIsTrial]           = useState(false)
   const [trialBlocked, setTrialBlocked] = useState(false)
@@ -219,7 +220,8 @@ export default function App() {
   if (!user && !isTrial) {
     if (authPage === 'signup') return <><StarField /><SignUp onSwitch={setAuthPage} /></>
     if (authPage === 'forgot') return <><StarField /><ForgotPassword onSwitch={setAuthPage} /></>
-    return <><StarField /><Login onSwitch={setAuthPage} onTrial={() => setIsTrial(true)} /></>
+    if (authPage === 'login')  return <><StarField /><Login onSwitch={setAuthPage} onTrial={() => setIsTrial(true)} /></>
+    return <Landing onSwitch={setAuthPage} />
   }
 
   const showLanding = phase === 'idle' || phase === 'animating'

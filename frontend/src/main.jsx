@@ -7,6 +7,7 @@ import Home from './pages/Home.jsx'
 import Tracker from './pages/Tracker.jsx'
 import History from './pages/History.jsx'
 import Login from './pages/Login.jsx'
+import Landing from './pages/Landing.jsx'
 import SignUp from './pages/SignUp.jsx'
 import ForgotPassword from './pages/ForgotPassword.jsx'
 import AuthCallback from './pages/AuthCallback.jsx'
@@ -29,16 +30,33 @@ function ProtectedRoute({ children }) {
   return children
 }
 
+function RootRoute() {
+  const { user, loading } = useAuth()
+  const navigate = useNavigate()
+  const [authPage, setAuthPage] = React.useState('landing')
+
+  const handleSwitch = (page) => {
+    if (page === 'login')  navigate('/login')
+    else if (page === 'signup') navigate('/signup')
+    else if (page === 'forgot') navigate('/forgot')
+    else setAuthPage(page)
+  }
+
+  if (loading) return null
+  if (user) return <Home />
+  return <Landing onSwitch={handleSwitch} />
+}
+
 function AppRoutes() {
   const { user } = useAuth()
   const navigate = useNavigate()
   return (
     <Routes>
-      <Route path="/login"          element={<><StarField /><Login onSwitch={(p) => navigate(`/${p}`)} /></>} />
-      <Route path="/signup"         element={<><StarField /><SignUp onSwitch={(p) => navigate(`/${p}`)} /></>} />
-      <Route path="/forgot"         element={<><StarField /><ForgotPassword onSwitch={(p) => navigate(`/${p}`)} /></>} />
+      <Route path="/login"          element={<><StarField /><Login onSwitch={(p) => navigate(p === 'login' ? '/login' : p === 'signup' ? '/signup' : p === 'forgot' ? '/forgot' : '/')} /></>} />
+      <Route path="/signup"         element={<><StarField /><SignUp onSwitch={(p) => navigate(p === 'login' ? '/login' : p === 'signup' ? '/signup' : p === 'forgot' ? '/forgot' : '/')} /></>} />
+      <Route path="/forgot"         element={<><StarField /><ForgotPassword onSwitch={(p) => navigate(p === 'login' ? '/login' : p === 'signup' ? '/signup' : p === 'forgot' ? '/forgot' : '/')} /></>} />
       <Route path="/auth/callback"  element={<AuthCallback />} />
-      <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+      <Route path="/" element={<RootRoute />} />
       <Route path="/analyze" element={<ProtectedRoute><App /></ProtectedRoute>} />
       <Route path="/tracker" element={<ProtectedRoute><Tracker /></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />

@@ -1,0 +1,94 @@
+.profile-screen { min-height: 100vh; background: #080808; color: #ccc; font-family: 'Inter', system-ui, sans-serif; }
+.profile-body { max-width: 860px; margin: 0 auto; padding: 32px 24px; }
+.profile-loading { color: #444; text-align: center; padding: 60px; font-size: 12px; }
+.profile-empty { color: #444; text-align: center; padding: 40px; font-size: 12px; }
+
+/* Header */
+.profile-header { display: flex; gap: 24px; align-items: flex-start; background: #0d0d0d; border: 1px solid #1e1e1e; border-radius: 8px; padding: 24px; margin-bottom: 16px; flex-wrap: wrap; }
+.profile-avatar-large {
+  width: 72px; height: 72px; border-radius: 50%; flex-shrink: 0;
+  background: #1a1a1a; border: 2px solid #222;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 600; color: #888; overflow: hidden;
+}
+.profile-avatar-large img { width: 100%; height: 100%; object-fit: cover; }
+.profile-info { flex: 1; min-width: 0; }
+.profile-name { font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+.profile-bio { font-size: 12px; color: #666; margin-bottom: 10px; font-weight: 300; line-height: 1.5; }
+.profile-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.profile-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 400; }
+.profile-stats { display: flex; gap: 20px; flex-wrap: wrap; }
+.profile-stats > div { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.profile-stats span:first-child { font-size: 14px; font-weight: 600; color: #fff; }
+.profile-stats span:last-child { font-size: 9px; color: #555; text-transform: uppercase; letter-spacing: 1px; }
+.c-green { color: var(--green); }
+.c-blue { color: #3b82f6; }
+.c-purple { color: #8b5cf6; }
+
+.profile-actions { display: flex; flex-direction: column; gap: 8px; }
+.profile-follow-btn {
+  background: var(--green); border: none; border-radius: 4px;
+  color: #000; font-family: inherit; font-size: 11px; font-weight: 600;
+  padding: 8px 20px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.profile-follow-btn.following { background: #1a1a1a; border: 1px solid #333; color: #888; }
+.profile-follow-btn.following:hover { border-color: var(--red); color: var(--red); }
+.profile-dm-btn {
+  background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 4px;
+  color: #888; font-family: inherit; font-size: 11px;
+  padding: 7px 16px; cursor: pointer; transition: all 0.15s;
+}
+.profile-dm-btn:hover { border-color: #444; color: #ccc; }
+.profile-edit-btn {
+  background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 4px;
+  color: #666; font-family: inherit; font-size: 11px;
+  padding: 7px 16px; cursor: pointer;
+}
+
+/* DM box */
+.profile-dm-box { background: #0d0d0d; border: 1px solid #1e1e1e; border-radius: 6px; padding: 16px; margin-bottom: 16px; }
+.profile-dm-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #555; margin-bottom: 8px; }
+.profile-dm-input { width: 100%; background: #080808; border: 1px solid #1e1e1e; border-radius: 4px; color: #ccc; font-family: inherit; font-size: 12px; font-weight: 300; padding: 10px 12px; outline: none; resize: none; box-sizing: border-box; margin-bottom: 8px; }
+.profile-dm-input:focus { border-color: #2a2a2a; }
+.profile-dm-send { background: var(--green); border: none; border-radius: 4px; color: #000; font-family: inherit; font-size: 11px; font-weight: 600; padding: 7px 18px; cursor: pointer; }
+.profile-dm-send:disabled { opacity: 0.4; cursor: not-allowed; }
+.profile-dm-sent { color: var(--green); font-size: 12px; text-align: center; padding: 8px; }
+
+/* Tabs */
+.profile-tabs { display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid #161616; }
+.profile-tab { background: none; border: none; border-bottom: 2px solid transparent; color: #555; font-family: inherit; font-size: 12px; padding: 8px 16px; cursor: pointer; transition: all 0.15s; margin-bottom: -1px; }
+.profile-tab.active { color: var(--green); border-bottom-color: var(--green); }
+.profile-tab:hover:not(.active) { color: #aaa; }
+
+/* Calls */
+.profile-calls, .profile-threads { display: flex; flex-direction: column; gap: 6px; }
+.pcall-row { display: grid; grid-template-columns: 1fr 80px 80px 80px 80px; align-items: center; background: #0d0d0d; border: 1px solid #1e1e1e; border-radius: 6px; padding: 12px 16px; cursor: pointer; transition: border-color 0.15s; gap: 8px; }
+.pcall-row:hover { border-color: #2a2a2a; }
+.pcall-name { font-size: 13px; font-weight: 500; color: #ddd; }
+.pcall-symbol { font-size: 10px; color: #555; margin-left: 4px; }
+.pcall-note { font-size: 11px; color: #444; margin-top: 2px; font-weight: 300; }
+.pcall-mc { text-align: center; }
+.pcall-label { font-size: 9px; color: #444; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+.pcall-status { font-size: 11px; text-align: center; font-weight: 500; }
+.pcall-time { font-size: 10px; color: #444; text-align: right; }
+
+/* Threads */
+.pthread-row { background: #0d0d0d; border: 1px solid #1e1e1e; border-radius: 6px; padding: 12px 16px; cursor: pointer; transition: border-color 0.15s; }
+.pthread-row:hover { border-color: #2a2a2a; }
+.pthread-title { font-size: 13px; color: #ddd; margin-bottom: 4px; }
+.pthread-meta { font-size: 10px; color: #444; font-weight: 300; }
+
+@media (max-width: 640px) {
+  .profile-header { flex-direction: column; }
+  .pcall-row { grid-template-columns: 1fr 70px 70px 70px; }
+  .pcall-time { display: none; }
+}
+
+.pthread-reply-in { font-size: 10px; color: #444; margin-bottom: 4px; }
+.pthread-reply-in span { color: #666; }
+.pthread-reply-body { font-size: 12px; color: #aaa; font-weight: 300; line-height: 1.5; }
+
+.profile-member-since {
+  font-size: 10px; color: #444; letter-spacing: 0.5px;
+  margin-bottom: 10px; font-weight: 300;
+}

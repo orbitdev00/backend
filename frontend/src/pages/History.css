@@ -1,0 +1,120 @@
+.history-screen { min-height: 100vh; background: #000; color: var(--text); }
+.history-body { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+.history-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+.history-header h2 { font-size: 18px; letter-spacing: 2px; text-transform: uppercase; margin: 0; }
+.history-search {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text); font-family: var(--mono); font-size: 12px;
+  padding: 8px 14px; outline: none; width: 280px;
+}
+.history-search:focus { border-color: var(--green); }
+.history-loading, .history-empty { text-align: center; color: var(--text-muted); font-size: 12px; padding: 60px; }
+
+.history-table { display: flex; flex-direction: column; gap: 2px; }
+.ht-head {
+  display: grid;
+  grid-template-columns: 24px 2fr 1.5fr 1fr 1fr 1fr 0.6fr 1fr;
+  padding: 8px 14px; font-size: 9px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.ht-row {
+  display: grid;
+  grid-template-columns: 24px 2fr 1.5fr 1fr 1fr 1fr 0.6fr 1fr;
+  padding: 12px 14px; background: #111; border: 1px solid var(--border);
+  border-radius: 4px; cursor: pointer; font-size: 12px; align-items: center;
+  transition: border-color 0.15s;
+}
+.ht-row:hover { border-color: var(--green); }
+.ht-name { font-weight: 600; }
+.ht-symbol { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+.ht-time { font-size: 10px; color: var(--text-muted); }
+.ht-actual { color: var(--green); }
+.ht-pending { color: var(--text-muted); }
+.ht-stage { font-size: 10px; color: var(--text-muted); text-transform: capitalize; }
+.c-red { color: var(--red); }
+.c-yellow { color: var(--yellow); }
+.c-green { color: var(--green); }
+
+.hist-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  z-index: 500; display: flex; align-items: center; justify-content: center;
+}
+.hist-modal {
+  background: #111; border: 1px solid #333;
+  border-radius: 8px; width: 480px; max-width: 95vw; padding: 24px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+}
+.hist-modal-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 20px;
+}
+.hist-modal-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.hist-modal-close {
+  background: none; border: none; color: var(--text-muted);
+  font-size: 16px; cursor: pointer; padding: 4px 8px;
+}
+.hist-modal-close:hover { color: var(--text); }
+.hist-modal-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px; margin-bottom: 20px;
+}
+.hist-stat { background: var(--surface2); border-radius: 4px; padding: 10px 12px; }
+.hist-stat-label { font-size: 9px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+.hist-stat-val { font-size: 14px; font-weight: 600; }
+.c-muted { color: var(--text-muted); }
+.hist-modal-actions { display: flex; justify-content: flex-end; }
+.hist-reanalyze {
+  background: var(--green); border: none; border-radius: 4px;
+  color: #000; font-family: var(--mono); font-size: 11px;
+  font-weight: 700; letter-spacing: 1px; padding: 8px 18px; cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .history-body { padding: 16px; }
+  .history-header { flex-direction: column; align-items: flex-start; }
+  .history-search { width: 100%; }
+  .ht-head { display: none; }
+  .ht-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .ht-row > span:nth-child(n+6) { display: none; }
+  .hist-modal { width: 95vw; padding: 16px; }
+  .hist-modal-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.ht-checkbox { width: 14px; height: 14px; cursor: pointer; accent-color: var(--green); }
+.ht-checked { background: rgba(34,197,94,0.05); border-color: #2a3a2a; }
+
+.history-actions { display: flex; gap: 8px; align-items: center; }
+.hist-clear-btn {
+  background: rgba(239,68,68,0.1); border: 1px solid var(--red); border-radius: 4px;
+  color: var(--red); font-family: var(--mono); font-size: 10px;
+  padding: 5px 12px; cursor: pointer;
+}
+.hist-clear-all-btn {
+  background: none; border: 1px solid #222; border-radius: 4px;
+  color: #555; font-family: var(--mono); font-size: 10px;
+  padding: 5px 12px; cursor: pointer;
+}
+.hist-clear-all-btn:hover { border-color: var(--red); color: var(--red); }
+.ht-selected { border-color: var(--green) !important; }
+.ht-checkbox { accent-color: var(--green); cursor: pointer; }
+
+.history-header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.history-actions { display: flex; gap: 8px; }
+.hist-clear-btn { background: rgba(239,68,68,0.1); border: 1px solid var(--red); border-radius: 4px; color: var(--red); font-family: var(--mono); font-size: 10px; padding: 5px 12px; cursor: pointer; }
+.hist-clear-all-btn { background: none; border: 1px solid #222; border-radius: 4px; color: #555; font-family: var(--mono); font-size: 10px; padding: 5px 12px; cursor: pointer; }
+.hist-clear-all-btn:hover { border-color: var(--red); color: var(--red); }
+.ht-selected { border-color: var(--green) !important; }
+.ht-checkbox { accent-color: var(--green); cursor: pointer; margin: 0; }
+
+.history-header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hist-edit-btn { background: none; border: 1px solid #222; border-radius: 4px; color: #666; font-family: var(--mono); font-size: 10px; padding: 5px 14px; cursor: pointer; }
+.hist-edit-btn:hover { border-color: #444; color: #aaa; }
+.hist-done-btn { background: var(--green); border: none; border-radius: 4px; color: #000; font-family: var(--mono); font-size: 10px; font-weight: 700; padding: 5px 14px; cursor: pointer; }
+.hist-clear-btn { background: rgba(239,68,68,0.1); border: 1px solid var(--red); border-radius: 4px; color: var(--red); font-family: var(--mono); font-size: 10px; padding: 5px 12px; cursor: pointer; }
+.hist-clear-all-btn { background: none; border: 1px solid #333; border-radius: 4px; color: #666; font-family: var(--mono); font-size: 10px; padding: 5px 12px; cursor: pointer; }
+.hist-clear-all-btn:hover { border-color: var(--red); color: var(--red); }
+.ht-selected { border-color: var(--green) !important; }
+.ht-checkbox { accent-color: var(--green); cursor: pointer; margin: 0; }

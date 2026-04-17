@@ -1,0 +1,18 @@
+# Secrets
+backend/.env
+frontend/.env
+
+# Dependencies (too large for GitHub)
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Build output
+frontend/dist/
+frontend/.vite/
+
+# Logs & misc
+*.log
+.DS_Store 

@@ -1,0 +1,37 @@
+.coin-input-wrap { display: flex; flex-direction: column; gap: 6px; }
+
+.coin-input-row {
+  display: flex; gap: 6px; align-items: center;
+}
+
+.coin-input {
+  flex: 1; background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text); font-family: var(--mono); font-size: 13px;
+  padding: 10px 14px; outline: none; transition: border-color 0.15s;
+}
+.coin-input:focus { border-color: var(--green); }
+.coin-input::placeholder { color: var(--text-muted); }
+
+.btn-paste {
+  background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text-dim); width: 38px; height: 38px;
+  font-size: 16px; cursor: pointer; transition: all 0.15s;
+  flex-shrink: 0;
+}
+.btn-paste:hover { border-color: var(--green); color: var(--green); }
+
+.btn-analyze {
+  background: var(--green); color: #000; border: none;
+  padding: 10px 20px; font-family: var(--sans); font-size: 13px;
+  font-weight: 600; cursor: pointer; transition: opacity 0.15s;
+  white-space: nowrap; flex-shrink: 0;
+}
+.btn-analyze:hover:not(:disabled) { opacity: 0.85; }
+.btn-analyze:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-refresh {
+  background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text-dim); width: 38px; height: 38px;
+  font-size: 17px; cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+}
+.btn-refresh:hover { border-color: var(--text-dim); color: var(--text); }

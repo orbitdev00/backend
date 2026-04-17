@@ -1,0 +1,51 @@
+.metrics-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.metrics-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+
+.metric {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 9px 11px; background: var(--bg3);
+}
+.metric-big .metric-value { font-size: 19px !important; font-weight: 600; }
+
+.metric-label { font-size: 10px; color: var(--text-muted); letter-spacing: 0.3px; text-transform: uppercase; }
+.metric-value { font-size: 14px; color: var(--text); font-weight: 500; font-family: var(--mono); }
+
+.peak-warning {
+  font-size: 12px; color: var(--red); padding: 6px 10px;
+  background: var(--red-bg); border-left: 2px solid var(--red-dim);
+  font-weight: 500;
+}
+
+.alert-box {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px; border: 1px solid; border-radius: 2px;
+}
+.alert-red    { background: var(--red-bg);    border-color: var(--red-dim);    }
+.alert-yellow { background: var(--yellow-bg); border-color: rgba(251,191,36,0.3); }
+
+.alert-icon { font-size: 15px; margin-top: 1px; flex-shrink: 0; }
+.alert-title { font-size: 12px; font-weight: 600; color: var(--text); }
+.alert-score { font-weight: 400; color: var(--text-dim); }
+.alert-sub   { font-size: 11px; color: var(--text-dim); margin-top: 2px; line-height: 1.5; }
+
+/* Migration countdown */
+.migration-bar-wrap { display: flex; flex-direction: column; gap: 5px; }
+.migration-bar { height: 6px; background: var(--bg3); border: 1px solid var(--border); overflow: hidden; }
+.migration-fill { height: 100%; background: var(--green); transition: width 0.4s ease; }
+.migration-meta { display: flex; justify-content: space-between; align-items: center; }
+.migration-pct { font-size: 12px; font-weight: 600; color: var(--green); font-family: var(--mono); }
+.migration-eta { font-size: 12px; color: var(--text-muted); font-family: var(--mono); }
+
+/* Dev history */
+.dev-history-bar {
+  display: flex; gap: 8px; align-items: flex-start;
+  padding: 8px 10px; border-left: 2px solid;
+}
+.dev-clean  { border-color: var(--green);  background: var(--green-bg); }
+.dev-warn   { border-color: var(--yellow); background: rgba(251,191,36,0.05); }
+.dev-danger { border-color: var(--red);    background: var(--red-bg); }
+.dev-history-icon { font-size: 12px; flex-shrink: 0; margin-top: 1px; }
+.dev-clean  .dev-history-icon { color: var(--green); }
+.dev-warn   .dev-history-icon { color: var(--yellow); }
+.dev-danger .dev-history-icon { color: var(--red); }
+.dev-history-text { font-size: 12px; line-height: 1.5; color: var(--text-dim); }

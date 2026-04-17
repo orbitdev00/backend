@@ -1,0 +1,300 @@
+import { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
+import NavBar from '../components/NavBar'
+import './Profile.css'
+
+function timeAgo(ts) {
+  if (!ts) return '—'
+  const s = Math.floor((Date.now() - new Date(ts)) / 1000)
+  if (s < 60) return `${s}s ago`
+  if (s < 3600) return `${Math.floor(s/60)}m ago`
+  if (s < 86400) return `${Math.floor(s/3600)}h ago`
+  return `${Math.floor(s/86400)}d ago`
+}
+
+function fmtMC(n) {
+  if (!n) return '$0'
+  if (n >= 1_000_000) return `$${(n/1_000_000).toFixed(2)}M`
+  if (n >= 1_000) return `$${(n/1_000).toFixed(1)}K`
+  return `$${n.toFixed(0)}`
+}
+
+export default function Profile() {
+  const { username } = useParams()
+  const nav = useNavigate()
+  const { user } = useAuth()
+  const [profile, setProfile]     = useState(null)
+  const [badges, setBadges]       = useState([])
+  const [threads, setThreads]     = useState([])
+  const [replies, setReplies]     = useState([])
+  const [isFollowing, setIsFollowing] = useState(false)
+  const [tab, setTab]             = useState('threads')
+  const [loading, setLoading]     = useState(true)
+  const [dmOpen, setDmOpen]       = useState(false)
+  const [pnlLoading, setPnlLoading] = useState(false)
+  const [pnlMsg, setPnlMsg]         = useState('')
+  const [dmBody, setDmBody]       = useState('')
+  const [dmSending, setDmSending] = useState(false)
+  const [dmSent, setDmSent]       = useState(false)
+
+  useEffect(() => { loadProfile() }, [username])
+
+  const loadProfile = async () => {
+    setLoading(true)
+    // Find by username or user_id
+    let { data: rep } = await supabase.from('user_reputation')
+.select('*').eq('username', username).single()
+    if (!rep) {
+      const { data } = await supabase.from('user_reputation')
+        .select('*,total_pnl_pct,show_pnl,wallet_address').eq('user_id', username).single()
+      rep = data
+    }
+    if (!rep) { nav('/leaderboard'); return }
+    // Try to get auth creation date for own profile
+    setProfile(rep)
+
+    // Load badges
+    const { data: ub } = await supabase.from('user_badges')
+      .select('forum_badges(*)').eq('user_id', rep.user_id)
+    setBadges(ub?.map(x => x.forum_badges) || [])
+
+    // Load forum threads
+    const { data: t } = await supabase.from('forum_threads')
+      .select('id,title,reply_count,created_at').eq('user_id', rep.user_id)
+      .order('created_at', { ascending: false }).limit(10)
+    setThreads(t || [])
+
+    // Load replies
+    const { data: replyData } = await supabase.from('forum_posts')
+      .select('id,body,created_at,thread_id,forum_threads(title)')
+      .eq('user_id', rep.user_id)
+      .order('created_at', { ascending: false }).limit(20)
+    setReplies(replyData || [])
+
+    // Check if following
+    if (user && user.id !== rep.user_id) {
+      const { data: f } = await supabase.from('user_follows')
+        .select('id').eq('follower_id', user.id).eq('following_id', rep.user_id).single()
+      setIsFollowing(!!f)
+    }
+    setLoading(false)
+  }
+
+  const toggleFollow = async () => {
+    if (!user) { nav('/login'); return }
+    if (isFollowing) {
+      await supabase.from('user_follows').delete()
+        .eq('follower_id', user.id).eq('following_id', profile.user_id)
+      await supabase.from('user_reputation').update({ follower_count: Math.max((profile.follower_count||1)-1,0) }).eq('user_id', profile.user_id)
+      await supabase.from('user_reputation').update({ following_count: Math.max((profile.following_count||1)-1,0) }).eq('user_id', user.id)
+      setIsFollowing(false)
+      setProfile(p => ({ ...p, follower_count: Math.max((p.follower_count||1)-1,0) }))
+    } else {
+      await supabase.from('user_follows').insert({ follower_id: user.id, following_id: profile.user_id })
+      await supabase.from('user_reputation').update({ follower_count: (profile.follower_count||0)+1 }).eq('user_id', profile.user_id)
+      await supabase.from('user_reputation').update({ following_count: (profile.following_count||0)+1 }).eq('user_id', user.id)
+      setIsFollowing(true)
+      setProfile(p => ({ ...p, follower_count: (p.follower_count||0)+1 }))
+    }
+  }
+
+  const sendDM = async () => {
+    if (!dmBody.trim() || !user) return
+    setDmSending(true)
+    await supabase.from('direct_messages').insert({
+      sender_id: user.id, receiver_id: profile.user_id, body: dmBody.trim()
+    })
+    setDmSending(false); setDmSent(true); setDmBody('')
+    setTimeout(() => { setDmSent(false); setDmOpen(false) }, 2000)
+  }
+
+  const refreshPnl = async () => {
+    if (!profile?.wallet_address) {
+      setPnlMsg('no_wallet')
+      return
+    }
+    setPnlLoading(true); setPnlMsg('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const resp = await fetch('/pnl/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet: profile.wallet_address,
+          user_id: user.id,
+          jwt: session?.access_token || '',
+        }),
+      })
+      const data = await resp.json()
+      if (data.error) { setPnlMsg('error'); return }
+      setPnlMsg('done')
+      // Refresh profile to show new PnL
+      loadProfile()
+    } catch { setPnlMsg('error') }
+    finally { setPnlLoading(false) }
+  }
+
+  const isOwnProfile = user?.id === profile?.user_id
+  const displayName = profile?.username || profile?.email?.split('@')[0]
+
+  if (loading) return <div className="profile-screen"><NavBar /><div className="profile-loading">Loading...</div></div>
+  if (!profile) return null
+
+  return (
+    <div className="profile-screen">
+      <NavBar />
+      <div className="profile-body">
+
+        {/* Header */}
+        <div className="profile-header">
+          <div className="profile-avatar-large" style={{cursor: isOwnProfile ? "default" : "pointer"}} onClick={() => !isOwnProfile && nav(`/profile/${profile.username || profile.user_id}`)}>
+            {profile.avatar_url
+              ? <img src={profile.avatar_url} alt="" />
+              : displayName?.slice(0,2).toUpperCase()}
+          </div>
+          <div className="profile-info">
+            <div className="profile-name">{displayName}</div>
+            {profile.bio && <div className="profile-bio">{profile.bio}</div>}
+            <div className="profile-badges">
+              {badges.map(b => (
+                <span key={b?.slug} className="profile-badge" style={{background: b?.color + '22', color: b?.color, border: `1px solid ${b?.color}44`}}>
+                  {b?.icon} {b?.name}
+                </span>
+              ))}
+            </div>
+            <div className="profile-member-since">
+              Member since {profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', {month:'long', year:'numeric'}) : '—'}
+            </div>
+            <div className="profile-stats">
+              <div><span>{profile.score || 0}</span><span>Rep</span></div>
+              <div><span>{profile.follower_count || 0}</span><span>Followers</span></div>
+              <div><span>{profile.following_count || 0}</span><span>Following</span></div>
+              <div><span>{threads.length + replies.length}</span><span>Posts</span></div>
+              {(profile.show_pnl !== false || isOwnProfile) && profile.total_pnl_pct !== null && profile.total_pnl_pct !== undefined && (
+                <div>
+                  <span style={{color: profile.total_pnl_pct > 0 ? 'var(--green)' : 'var(--red)'}}>
+                    {profile.total_pnl_pct > 0 ? '+' : ''}{Number(profile.total_pnl_pct).toFixed(4)}
+                  </span>
+                  <span>SOL/mo</span>
+                </div>
+              )}
+            </div>
+          </div>
+          {!isOwnProfile && user && (
+            <div className="profile-actions">
+              <button className={`profile-follow-btn ${isFollowing ? 'following' : ''}`} onClick={toggleFollow}>
+                {isFollowing ? 'Following' : '+ Follow'}
+              </button>
+              <button className="profile-dm-btn" onClick={() => setDmOpen(p => !p)}>
+                ✉ Message
+              </button>
+            </div>
+          )}
+          {isOwnProfile && (
+            <div style={{display:'flex',flexDirection:'column',gap:8,alignItems:'flex-end'}}>
+              <button className="profile-edit-btn" onClick={() => nav('/edit-profile')}>Edit Profile</button>
+              <button className="profile-edit-btn" onClick={refreshPnl} disabled={pnlLoading}
+                style={{fontSize:10, opacity: pnlLoading ? 0.5 : 1}}>
+                {pnlLoading ? 'Refreshing...' : '↻ Refresh Monthly PnL'}
+              </button>
+              {pnlMsg === 'no_wallet' && (
+                <div style={{fontSize:10,color:'#888',textAlign:'right',maxWidth:160}}>
+                  No wallet linked. Add it in <span style={{color:'var(--green)',cursor:'pointer'}} onClick={() => nav('/edit-profile')}>Edit Profile</span>.
+                </div>
+              )}
+              {pnlMsg === 'done' && <div style={{fontSize:10,color:'var(--green)'}}>✓ PnL updated</div>}
+              {pnlMsg === 'error' && <div style={{fontSize:10,color:'var(--red)'}}>Failed to refresh</div>}
+            </div>
+          )}
+        </div>
+
+        {/* DM box */}
+        {dmOpen && (
+          <div className="profile-dm-box">
+            <div className="profile-dm-label">Message {displayName}</div>
+            {dmSent
+              ? <div className="profile-dm-sent">✓ Sent!</div>
+              : <>
+                  <textarea className="profile-dm-input" placeholder="Write a message..."
+                    value={dmBody} onChange={e => setDmBody(e.target.value)} rows={3} />
+                  <button className="profile-dm-send" onClick={sendDM} disabled={dmSending || !dmBody.trim()}>
+                    {dmSending ? 'Sending...' : 'Send'}
+                  </button>
+                </>
+            }
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div className="profile-tabs">
+          <button className={`profile-tab ${tab==='threads'?'active':''}`} onClick={() => setTab('threads')}>Threads</button>
+          <button className={`profile-tab ${tab==='replies'?'active':''}`} onClick={() => setTab('replies')}>Replies</button>
+        </div>
+
+        {/* Replies tab */}
+        {tab === 'replies' && (
+          <div className="profile-threads">
+            {replies.length === 0
+              ? <div className="profile-empty">No replies yet.</div>
+              : replies.map(r => (
+                <div key={r.id} className="pthread-row" onClick={() => nav(`/forum/thread/${r.thread_id}`)}>
+                  <div className="pthread-meta" style={{marginBottom:4}}>Replied in: {r.forum_threads?.title}</div>
+                  <div className="pthread-title" style={{fontSize:12,color:'#aaa',fontWeight:300}}>{r.body?.slice(0,120)}{r.body?.length > 120 ? '...' : ''}</div>
+                  <div className="pthread-meta" style={{marginTop:4}}>{timeAgo(r.created_at)}</div>
+                </div>
+              ))
+            }
+          </div>
+        )}
+
+        {/* Calls tab - hidden, keeping for data compat */}
+        {tab === 'calls' && (
+          <div className="profile-calls">
+            {calls.length === 0
+              ? <div className="profile-empty">No calls yet.</div>
+              : calls.map(c => (
+                <div key={c.id} className="pcall-row" onClick={() => nav(`/analyze?mint=${c.mint}`)}>
+                  <div className="pcall-main">
+                    <div className="pcall-name">{c.name || c.mint?.slice(0,8)+'...'} <span className="pcall-symbol">{c.symbol}</span></div>
+                    <div className="pcall-note">{c.note || '—'}</div>
+                  </div>
+                  <div className="pcall-mc">
+                    <div className="pcall-label">Entry</div>
+                    <div>{fmtMC(c.entry_mc)}</div>
+                  </div>
+                  <div className="pcall-mc">
+                    <div className="pcall-label">Peak</div>
+                    <div>{c.peak_mc ? fmtMC(c.peak_mc) : '…'}</div>
+                  </div>
+                  <div className="pcall-status" style={{color: statusColor[c.status]}}>
+                    {statusLabel[c.status]}
+                  </div>
+                  <div className="pcall-time">{timeAgo(c.called_at)}</div>
+                </div>
+              ))
+            }
+          </div>
+        )}
+
+        {/* Replies tab */}
+        
+        {/* Threads tab */}
+        {tab === 'threads' && (
+          <div className="profile-threads">
+            {threads.length === 0
+              ? <div className="profile-empty">No forum posts yet.</div>
+              : threads.map(t => (
+                <div key={t.id} className="pthread-row" onClick={() => nav(`/forum/thread/${t.id}`)}>
+                  <div className="pthread-title">{t.title}</div>
+                  <div className="pthread-meta">{t.reply_count} replies · {timeAgo(t.created_at)}</div>
+                </div>
+              ))
+            }
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

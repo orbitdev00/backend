@@ -1,0 +1,244 @@
+/* ═══════════════════════════════════════════════════════
+   ORBIT — Global Mobile Responsiveness
+   Breakpoints: 640px (phone), 768px (tablet)
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Viewport safety ─────────────────────────────────── */
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+/* ── App.jsx / Analyzer ──────────────────────────────── */
+@media (max-width: 768px) {
+  .app-container {
+    padding: 0 !important;
+  }
+  .landing-screen,
+  .analyzer-screen {
+    padding: 16px !important;
+  }
+  .input-row {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  .input-row input {
+    width: 100% !important;
+  }
+  .panel-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .loading-messages {
+    font-size: 11px !important;
+    padding: 0 8px !important;
+  }
+  .trial-modal {
+    width: calc(100vw - 32px) !important;
+    padding: 20px 16px !important;
+  }
+}
+
+/* ── NavBar ───────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .navbar { padding: 10px 14px !important; gap: 10px !important; }
+  .nb-title { font-size: 11px !important; letter-spacing: 2px !important; }
+  .nb-version { display: none !important; }
+  .nb-desktop { display: none !important; }
+  .nb-mobile  { display: flex !important; }
+  /* Modal full-width on phone */
+  .nb-modal { width: calc(100vw - 24px) !important; }
+}
+
+/* ── Forum ────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .forum-body {
+    grid-template-columns: 1fr !important;
+    padding: 12px !important;
+    gap: 0 !important;
+  }
+  .forum-sidebar { display: none !important; }
+
+  .forum-topbar { flex-direction: column; align-items: flex-start !important; gap: 8px !important; }
+  .forum-topbar-right { width: 100%; flex-wrap: wrap; gap: 6px !important; }
+  .forum-search-wrap { flex: 1 !important; }
+  .forum-search-input { width: 100% !important; flex: 1 !important; min-width: 0 !important; }
+  .forum-new-btn { flex: 1 !important; text-align: center !important; }
+
+  /* Category blocks: hide latest column on small screens */
+  .fcat-header {
+    grid-template-columns: 30px 1fr 56px !important;
+    gap: 8px !important;
+    padding: 12px !important;
+  }
+  .fcat-latest { display: none !important; }
+  .fcat-name { font-size: 12px !important; }
+  .fcat-desc { font-size: 10px !important; }
+
+  /* Thread rows */
+  .fthread-list-head {
+    grid-template-columns: 1fr 44px 44px !important;
+    padding: 6px 10px !important;
+  }
+  .fthread-row {
+    grid-template-columns: 1fr 44px 44px !important;
+    padding: 10px !important;
+  }
+  .fthread-last { display: none !important; }
+  .fthread-title { font-size: 12px !important; }
+
+  /* Posts: narrower author column */
+  .fpost { grid-template-columns: 52px 1fr !important; }
+  .fpost-author { padding: 10px 6px !important; }
+  .fpost-author-name { font-size: 9px !important; }
+  .fpost-content { padding: 10px !important; }
+  .fpost-body { font-size: 12px !important; }
+
+  /* Reply box */
+  .freply-box { padding: 10px !important; }
+  .freply-input { font-size: 12px !important; }
+
+  /* New thread */
+  .fnew-form { padding: 14px !important; }
+  .fnew-input, .fnew-select, .fnew-textarea { font-size: 12px !important; }
+
+  /* Notif dropdown */
+  .forum-notif-dropdown { width: calc(100vw - 28px) !important; right: -60px !important; }
+}
+
+/* ── Leaderboard ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  .lb-body { padding: 14px !important; }
+  .lb-header { flex-direction: column; align-items: flex-start !important; gap: 10px !important; }
+  .lb-tabs { width: 100% !important; }
+  .lb-tab { flex: 1 !important; text-align: center !important; }
+
+  /* PnL toggle row */
+  .lb-pnl-toggle { flex-wrap: wrap !important; gap: 6px !important; }
+}
+@media (max-width: 640px) {
+  /* Rep tab: hide wallet + last columns */
+  .lb-head { grid-template-columns: 32px 1fr 60px 40px 40px !important; }
+  .lb-row { grid-template-columns: 32px 1fr 60px 40px 40px !important; }
+  .lb-head > span:nth-child(7),
+  .lb-row  > span:nth-child(7) { display: none !important; }
+
+  /* PnL tab rows */
+  .lb-pnl-head { grid-template-columns: 32px 1fr 100px !important; }
+  .lb-pnl-row  { grid-template-columns: 32px 1fr 100px !important; }
+  .lb-wallet { font-size: 9px !important; }
+}
+
+/* ── Profile ──────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .profile-body { padding: 14px !important; }
+  .profile-header { flex-direction: column !important; gap: 16px !important; padding: 16px !important; }
+  .profile-actions { flex-direction: row !important; flex-wrap: wrap !important; }
+  .profile-follow-btn, .profile-dm-btn, .profile-edit-btn { flex: 1 !important; text-align: center !important; }
+  .profile-stats { gap: 12px !important; }
+  .profile-name { font-size: 16px !important; }
+
+  /* Call rows: hide time column */
+  .pcall-row { grid-template-columns: 1fr 64px 64px 64px !important; }
+  .pcall-time { display: none !important; }
+}
+
+/* ── Edit Profile ─────────────────────────────────────── */
+@media (max-width: 640px) {
+  .ep-body { padding: 14px !important; }
+  .ep-card { margin: 0 !important; }
+  .ep-pfp-row { flex-direction: column !important; align-items: flex-start !important; }
+}
+
+/* ── Inbox ────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .inbox-body {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+    min-height: calc(100vh - 48px) !important;
+  }
+  /* When no conversation selected, show sidebar; when selected, show thread */
+  .inbox-sidebar { display: block !important; border-right: none !important; }
+  .inbox-thread { display: none !important; }
+  /* JS handles switching — these classes toggle on mobile */
+  .inbox-body.thread-open .inbox-sidebar { display: none !important; }
+  .inbox-body.thread-open .inbox-thread  { display: flex !important; }
+  .inbox-thread { height: calc(100vh - 48px); }
+  .inbox-messages { max-height: calc(100vh - 48px - 120px); }
+  .inbox-compose { position: sticky; bottom: 0; }
+}
+@media (max-width: 640px) {
+  .inbox-msg { max-width: 85% !important; }
+  .inbox-thread-header { padding: 10px 14px !important; }
+  /* Back button — injected via CSS content trick for mobile */
+  .inbox-thread-back {
+    display: flex !important;
+    background: none; border: none; color: #555;
+    font-size: 16px; cursor: pointer; padding: 0 6px 0 0;
+  }
+}
+
+/* ── Tracker ──────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .tracker-body { padding: 14px !important; }
+  .tracker-header { flex-direction: column !important; align-items: flex-start !important; gap: 10px !important; }
+  .tracker-tabs { width: 100% !important; }
+  .tracker-tab { flex: 1 !important; justify-content: center !important; }
+
+  .tracker-add { padding: 14px !important; }
+  .add-row { flex-direction: column !important; gap: 6px !important; }
+  .add-input { width: 100% !important; min-width: unset !important; }
+  .add-mc { max-width: 100% !important; width: 100% !important; }
+  .add-select { width: 100% !important; }
+  .add-btn { width: 100% !important; padding: 10px !important; }
+
+  .tracker-row { flex-wrap: wrap !important; gap: 8px !important; padding: 12px !important; }
+  .tr-info { width: 100% !important; }
+  .tr-mc { min-width: 70px !important; flex: 1 !important; }
+  .tr-status { flex: 1 !important; text-align: left !important; }
+  .tr-actions { margin-left: auto !important; }
+}
+
+/* ── History ──────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .history-screen .history-body,
+  [class*="history"] .history-body { padding: 12px !important; }
+}
+
+/* ── Auth pages ───────────────────────────────────────── */
+@media (max-width: 640px) {
+  .auth-card {
+    width: calc(100vw - 32px) !important;
+    padding: 24px 18px !important;
+  }
+  .auth-screen { padding: 16px !important; }
+}
+
+/* ── Home ─────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .home-body { padding: 20px 14px !important; }
+  .home-welcome h1 { font-size: 18px !important; }
+  .home-welcome p { font-size: 11px !important; }
+  .home-cards { gap: 10px !important; }
+  .home-card { width: 100% !important; padding: 18px 16px !important; }
+  .home-cards-row .home-card { min-width: 100% !important; max-width: 100% !important; }
+}
+
+/* ── Utility: prevent horizontal scroll everywhere ────── */
+@media (max-width: 768px) {
+  body, #root { overflow-x: hidden !important; }
+  .panel { border-radius: 6px !important; }
+}
+
+/* ── Touch targets — minimum 44px tap area ────────────── */
+@media (max-width: 640px) {
+  .nb-mobile-link,
+  .forum-new-btn,
+  .add-btn,
+  .tracker-tab,
+  .lb-tab,
+  .profile-follow-btn,
+  .profile-dm-btn,
+  .freply-submit,
+  .inbox-send {
+    min-height: 40px !important;
+  }
+  button, [role="button"] { touch-action: manipulation !important; }
+}

@@ -2,6 +2,12 @@ import { useState, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { getFingerprint } from '../lib/fingerprint'
 
+const RAILWAY_URL = 'https://backend-production-a427a.up.railway.app'
+
+// In production (Vercel) hit Railway directly. In dev, use the Vite proxy (localhost).
+const IS_PROD = window.location.hostname !== 'localhost' && !window.location.hostname.includes('ngrok')
+const API_BASE = IS_PROD ? RAILWAY_URL : ''
+
 export function useStreamAnalysis() {
   const [status, setStatus]           = useState('idle')
   const [statusMsg, setStatusMsg]     = useState('Ready')
@@ -18,7 +24,6 @@ export function useStreamAnalysis() {
       try { wsRef.current.close() } catch {}
       wsRef.current = null
     }
-    // Clear all state so landing screen shows cleanly
     setSnapshot(null)
     setPrediction(null)
     setPreview(null)
@@ -43,8 +48,12 @@ export function useStreamAnalysis() {
     const { data: { session } } = await supabase.auth.getSession()
     const loggedIn = !!(session?.user?.id)
 
-    const proto  = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl  = `${proto}//${window.location.host}/ws/stream/${mint.trim()}`
+    // Build WebSocket URL pointing at Railway in prod
+    const wsProto = IS_PROD ? 'wss:' : (window.location.protocol === 'https:' ? 'wss:' : 'ws:')
+    const wsHost  = IS_PROD
+      ? RAILWAY_URL.replace('https://', '').replace('http://', '')
+      : window.location.host
+    const wsUrl   = `${wsProto}//${wsHost}/ws/stream/${mint.trim()}`
 
     console.log('[ORBIT] Connecting WebSocket:', wsUrl)
 
@@ -54,7 +63,7 @@ export function useStreamAnalysis() {
         if (!settled) { settled = true; resolve(val) }
       }
 
-      // On ngrok skip WS — free tier blocks upgrades, go straight to HTTP
+      // On ngrok skip WS — free tier blocks upgrades
       if (window.location.host.includes('ngrok')) {
         console.log('[ORBIT] Ngrok detected — using HTTP directly')
         httpFallback(mint, loggedIn, settle)
@@ -105,10 +114,7 @@ export function useStreamAnalysis() {
       ws.onclose = (e) => {
         console.log('[ORBIT] WebSocket closed', e.code)
         wsRef.current = null
-        // If we never got a result, fall back
-        if (!settled) {
-          httpFallback(mint, loggedIn, settle)
-        }
+        if (!settled) httpFallback(mint, loggedIn, settle)
       }
 
       // Safety timeout — fall back after 15s if nothing arrives
@@ -129,11 +135,10 @@ export function useStreamAnalysis() {
           q = `?fingerprint=${encodeURIComponent(fp)}&is_trial=true`
         }
         setStatusMsg('Analyzing...')
-        // Add user_id to request
         const { data: { session: sess2 } } = await supabase.auth.getSession()
         const uid = sess2?.user?.id || ''
         const uidParam = uid ? `${q ? '&' : '?'}user_id=${encodeURIComponent(uid)}` : ''
-        const res  = await fetch(`/analyze/${mint.trim()}${q}${uidParam}`, {
+        const res  = await fetch(`${API_BASE}/analyze/${mint.trim()}${q}${uidParam}`, {
           headers: { 'ngrok-skip-browser-warning': '1' }
         })
         const text = await res.text()

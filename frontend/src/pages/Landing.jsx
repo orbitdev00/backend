@@ -269,7 +269,7 @@ export default function Landing({ onSwitch }) {
                       strokeLinecap="round"
                       style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(0.4,0,0.2,1)' }} />
                     <text x={cx} y={cx - 3} textAnchor="middle" fill={c.col}
-                      fontSize={c.center ? 20 : 14} fontWeight="700" fontFamily="Syne, sans-serif">{c.score}</text>
+                      fontSize={c.center ? 20 : 14} fontWeight="700" fontFamily="Outfit, sans-serif">{c.score}</text>
                     <text x={cx} y={cx + (c.center ? 14 : 11)} textAnchor="middle"
                       fill="#555" fontSize={c.center ? 8 : 7} fontFamily="JetBrains Mono, monospace">{c.label}</text>
                   </svg>

@@ -180,12 +180,7 @@ export default function Landing({ onSwitch }) {
           <p className="lp-hero-note">No wallet required to start.</p>
         </div>
 
-        {/* Floating signal tags */}
-        <div className="lp-hero-tags">
-          {SIGNALS.slice(0, 6).map((s, i) => (
-            <span key={s} className="lp-signal-tag" style={{ animationDelay: `${i * 0.15}s` }}>{s}</span>
-          ))}
-        </div>
+
       </section>
 
       {/* Ticker */}

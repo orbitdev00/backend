@@ -132,11 +132,7 @@
 }
 
 /* Signal tags */
-.lp-hero-tags {
-  display: flex; flex-wrap: wrap;
-  gap: 8px; justify-content: center;
-  max-width: 600px;
-}
+.lp-hero-tags { display: none; }
 .lp-signal-tag {
   font-family: var(--mono); font-size: 9px;
   letter-spacing: 1.5px; text-transform: uppercase;
@@ -179,7 +175,7 @@
 
 /* ── Shared section styles ───────────────────────────── */
 .lp-section-eyebrow {
-  font-family: var(--mono); font-size: 9px;
+  font-family: var(--mono); font-size: 12px;
   letter-spacing: 3px; text-transform: uppercase;
   color: var(--green); margin-bottom: 20px;
 }
@@ -209,8 +205,9 @@
   gap: 12px; margin: 40px 0;
 }
 .lp-problem-card {
-  background: #060606;
-  border: 1px solid #111; border-radius: 8px;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
   padding: 24px; text-align: left;
   display: flex; gap: 14px; align-items: center;
   transition: border-color 0.2s, transform 0.2s;
@@ -219,11 +216,12 @@
 .lp-in-view .lp-problem-card { opacity: 1; }
 .lp-problem-card:hover { border-color: #1e1e1e; transform: translateY(-2px); }
 .lp-problem-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
-.lp-problem-text { font-size: 14px; color: #ddd; line-height: 1.7; font-weight: 400; }
+.lp-problem-text { font-size: 17px; color: #ddd; line-height: 1.7; font-weight: 400; }
 .lp-problem-closer {
-  font-size: 20px; color: #fff; font-weight: 500;
-  padding: 32px; border: 1px solid #1a1a1a;
-  border-radius: 8px; background: #080808;
+  font-size: 24px; color: #fff; font-weight: 500;
+  padding: 32px; border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px; background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
   letter-spacing: -0.3px;
 }
 
@@ -240,7 +238,7 @@
   gap: 14px; margin-top: 48px;
 }
 .lp-pillar-card {
-  background: #060606; border: 1px solid #111;
+  background: rgba(255,255,255,0.08); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.12);
   border-radius: 10px; padding: 36px 28px;
   text-align: left; transition: all 0.25s;
   position: relative; overflow: hidden;
@@ -257,11 +255,11 @@
 .lp-pillar-card:hover::before { opacity: 1; }
 .lp-pillar-icon { font-size: 28px; color: var(--green); margin-bottom: 16px; }
 .lp-pillar-label {
-  font-family: var(--mono); font-size: 9px;
+  font-family: var(--mono); font-size: 12px;
   letter-spacing: 2px; text-transform: uppercase;
   color: var(--green); margin-bottom: 10px;
 }
-.lp-pillar-title { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 12px; line-height: 1.4; }
+.lp-pillar-title { font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 12px; line-height: 1.4; }
 .lp-pillar-desc { font-size: 12px; color: #ddd; line-height: 1.75; font-weight: 300; }
 
 /* ── Mock analysis ───────────────────────────────────── */
@@ -272,8 +270,9 @@
   text-align: center;
 }
 .lp-mock-card {
-  background: #080808;
-  border: 1px solid #1a1a1a; border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
   overflow: hidden; margin: 0 auto 32px;
   opacity: 0; transform: translateY(20px);
   transition: opacity 0.6s ease, transform 0.6s ease;
@@ -282,8 +281,8 @@
 .lp-mock-card.lp-mock-visible { opacity: 1; transform: translateY(0); }
 .lp-mock-header {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 16px 20px; border-bottom: 1px solid #111;
-  background: #0a0a0a;
+  padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
 }
 .lp-mock-coin { display: flex; align-items: center; gap: 10px; }
 .lp-mock-coin-dot {
@@ -332,7 +331,7 @@
 .lp-mock-bar-pct { font-family: var(--mono); font-size: 11px; font-weight: 600; width: 36px; text-align: right; }
 
 .lp-mock-narrative {
-  padding: 14px 20px; font-size: 12px;
+  padding: 14px 20px; font-size: 15px;
   color: #ddd; line-height: 1.7; font-weight: 300;
 }
 .lp-mock-narrative-label {
@@ -357,11 +356,11 @@
 }
 .lp-wallet-title { font-size: 36px; font-weight: 600; color: #fff; margin-bottom: 16px; }
 .lp-wallet-desc { font-size: 14px; color: #ddd; line-height: 1.75; font-weight: 300; margin-bottom: 20px; }
-.lp-wallet-joke { font-size: 15px; color: #fff; font-weight: 500; line-height: 1.7; }
-.lp-wallet-joke-sub { font-size: 13px; color: #ddd; font-weight: 400; }
+.lp-wallet-joke { font-size: 18px; color: #fff; font-weight: 500; line-height: 1.7; }
+.lp-wallet-joke-sub { font-size: 16px; color: #ddd; font-weight: 400; }
 
 .lp-wallet-card {
-  background: #080808; border: 1px solid #1a1a1a;
+  background: rgba(255,255,255,0.08); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.12);
   border-radius: 10px; padding: 28px;
   text-align: center;
 }
@@ -587,7 +586,7 @@
   align-items: center; flex-wrap: wrap; gap: 12px;
 }
 .lp-footer-copy {
-  font-family: var(--mono); font-size: 10px;
+  font-family: var(--mono); font-size: 13px;
   color: #666; letter-spacing: 0.5px;
 }
 .lp-footer-disclaimer {
@@ -621,67 +620,67 @@
 
 /* Glass block behind hero text */
 .lp-hero-glass {
-  background: rgba(0,0,0,0.5);
-  backdrop-filter: blur(2px);
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
   border-radius: 16px;
-  padding: 48px 40px 36px;
+  padding: 48px 56px 40px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  max-width: 720px;
+  max-width: 860px;
   width: 100%;
-  border: 1px solid rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
 }
 
 /* Glass behind problem section title */
 .lp-problem-title-glass {
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(3px);
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
   border-radius: 12px;
   padding: 32px 40px;
   margin-bottom: 28px;
-  border: 1px solid rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
 }
 
 /* Glass behind pillar cards */
 .lp-pillars-title-glass {
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(3px);
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
   border-radius: 12px;
   padding: 28px 40px;
   margin-bottom: 36px;
-  border: 1px solid rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
 }
 
 /* Glass behind wallet text */
 .lp-wallet-text-glass {
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(3px);
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
   border-radius: 12px;
   padding: 32px 36px;
-  border: 1px solid rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
 }
 
 /* Glass behind final CTA */
 .lp-final-glass {
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(4px);
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
   border-radius: 16px;
   padding: 56px 48px;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
   max-width: 640px;
   margin: 0 auto;
 }
 
 /* Glass behind mock section title */
 .lp-mock-title-glass {
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(3px);
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
   border-radius: 12px;
   padding: 28px 40px;
   margin-bottom: 32px;
-  border: 1px solid rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
   text-align: center;
 }
 

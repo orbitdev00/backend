@@ -108,11 +108,16 @@ export default function Landing({ onSwitch }) {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       const scrollOffset = scrollYRef.current
       stars.forEach(s => {
-        const opacity = s.o + Math.sin(t * 0.001 * s.speed * 60 + s.phase) * 0.2
+        // Twinkle: sine wave on opacity
+        const twinkle = Math.sin(t * 0.001 * s.speed * 80 + s.phase)
+        const opacity = Math.max(0.05, Math.min(1, s.o + twinkle * 0.25))
+        // Parallax: scroll offset scaled by depth
         const py = s.y - scrollOffset * s.depth
+        // Size pulse: subtle radius variation
+        const r = s.r + Math.sin(t * 0.0008 * s.speed * 60 + s.phase) * 0.15
         ctx.beginPath()
-        ctx.arc(s.x, py, s.r, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(255,255,255,${Math.max(0, Math.min(1, opacity))})`
+        ctx.arc(s.x, py, Math.max(0.1, r), 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(255,255,255,${opacity})`
         ctx.fill()
       })
       raf = requestAnimationFrame(draw)
@@ -347,7 +352,7 @@ export default function Landing({ onSwitch }) {
             </p>
             <p className="lp-wallet-joke">
               Unlike other sites, we have zero interest in your money.<br />
-              <span className="lp-wallet-joke-sub">We built a tool, not a trap.</span>
+              <span className="lp-wallet-joke-sub">We built a <em>tool</em>, not a wallet drainer.</span>
             </p>
           </div>
           <div className="lp-wallet-visual">
@@ -368,11 +373,11 @@ export default function Landing({ onSwitch }) {
             <span className="lp-dot" /> Free to start
           </div>
           <h2 className="lp-final-title">
-            The information gap is real.<br />
-            <span className="lp-hero-accent">Close it.</span>
+            One analysis.<br />
+            <span className="lp-hero-accent">That's all it takes.</span>
           </h2>
           <p className="lp-final-sub">
-            No wallet. No credit card. One free analysis to see what you've been missing.
+            See exactly what you've been missing. No wallet required to start.
           </p>
           <div className="lp-final-btns">
             <button className="lp-btn-primary lp-btn-xl" onClick={() => onSwitch('signup')}>
@@ -386,24 +391,56 @@ export default function Landing({ onSwitch }) {
       </Section>
 
       {/* Footer */}
-      <footer className="lp-footer">
-        <div className="lp-footer-logo">
-          <img src={orbitPfp} className="lp-nav-pfp" alt="" />
-          <span className="lp-nav-title">ORBIT</span>
-          <span className="lp-nav-version">v0.2</span>
+      <footer className="lp-footer-new">
+        <div className="lp-footer-top">
+          {/* Brand */}
+          <div className="lp-footer-brand">
+            <div className="lp-footer-logo-row">
+              <img src={orbitPfp} className="lp-nav-pfp" alt="" />
+              <span className="lp-nav-title">ORBIT</span>
+              <span className="lp-nav-version">v0.2</span>
+            </div>
+            <p className="lp-footer-tagline">On-chain intelligence for Solana traders.</p>
+            <div className="lp-footer-status">
+              <span className="lp-status-dot" />
+              All systems operational
+            </div>
+          </div>
+
+          {/* Platform links */}
+          <div className="lp-footer-col">
+            <div className="lp-footer-col-title">Platform</div>
+            <button className="lp-footer-col-link" onClick={() => onSwitch('signup')}>Analyzer</button>
+            <button className="lp-footer-col-link" onClick={() => onSwitch('signup')}>Forum</button>
+            <button className="lp-footer-col-link" onClick={() => onSwitch('signup')}>Tracker</button>
+            <button className="lp-footer-col-link" onClick={() => onSwitch('signup')}>Leaderboard</button>
+          </div>
+
+          {/* Account links */}
+          <div className="lp-footer-col">
+            <div className="lp-footer-col-title">Account</div>
+            <button className="lp-footer-col-link" onClick={() => onSwitch('login')}>Sign in</button>
+            <button className="lp-footer-col-link" onClick={() => onSwitch('signup')}>Create account</button>
+            <button className="lp-footer-col-link" onClick={() => onSwitch('trial')}>Try free</button>
+          </div>
+
+          {/* Community */}
+          <div className="lp-footer-col">
+            <div className="lp-footer-col-title">Community</div>
+            {SOCIALS.map(s => (
+              <a key={s.label} href={s.url} target="_blank" rel="noopener noreferrer" className="lp-footer-col-link lp-footer-col-a">
+                {s.label}
+              </a>
+            ))}
+          </div>
         </div>
-        <div className="lp-footer-socials">
-          {SOCIALS.map(s => (
-            <a key={s.label} href={s.url} target="_blank" rel="noopener noreferrer" className="lp-social-link" title={s.label}>
-              {s.icon}
-            </a>
-          ))}
+
+        <div className="lp-footer-bottom">
+          <span className="lp-footer-copy">© {new Date().getFullYear()} Orbit · orbit-app.xyz</span>
+          <span className="lp-footer-disclaimer">
+            Orbit does not provide financial advice. All analysis is for informational purposes only.
+          </span>
         </div>
-        <div className="lp-footer-links">
-          <button className="lp-footer-link" onClick={() => onSwitch('login')}>Sign in</button>
-          <button className="lp-footer-link" onClick={() => onSwitch('signup')}>Sign up</button>
-        </div>
-        <div className="lp-footer-copy">orbit-app.xyz · {new Date().getFullYear()}</div>
       </footer>
     </div>
   )

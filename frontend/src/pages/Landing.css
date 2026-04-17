@@ -117,7 +117,7 @@
 .lp-accent-red  { color: #f87171; }
 
 .lp-hero-sub {
-  font-size: 15px; color: #888;
+  font-size: 15px; color: #bbb;
   max-width: 560px; line-height: 1.75;
   margin-bottom: 40px; font-weight: 300;
 }
@@ -168,7 +168,7 @@
   display: inline-flex; align-items: center;
   gap: 10px; font-family: var(--mono);
   font-size: 10px; letter-spacing: 2px;
-  color: #444; padding: 0 24px;
+  color: #555; padding: 0 24px;
   text-transform: uppercase;
 }
 .lp-ticker-dot { color: var(--green); font-size: 7px; opacity: 0.7; }
@@ -190,7 +190,7 @@
   margin-bottom: 16px;
 }
 .lp-section-sub {
-  font-size: 14px; color: #666;
+  font-size: 14px; color: #aaa;
   font-weight: 300; line-height: 1.7;
   max-width: 540px; margin: 0 auto 48px;
   text-align: center;
@@ -212,7 +212,7 @@
   background: #060606;
   border: 1px solid #111; border-radius: 8px;
   padding: 24px; text-align: left;
-  display: flex; gap: 14px; align-items: flex-start;
+  display: flex; gap: 14px; align-items: center;
   transition: border-color 0.2s, transform 0.2s;
   animation: fadeUp 0.5s ease forwards; opacity: 0;
 }
@@ -261,8 +261,8 @@
   letter-spacing: 2px; text-transform: uppercase;
   color: var(--green); margin-bottom: 10px;
 }
-.lp-pillar-title { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 12px; line-height: 1.4; }
-.lp-pillar-desc { font-size: 12px; color: #666; line-height: 1.75; font-weight: 300; }
+.lp-pillar-title { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 12px; line-height: 1.4; }
+.lp-pillar-desc { font-size: 12px; color: #aaa; line-height: 1.75; font-weight: 300; }
 
 /* ── Mock analysis ───────────────────────────────────── */
 .lp-mock-section {
@@ -356,9 +356,9 @@
   gap: 60px; align-items: center;
 }
 .lp-wallet-title { font-size: 36px; font-weight: 600; color: #fff; margin-bottom: 16px; }
-.lp-wallet-desc { font-size: 13px; color: #777; line-height: 1.75; font-weight: 300; margin-bottom: 20px; }
-.lp-wallet-joke { font-size: 14px; color: #fff; font-weight: 500; line-height: 1.6; }
-.lp-wallet-joke-sub { font-size: 12px; color: #555; font-weight: 300; }
+.lp-wallet-desc { font-size: 14px; color: #aaa; line-height: 1.75; font-weight: 300; margin-bottom: 20px; }
+.lp-wallet-joke { font-size: 15px; color: #fff; font-weight: 500; line-height: 1.7; }
+.lp-wallet-joke-sub { font-size: 13px; color: #aaa; font-weight: 400; }
 
 .lp-wallet-card {
   background: #080808; border: 1px solid #1a1a1a;
@@ -404,7 +404,7 @@
   margin-bottom: 20px;
 }
 .lp-final-sub {
-  font-size: 14px; color: #666;
+  font-size: 14px; color: #aaa;
   font-weight: 300; line-height: 1.7;
   margin-bottom: 40px;
 }
@@ -517,3 +517,91 @@
   transition: all 0.15s;
 }
 .lp-nav-social:hover { border-color: #333; color: #aaa; }
+
+/* ── Italic tool emphasis ──────────────────────────── */
+.lp-wallet-joke em {
+  font-style: italic;
+  color: var(--green);
+  font-weight: 600;
+}
+
+/* ── Rebuilt Footer ────────────────────────────────── */
+.lp-footer-new {
+  border-top: 1px solid #0d0d0d;
+  position: relative; z-index: 1;
+  background: #030303;
+}
+.lp-footer-top {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 40px;
+  padding: 48px 48px 32px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.lp-footer-brand { }
+.lp-footer-logo-row {
+  display: flex; align-items: center;
+  gap: 8px; margin-bottom: 12px;
+}
+.lp-footer-tagline {
+  font-size: 12px; color: #555;
+  line-height: 1.6; margin-bottom: 16px;
+  font-weight: 300; max-width: 220px;
+}
+.lp-footer-status {
+  display: inline-flex; align-items: center;
+  gap: 7px; font-family: var(--mono);
+  font-size: 10px; color: #4ade80;
+  letter-spacing: 0.5px;
+}
+.lp-status-dot {
+  width: 6px; height: 6px;
+  background: #4ade80; border-radius: 50%;
+  animation: pulse 2.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.lp-footer-col { display: flex; flex-direction: column; gap: 10px; }
+.lp-footer-col-title {
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: #333; margin-bottom: 4px;
+}
+.lp-footer-col-link {
+  background: none; border: none;
+  color: #555; font-family: var(--sans);
+  font-size: 12px; cursor: pointer;
+  text-align: left; padding: 0;
+  transition: color 0.15s; text-decoration: none;
+  display: block;
+}
+.lp-footer-col-link:hover { color: #bbb; }
+.lp-footer-col-a { color: #555; }
+
+.lp-footer-bottom {
+  border-top: 1px solid #0a0a0a;
+  padding: 20px 48px;
+  max-width: 1100px; margin: 0 auto;
+  display: flex; justify-content: space-between;
+  align-items: center; flex-wrap: wrap; gap: 12px;
+}
+.lp-footer-copy {
+  font-family: var(--mono); font-size: 10px;
+  color: #2a2a2a; letter-spacing: 0.5px;
+}
+.lp-footer-disclaimer {
+  font-size: 10px; color: #2a2a2a;
+  max-width: 500px; text-align: right;
+  line-height: 1.5;
+}
+
+/* ── Mobile footer ─────────────────────────────────── */
+@media (max-width: 768px) {
+  .lp-footer-top { grid-template-columns: 1fr 1fr; padding: 32px 24px 24px; gap: 28px; }
+  .lp-footer-bottom { padding: 16px 24px; flex-direction: column; align-items: flex-start; }
+  .lp-footer-disclaimer { text-align: left; }
+}
+@media (max-width: 480px) {
+  .lp-footer-top { grid-template-columns: 1fr; }
+}

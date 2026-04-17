@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-const RAILWAY_URL = 'https://backend-production-XXXX.up.railway.app' // ← replace after Railway deploys
+const RAILWAY_URL = 'https://backend-production-a427a.up.railway.app' // ← replace after Railway deploys
 
 export default defineConfig({
   plugins: [react()],

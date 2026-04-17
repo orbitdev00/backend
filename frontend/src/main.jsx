@@ -33,13 +33,13 @@ function ProtectedRoute({ children }) {
 function RootRoute() {
   const { user, loading } = useAuth()
   const navigate = useNavigate()
-  const [authPage, setAuthPage] = React.useState('landing')
+  const [isTrial, setIsTrial] = React.useState(false)
 
   const handleSwitch = (page) => {
-    if (page === 'login')  navigate('/login')
-    else if (page === 'signup') navigate('/signup')
-    else if (page === 'forgot') navigate('/forgot')
-    else setAuthPage(page)
+    if (page === 'login')   navigate('/login')
+    else if (page === 'signup')  navigate('/signup')
+    else if (page === 'forgot')  navigate('/forgot')
+    else if (page === 'trial')   { setIsTrial(true); navigate('/analyze') }
   }
 
   if (loading) return null

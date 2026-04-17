@@ -155,28 +155,30 @@ export default function Landing({ onSwitch }) {
 
       {/* Hero */}
       <section className="lp-hero">
-        <div className="lp-hero-eyebrow">
-          <span className="lp-dot" />
-          Built for Solana traders
+        <div className="lp-hero-glass">
+          <div className="lp-hero-eyebrow">
+            <span className="lp-dot" />
+            Built for Solana traders
+          </div>
+          <h1 className="lp-hero-title">
+            Stop trading blind.<br />
+            <span className="lp-hero-accent">Start trading informed.</span>
+          </h1>
+          <p className="lp-hero-sub">
+            Orbit is the platform where on-chain intelligence meets trader community.
+            Analyze any Pump.fun token in seconds, discuss with real traders,
+            and build a reputation based on actual performance.
+          </p>
+          <div className="lp-hero-cta">
+            <button className="lp-btn-primary lp-btn-lg" onClick={() => onSwitch('signup')}>
+              Create free account
+            </button>
+            <button className="lp-btn-outline lp-btn-lg" onClick={() => onSwitch('trial')}>
+              Try one analysis free →
+            </button>
+          </div>
+          <p className="lp-hero-note">No wallet required to start.</p>
         </div>
-        <h1 className="lp-hero-title">
-          Stop trading blind.<br />
-          <span className="lp-hero-accent">Start trading informed.</span>
-        </h1>
-        <p className="lp-hero-sub">
-          Orbit is the platform where on-chain intelligence meets trader community.
-          Analyze any Pump.fun token in seconds, discuss with real traders,
-          and build a reputation based on actual performance.
-        </p>
-        <div className="lp-hero-cta">
-          <button className="lp-btn-primary lp-btn-lg" onClick={() => onSwitch('signup')}>
-            Create free account
-          </button>
-          <button className="lp-btn-outline lp-btn-lg" onClick={() => onSwitch('trial')}>
-            Try one analysis free →
-          </button>
-        </div>
-        <p className="lp-hero-note">No wallet required to start.</p>
 
         {/* Floating signal tags */}
         <div className="lp-hero-tags">
@@ -199,11 +201,13 @@ export default function Landing({ onSwitch }) {
 
       {/* Problem */}
       <Section className="lp-problem-section">
-        <div className="lp-section-eyebrow">The problem</div>
-        <h2 className="lp-section-title">
-          Most traders lose because they're<br />
-          <span className="lp-accent-red">working with incomplete information.</span>
-        </h2>
+        <div className="lp-problem-title-glass">
+          <div className="lp-section-eyebrow">The problem</div>
+          <h2 className="lp-section-title">
+            Most traders lose because they're<br />
+            <span className="lp-accent-red">working with incomplete information.</span>
+          </h2>
+        </div>
         <div className="lp-problems-grid">
           {PROBLEMS.map((p, i) => (
             <div key={i} className="lp-problem-card" style={{ animationDelay: `${i * 0.1}s` }}>
@@ -219,11 +223,13 @@ export default function Landing({ onSwitch }) {
 
       {/* Pillars */}
       <Section className="lp-pillars-section">
-        <div className="lp-section-eyebrow">The platform</div>
-        <h2 className="lp-section-title">
-          Three things working together.<br />
-          <span className="lp-hero-accent">Nothing like it exists.</span>
-        </h2>
+        <div className="lp-pillars-title-glass">
+          <div className="lp-section-eyebrow">The platform</div>
+          <h2 className="lp-section-title">
+            Three things working together.<br />
+            <span className="lp-hero-accent">Nothing like it exists.</span>
+          </h2>
+        </div>
         <div className="lp-pillars-grid">
           {PILLARS.map((p, i) => (
             <div key={p.label} className="lp-pillar-card" style={{ animationDelay: `${i * 0.12}s` }}>
@@ -238,11 +244,13 @@ export default function Landing({ onSwitch }) {
 
       {/* Mock analysis */}
       <Section className="lp-mock-section">
-        <div className="lp-section-eyebrow">The analyzer</div>
-        <h2 className="lp-section-title">Paste a CA. Get the truth.</h2>
-        <p className="lp-section-sub">
-          20+ on-chain signals, AI narrative, and probability bands — in under 5 seconds.
-        </p>
+        <div className="lp-mock-title-glass">
+          <div className="lp-section-eyebrow">The analyzer</div>
+          <h2 className="lp-section-title">Paste a CA. Get the truth.</h2>
+          <p className="lp-section-sub">
+            20+ on-chain signals, AI narrative, and probability bands — in under 5 seconds.
+          </p>
+        </div>
         <div ref={mockRef} className={`lp-mock-card ${mockVisible ? 'lp-mock-visible' : ''}`}>
           {/* Header */}
           <div className="lp-mock-header">
@@ -330,7 +338,7 @@ export default function Landing({ onSwitch }) {
           {/* AI narrative */}
           <div className="lp-mock-narrative">
             <span className="lp-mock-narrative-label">Orbit Analysis</span>
-            ASTEROID shows strong post-migration fundamentals with clean holder distribution and zero dev risk. High organic volume suggests sustained interest. Recommend monitoring for entry on dips toward $4.2M...
+            DOGE shows strong post-migration fundamentals with clean holder distribution and zero dev risk. High organic volume suggests sustained interest. Recommend monitoring for entry on dips toward $4.2M...
           </div>
         </div>
         <button className="lp-btn-outline lp-btn-lg lp-mock-cta" onClick={() => onSwitch('trial')}>
@@ -342,18 +350,20 @@ export default function Landing({ onSwitch }) {
       <Section className="lp-wallet-section">
         <div className="lp-wallet-inner">
           <div className="lp-wallet-text">
-            <div className="lp-section-eyebrow">Your wallet</div>
-            <h2 className="lp-wallet-title">Optional. Seriously.</h2>
-            <p className="lp-wallet-desc">
-              Add your public Solana wallet address if you want your
-              monthly PnL visible on the leaderboard. That's it.
-              We pull read-only on-chain data — no connection request,
-              no signing, no approvals.
-            </p>
-            <p className="lp-wallet-joke">
-              Unlike other sites, we have zero interest in your money.<br />
-              <span className="lp-wallet-joke-sub">We built a <em>tool</em>, not a wallet drainer.</span>
-            </p>
+            <div className="lp-wallet-text-glass">
+              <div className="lp-section-eyebrow">Your wallet</div>
+              <h2 className="lp-wallet-title">Optional. Seriously.</h2>
+              <p className="lp-wallet-desc">
+                Add your public Solana wallet address if you want your
+                monthly PnL visible on the leaderboard. That's it.
+                We pull read-only on-chain data — no connection request,
+                no signing, no approvals.
+              </p>
+              <p className="lp-wallet-joke">
+                Unlike other sites, we have zero interest in your money.<br />
+                <span className="lp-wallet-joke-sub">We built a <em>tool</em>, not a wallet drainer.</span>
+              </p>
+            </div>
           </div>
           <div className="lp-wallet-visual">
             <div className="lp-wallet-card">
@@ -368,7 +378,7 @@ export default function Landing({ onSwitch }) {
 
       {/* Final CTA */}
       <Section className="lp-final-section">
-        <div className="lp-final-inner">
+        <div className="lp-final-glass">
           <div className="lp-final-eyebrow">
             <span className="lp-dot" /> Free to start
           </div>

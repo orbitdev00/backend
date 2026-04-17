@@ -147,7 +147,7 @@ export default function App() {
 
   const [authPage, setAuthPage]         = useState('landing')
   const [showAccountMenu, setShowAccountMenu] = useState(false)
-  const [isTrial, setIsTrial]           = useState(false)
+  const [isTrial, setIsTrial]           = useState(() => new URLSearchParams(window.location.search).get('trial') === '1')
   const [trialBlocked, setTrialBlocked] = useState(false)
   const [collapsed, setCollapsed]       = useState({})
   const [mint, setMint]                 = useState('')
@@ -306,7 +306,7 @@ export default function App() {
         {trialBlocked && (
           <div className="trial-modal-overlay">
             <div className="trial-modal">
-              <img src={kikoPfp} alt="ORBIT" className="trial-modal-pfp" />
+              <img src={orbitPfp} alt="ORBIT" className="trial-modal-pfp" />
               <h2 className="trial-modal-title">Your free analysis is up.</h2>
               <p className="trial-modal-sub">Create a free account to keep analyzing coins with Orbit.</p>
               <button className="btn-primary" style={{width:'100%'}} onClick={() => { setTrialBlocked(false); setIsTrial(false); setAuthPage('signup') }}>

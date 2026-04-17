@@ -39,7 +39,7 @@ function RootRoute() {
     if (page === 'login')   navigate('/login')
     else if (page === 'signup')  navigate('/signup')
     else if (page === 'forgot')  navigate('/forgot')
-    else if (page === 'trial')   { setIsTrial(true); navigate('/analyze') }
+    else if (page === 'trial')   { navigate('/analyze?trial=1') }
   }
 
   if (loading) return null

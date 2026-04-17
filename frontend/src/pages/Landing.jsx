@@ -22,6 +22,60 @@ const FEATURES = [
   { num: '04', title: 'Price Alerts', body: 'Watch any token and get notified the moment it hits your target market cap. Watchlist syncs across devices.' },
 ]
 
+
+const FEATURE_DETAILS = [
+  {
+    num: '01', title: 'Token Intelligence',
+    short: 'Rug probability, bundle detection, fake volume scoring, dev history.',
+    detail: 'Orbit pulls 20+ on-chain signals in real time: holder distribution, fresh wallet concentration, sniper count, dev sell history, liquidity depth, bonding curve progress, and migration status. An AI narrative synthesizes everything into a plain-English verdict in under 5 seconds.'
+  },
+  {
+    num: '02', title: 'Trader Community',
+    short: 'Forum built for real degens. Share analysis, post calls, discuss tokens.',
+    detail: 'Threaded forum with categories for calls, analysis, education, and general discussion. Voting system, reputation scores, direct messaging, and a following feed. Your rep is built on what you actually say, not how loud you are.'
+  },
+  {
+    num: '03', title: 'On-Chain Leaderboard',
+    short: 'Monthly PnL rankings pulled directly from DEX swap history.',
+    detail: 'We fetch your transaction history from Raydium, Pump.fun, Jupiter, Orca, and Meteora and calculate real net SOL gained or lost. No self-reporting. No screenshots. Connect your public wallet address and let the chain speak for you.'
+  },
+  {
+    num: '04', title: 'Price Alerts',
+    short: 'Get notified the moment a token hits your target market cap.',
+    detail: 'Add any token CA to your watchlist with a target MC and direction. Orbit polls DexScreener every 15 seconds and fires an audio alert the moment the threshold is crossed. Watchlist syncs across all your devices.'
+  },
+]
+
+function FeaturesSection() {
+  const [open, setOpen] = useState(null)
+  return (
+    <section className="lp-section lp-features">
+      <Reveal>
+        <div className="lp-label">The platform</div>
+        <h2 className="lp-h2">Four tools.<br />One unfair advantage.</h2>
+      </Reveal>
+      <div className="lp-feat-list">
+        {FEATURE_DETAILS.map((f, i) => (
+          <Reveal key={i} delay={i * 60}>
+            <div
+              className={`lp-feat-row ${open === i ? 'lp-feat-open' : ''}`}
+              onClick={() => setOpen(open === i ? null : i)}
+            >
+              <span className="lp-feat-num">{f.num}</span>
+              <div className="lp-feat-content">
+                <div className="lp-feat-title">{f.title}</div>
+                <div className="lp-feat-body">{f.short}</div>
+                <div className="lp-feat-detail">{f.detail}</div>
+              </div>
+              <div className="lp-feat-arrow">{open === i ? '↓' : '→'}</div>
+            </div>
+          </Reveal>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 function useInView(threshold = 0.15) {
   const ref = useRef(null)
   const [inView, setInView] = useState(false)
@@ -145,8 +199,8 @@ export default function Landing({ onSwitch }) {
         </Reveal>
         <Reveal delay={100}>
           <h1 className="lp-hero-h1">
-            The edge isn't luck.<br />
-            <em>It's information.</em>
+            Everyone sees the chart.<br />
+            <em>Not everyone sees the truth.</em>
           </h1>
         </Reveal>
         <Reveal delay={220}>
@@ -211,26 +265,7 @@ export default function Landing({ onSwitch }) {
       </section>
 
       {/* ── FEATURES ── */}
-      <section className="lp-section lp-features">
-        <Reveal>
-          <div className="lp-label">The platform</div>
-          <h2 className="lp-h2">Four tools.<br />One unfair advantage.</h2>
-        </Reveal>
-        <div className="lp-feat-list">
-          {FEATURES.map((f, i) => (
-            <Reveal key={i} delay={i * 60}>
-              <div className="lp-feat-row">
-                <span className="lp-feat-num">{f.num}</span>
-                <div className="lp-feat-content">
-                  <div className="lp-feat-title">{f.title}</div>
-                  <div className="lp-feat-body">{f.body}</div>
-                </div>
-                <div className="lp-feat-arrow">→</div>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
+      <FeaturesSection />
 
       {/* ── MOCK ANALYZER ── */}
       <section className="lp-section lp-mock-section">
@@ -329,8 +364,8 @@ export default function Landing({ onSwitch }) {
               Read-only. No connection request, no signing, no approvals.
             </p>
             <p className="lp-wallet-quip">
-              Unlike other sites, we have zero interest in your money.<br />
-              We built a <em>tool</em>, not a wallet drainer.
+              We pull read-only data. No connection request, no signing, no approvals.<br />
+              <em>We built a tool, not a wallet drainer.</em>
             </p>
           </Reveal>
           <Reveal delay={150}>

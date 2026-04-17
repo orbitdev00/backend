@@ -190,7 +190,7 @@
 }
 .lp-tick {
   font-family: var(--mono); font-size: 11px;
-  letter-spacing: 2px; color: #444;
+  letter-spacing: 2px; color: #888;
   text-transform: uppercase; padding: 0 16px;
   display: inline-flex; align-items: center; gap: 16px;
 }
@@ -445,4 +445,39 @@
   .lp-nav-divider { display: none; }
   .lp-hero-h1 { font-size: 40px; letter-spacing: -1px; }
   .lp-footer-top { grid-template-columns: 1fr; }
+}
+
+/* ── Large section label ───────────────────────────── */
+.lp-label-lg {
+  font-family: var(--mono); font-size: 15px;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--purple); margin-bottom: 20px;
+  font-weight: 600;
+}
+
+/* ── Expandable feature rows ───────────────────────── */
+.lp-feat-row {
+  cursor: pointer;
+  user-select: none;
+}
+.lp-feat-detail {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px; color: #666; line-height: 1.75;
+  font-weight: 300; margin-top: 16px;
+  max-height: 0; overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.4s ease, opacity 0.3s ease, margin 0.3s ease;
+}
+.lp-feat-open .lp-feat-detail {
+  max-height: 200px;
+  opacity: 1;
+}
+.lp-feat-open {
+  background: rgba(167,139,250,0.03);
+}
+.lp-feat-open .lp-feat-title {
+  color: var(--purple);
+}
+.lp-feat-open .lp-feat-arrow {
+  color: var(--purple);
 }

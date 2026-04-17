@@ -67,7 +67,7 @@ export default function AuthCallback() {
         <img src={orbitPfp} alt="ORBIT" className="auth-logo" style={{
           animation: status === 'verifying' ? 'pulse 1.4s ease-in-out infinite' : 'none'
         }} />
-        <h1 className="auth-title">KIKO</h1>
+        <h1 className="auth-title">ORBIT</h1>
 
         {status === 'verifying' && (
           <>

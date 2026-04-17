@@ -163,7 +163,7 @@ export default function PredictionPanel({ prediction: p, snapshot: s }) {
 
   const specialLayout = (text) => (
     <div className="panel">
-      <div className="panel-title">Kiko Analysis</div>
+      <div className="panel-title">Orbit Analysis</div>
       <div className="circles-row">
         <CircleSmall score={purity}     label="Purity"   color={purityColor(purity)} />
         <SpecialCircle text={text} />
@@ -180,7 +180,7 @@ export default function PredictionPanel({ prediction: p, snapshot: s }) {
 
   return (
     <div className="panel">
-      <div className="panel-title">Kiko Analysis</div>
+      <div className="panel-title">Orbit Analysis</div>
 
       <div className="circles-row">
         <CircleSmall score={rugProb}    label="Rug %"    color={rugColor(rugProb)} />

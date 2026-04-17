@@ -308,7 +308,7 @@ export default function App() {
             <div className="trial-modal">
               <img src={kikoPfp} alt="ORBIT" className="trial-modal-pfp" />
               <h2 className="trial-modal-title">Your free analysis is up.</h2>
-              <p className="trial-modal-sub">Create a free account to keep analyzing coins with KIKO.</p>
+              <p className="trial-modal-sub">Create a free account to keep analyzing coins with Orbit.</p>
               <button className="btn-primary" style={{width:'100%'}} onClick={() => { setTrialBlocked(false); setIsTrial(false); setAuthPage('signup') }}>
                 Create account — it's free
               </button>
@@ -365,7 +365,7 @@ export default function App() {
                   </StreamReveal>
                 )}
                 <StreamReveal show={phase === "revealing"} delay={0}>
-                  <CollapsiblePanel title="Kiko Analysis" id="analysis" collapsed={collapsed} toggle={togglePanel}>
+                  <CollapsiblePanel title="Orbit Analysis" id="analysis" collapsed={collapsed} toggle={togglePanel}>
                     <PredictionPanel prediction={prediction} snapshot={snapshot} />
                   </CollapsiblePanel>
                 </StreamReveal>

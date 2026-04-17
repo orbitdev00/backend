@@ -126,7 +126,7 @@
   margin-bottom: 14px; flex-wrap: wrap; justify-content: center;
 }
 .lp-hero-note {
-  font-size: 11px; color: #444;
+  font-size: 11px; color: #777;
   font-family: var(--mono); letter-spacing: 0.5px;
   margin-bottom: 48px;
 }
@@ -140,7 +140,7 @@
 .lp-signal-tag {
   font-family: var(--mono); font-size: 9px;
   letter-spacing: 1.5px; text-transform: uppercase;
-  color: #444; border: 1px solid #1a1a1a;
+  color: #777; border: 1px solid #1e1e1e;
   padding: 5px 10px; border-radius: 3px;
   background: #080808;
   animation: tagFadeIn 0.5s ease forwards;
@@ -168,10 +168,10 @@
   display: inline-flex; align-items: center;
   gap: 10px; font-family: var(--mono);
   font-size: 10px; letter-spacing: 2px;
-  color: #2a2a2a; padding: 0 24px;
+  color: #444; padding: 0 24px;
   text-transform: uppercase;
 }
-.lp-ticker-dot { color: var(--green); font-size: 7px; }
+.lp-ticker-dot { color: var(--green); font-size: 7px; opacity: 0.7; }
 @keyframes ticker {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }
@@ -218,12 +218,12 @@
 }
 .lp-in-view .lp-problem-card { opacity: 1; }
 .lp-problem-card:hover { border-color: #1e1e1e; transform: translateY(-2px); }
-.lp-problem-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
-.lp-problem-text { font-size: 13px; color: #888; line-height: 1.65; font-weight: 300; }
+.lp-problem-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+.lp-problem-text { font-size: 14px; color: #ccc; line-height: 1.7; font-weight: 400; }
 .lp-problem-closer {
-  font-size: 18px; color: #fff; font-weight: 500;
-  padding: 28px; border: 1px solid #111;
-  border-radius: 8px; background: #060606;
+  font-size: 20px; color: #fff; font-weight: 500;
+  padding: 32px; border: 1px solid #1a1a1a;
+  border-radius: 8px; background: #080808;
   letter-spacing: -0.3px;
 }
 
@@ -459,3 +459,61 @@
   .lp-final-section { padding: 60px 16px; }
   .lp-footer { padding: 20px 16px; flex-direction: column; align-items: flex-start; }
 }
+
+/* ── Mock card extras ──────────────────────────────── */
+.lp-mock-coin-sym {
+  font-family: var(--mono); font-size: 11px;
+  color: #444; letter-spacing: 1px;
+}
+.lp-mock-circles {
+  display: flex; align-items: center; justify-content: center;
+  gap: 24px; padding: 24px 20px 12px;
+  border-bottom: 1px solid #0d0d0d;
+}
+.lp-mock-circle-wrap { display: flex; align-items: center; justify-content: center; }
+.lp-mock-purity-wrap { display: flex; align-items: center; justify-content: center; }
+
+.lp-mock-meta {
+  display: flex; gap: 32px; padding: 14px 20px;
+  border-bottom: 1px solid #0d0d0d;
+  justify-content: center;
+}
+.lp-mock-meta-col { display: flex; flex-direction: column; gap: 3px; align-items: center; }
+.lp-mock-meta-label { font-size: 9px; color: #444; text-transform: uppercase; letter-spacing: 1.5px; }
+.lp-mock-meta-val { font-size: 13px; font-weight: 600; letter-spacing: 1px; }
+
+.lp-mock-peak {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 12px 20px; border-bottom: 1px solid #0d0d0d;
+  flex-wrap: wrap;
+}
+.lp-mock-peak-label { font-size: 9px; color: #444; text-transform: uppercase; letter-spacing: 1.5px; }
+.lp-mock-peak-val { font-family: var(--mono); font-size: 20px; font-weight: 700; color: #4ade80; }
+.lp-mock-peak-range { font-size: 11px; color: #555; }
+.lp-mock-peak-now { font-size: 11px; color: #444; margin-left: auto; }
+
+/* ── Social links ──────────────────────────────────── */
+.lp-footer-socials {
+  display: flex; gap: 4px; align-items: center;
+}
+.lp-social-link {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px;
+  border: 1px solid #1a1a1a; border-radius: 4px;
+  color: #444; font-size: 13px; text-decoration: none;
+  transition: all 0.15s; background: none;
+}
+.lp-social-link:hover { border-color: var(--green); color: var(--green); }
+
+/* Also add social links in hero eyebrow area for nav */
+.lp-nav-socials {
+  display: flex; gap: 4px; margin-right: 8px;
+}
+.lp-nav-social {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  border: 1px solid #1a1a1a; border-radius: 4px;
+  color: #444; font-size: 12px; text-decoration: none;
+  transition: all 0.15s;
+}
+.lp-nav-social:hover { border-color: #333; color: #aaa; }

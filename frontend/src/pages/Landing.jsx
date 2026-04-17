@@ -11,7 +11,7 @@ const SIGNALS = [
 ]
 
 const PROBLEMS = [
-  { icon: '⚠', text: 'You find a coin. It looks clean. You ape in. It rugs in 4 minutes.' },
+  { icon: '⚠', text: 'You find a coin. It looks clean. You ape in. It rugs.' },
   { icon: '📊', text: 'You\'re reading charts alone while the people with real data are already out.' },
   { icon: '💬', text: 'Alpha gets shared in private groups. You\'re always the last to know.' },
   { icon: '🎰', text: 'Every trade feels like a coin flip because you\'re flying blind.' },
@@ -38,13 +38,10 @@ const PILLARS = [
   },
 ]
 
-const MOCK_SIGNALS = [
-  { label: 'Rug Probability', value: '12%', color: '#4ade80' },
-  { label: 'Bundle Score', value: '0%', color: '#4ade80' },
-  { label: 'Purity', value: '74/100', color: '#a78bfa' },
-  { label: 'Fresh Wallets', value: '3 (4%)', color: '#4ade80' },
-  { label: 'Dev Sold', value: '0%', color: '#4ade80' },
-  { label: 'Est. Peak', value: '$8.5M', color: '#a78bfa' },
+const SOCIALS = [
+  { icon: '𝕏', label: 'Twitter', url: 'https://x.com/OrbitDevs00' },
+  { icon: '💬', label: 'Discord', url: 'https://discord.gg/792YWsb4sA' },
+  { icon: '⌥', label: 'GitHub', url: 'https://github.com/orbitdev00' },
 ]
 
 function useInView(ref, threshold = 0.15) {
@@ -77,7 +74,15 @@ export default function Landing({ onSwitch }) {
   useEffect(() => { setTimeout(() => setVisible(true), 60) }, [])
   useEffect(() => { if (mockInView) setTimeout(() => setMockVisible(true), 200) }, [mockInView])
 
-  // Starfield
+  // Parallax scroll ref
+  const scrollYRef = useRef(0)
+  useEffect(() => {
+    const onScroll = () => { scrollYRef.current = window.scrollY }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Starfield with parallax
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -87,7 +92,7 @@ export default function Landing({ onSwitch }) {
 
     const resize = () => {
       canvas.width  = window.innerWidth
-      canvas.height = window.innerHeight
+      canvas.height = window.innerHeight + 300
       stars = Array.from({ length: 400 }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
@@ -95,15 +100,18 @@ export default function Landing({ onSwitch }) {
         o: Math.random() * 0.6 + 0.15,
         speed: Math.random() * 0.012 + 0.004,
         phase: Math.random() * Math.PI * 2,
+        depth: Math.random() * 0.4 + 0.05, // parallax factor
       }))
     }
 
     const draw = (t) => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+      const scrollOffset = scrollYRef.current
       stars.forEach(s => {
         const opacity = s.o + Math.sin(t * 0.001 * s.speed * 60 + s.phase) * 0.2
+        const py = s.y - scrollOffset * s.depth
         ctx.beginPath()
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2)
+        ctx.arc(s.x, py, s.r, 0, Math.PI * 2)
         ctx.fillStyle = `rgba(255,255,255,${Math.max(0, Math.min(1, opacity))})`
         ctx.fill()
       })
@@ -128,6 +136,13 @@ export default function Landing({ onSwitch }) {
           <span className="lp-nav-version">v0.2</span>
         </div>
         <div className="lp-nav-actions">
+          <div className="lp-nav-socials">
+            {SOCIALS.map(s => (
+              <a key={s.label} href={s.url} target="_blank" rel="noopener noreferrer" className="lp-nav-social" title={s.label}>
+                {s.icon}
+              </a>
+            ))}
+          </div>
           <button className="lp-btn-ghost" onClick={() => onSwitch('login')}>Sign in</button>
           <button className="lp-btn-primary" onClick={() => onSwitch('signup')}>Get started free</button>
         </div>
@@ -156,7 +171,7 @@ export default function Landing({ onSwitch }) {
             Try one analysis free →
           </button>
         </div>
-        <p className="lp-hero-note">No wallet required. No credit card. Ever.</p>
+        <p className="lp-hero-note">No wallet required to start.</p>
 
         {/* Floating signal tags */}
         <div className="lp-hero-tags">
@@ -224,44 +239,97 @@ export default function Landing({ onSwitch }) {
           20+ on-chain signals, AI narrative, and probability bands — in under 5 seconds.
         </p>
         <div ref={mockRef} className={`lp-mock-card ${mockVisible ? 'lp-mock-visible' : ''}`}>
+          {/* Header */}
           <div className="lp-mock-header">
             <div className="lp-mock-coin">
               <div className="lp-mock-coin-dot" />
               <span className="lp-mock-coin-name">ASTEROID</span>
+              <span className="lp-mock-coin-sym">ASTEROID</span>
               <span className="lp-mock-coin-badge">Migrated</span>
             </div>
             <div className="lp-mock-mc">$5.15M MC</div>
           </div>
-          <div className="lp-mock-signals">
-            {MOCK_SIGNALS.map((s, i) => (
-              <div key={s.label} className="lp-mock-signal" style={{ animationDelay: mockVisible ? `${i * 0.08}s` : '0s' }}>
-                <span className="lp-mock-signal-label">{s.label}</span>
-                <span className="lp-mock-signal-value" style={{ color: s.color }}>{s.value}</span>
-              </div>
-            ))}
+
+          {/* Circles row like real panel */}
+          <div className="lp-mock-circles">
+            <div className="lp-mock-circle-wrap">
+              <svg width="64" height="64" viewBox="0 0 64 64">
+                <circle cx="32" cy="32" r="26" fill="none" stroke="#1a1a1a" strokeWidth="5"/>
+                <circle cx="32" cy="32" r="26" fill="none" stroke="#4ade80" strokeWidth="5"
+                  strokeDasharray={`${mockVisible ? 163.36*0.12 : 0} 163.36`}
+                  strokeDashoffset="40.84" strokeLinecap="round"
+                  style={{transition:'stroke-dasharray 1s ease 0.3s'}}/>
+                <text x="32" y="30" textAnchor="middle" fill="#4ade80" fontSize="13" fontWeight="700" fontFamily="Inter">12</text>
+                <text x="32" y="42" textAnchor="middle" fill="#555" fontSize="8" fontFamily="Inter">RUG %</text>
+              </svg>
+            </div>
+            <div className="lp-mock-purity-wrap">
+              <svg width="100" height="100" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="#1a1a1a" strokeWidth="7"/>
+                <circle cx="50" cy="50" r="42" fill="none" stroke="#f59e0b" strokeWidth="7"
+                  strokeDasharray={`${mockVisible ? 263.89*0.74 : 0} 263.89`}
+                  strokeDashoffset="65.97" strokeLinecap="round"
+                  style={{transition:'stroke-dasharray 1s ease 0.2s'}}/>
+                <text x="50" y="44" textAnchor="middle" fill="#fff" fontSize="22" fontWeight="700" fontFamily="Inter">74</text>
+                <text x="50" y="56" textAnchor="middle" fill="#555" fontSize="9" fontFamily="Inter">/100</text>
+                <text x="50" y="68" textAnchor="middle" fill="#aaa" fontSize="8" fontFamily="Inter">PURITY</text>
+              </svg>
+            </div>
+            <div className="lp-mock-circle-wrap">
+              <svg width="64" height="64" viewBox="0 0 64 64">
+                <circle cx="32" cy="32" r="26" fill="none" stroke="#1a1a1a" strokeWidth="5"/>
+                <circle cx="32" cy="32" r="26" fill="none" stroke="#4ade80" strokeWidth="5"
+                  strokeDasharray={`0 163.36`} strokeLinecap="round"/>
+                <text x="32" y="30" textAnchor="middle" fill="#4ade80" fontSize="13" fontWeight="700" fontFamily="Inter">0</text>
+                <text x="32" y="42" textAnchor="middle" fill="#555" fontSize="8" fontFamily="Inter">BUNDLE %</text>
+              </svg>
+            </div>
           </div>
+
+          {/* Momentum + Stage */}
+          <div className="lp-mock-meta">
+            <div className="lp-mock-meta-col">
+              <span className="lp-mock-meta-label">Momentum</span>
+              <span className="lp-mock-meta-val" style={{color:'#a78bfa'}}>BUILDING</span>
+            </div>
+            <div className="lp-mock-meta-col">
+              <span className="lp-mock-meta-label">Stage</span>
+              <span className="lp-mock-meta-val" style={{color:'#e8e8e8'}}>Post Migration Pump</span>
+            </div>
+          </div>
+
+          {/* Prob bars */}
           <div className="lp-mock-bars">
             <div className="lp-mock-bar-label">Probability of reaching</div>
-            {[['$100K', 100], ['$500K', 100], ['$1M', 92], ['$5M', 68], ['$10M', 42]].map(([label, pct], i) => (
+            {[['$100K', 100, '#4ade80'], ['$250K', 100, '#4ade80'], ['$500K', 100, '#4ade80'], ['$1M', 95, '#4ade80'], ['$5M', 78, '#f59e0b'], ['$10M', 52, '#f97316']].map(([label, pct, col], i) => (
               <div key={label} className="lp-mock-bar-row">
                 <span className="lp-mock-bar-target">{label}</span>
                 <div className="lp-mock-bar-track">
-                  <div
-                    className="lp-mock-bar-fill"
-                    style={{ width: mockVisible ? `${pct}%` : '0%', transitionDelay: `${0.4 + i * 0.08}s` }}
+                  <div className="lp-mock-bar-fill"
+                    style={{ width: mockVisible ? `${pct}%` : '0%', background: col, transitionDelay: `${0.3 + i * 0.07}s` }}
                   />
                 </div>
-                <span className="lp-mock-bar-pct" style={{ color: pct >= 50 ? '#4ade80' : '#f97316' }}>{pct}%</span>
+                <span className="lp-mock-bar-pct" style={{ color: col }}>{pct}%</span>
               </div>
             ))}
           </div>
+
+          {/* Est peak */}
+          <div className="lp-mock-peak">
+            <span className="lp-mock-peak-label">Estimated Peak</span>
+            <span className="lp-mock-peak-val">$8.50M</span>
+            <span className="lp-mock-peak-range">$7.2M — $9.8M</span>
+            <span className="lp-mock-peak-now">now: $5.15M</span>
+          </div>
+
+          {/* AI narrative */}
           <div className="lp-mock-narrative">
-            <span className="lp-mock-narrative-label">AI Analysis</span>
+            <span className="lp-mock-narrative-label">Orbit Analysis</span>
             ASTEROID shows strong post-migration fundamentals with clean holder distribution and zero dev risk. High organic volume suggests sustained interest. Recommend monitoring for entry on dips toward $4.2M...
           </div>
         </div>
         <button className="lp-btn-outline lp-btn-lg lp-mock-cta" onClick={() => onSwitch('trial')}>
-          Try it yourself — free, no account needed →
+          Try it yourself — free, no account needed (yet) →
         </button>
       </Section>
 
@@ -323,6 +391,13 @@ export default function Landing({ onSwitch }) {
           <img src={orbitPfp} className="lp-nav-pfp" alt="" />
           <span className="lp-nav-title">ORBIT</span>
           <span className="lp-nav-version">v0.2</span>
+        </div>
+        <div className="lp-footer-socials">
+          {SOCIALS.map(s => (
+            <a key={s.label} href={s.url} target="_blank" rel="noopener noreferrer" className="lp-social-link" title={s.label}>
+              {s.icon}
+            </a>
+          ))}
         </div>
         <div className="lp-footer-links">
           <button className="lp-footer-link" onClick={() => onSwitch('login')}>Sign in</button>

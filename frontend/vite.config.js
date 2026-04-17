@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const RAILWAY_URL = 'https://backend-production-XXXX.up.railway.app' // ← replace after Railway deploys
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -17,13 +19,18 @@ export default defineConfig({
       '/stats':        { target: 'http://localhost:8000', changeOrigin: true },
       '/health':       { target: 'http://localhost:8000', changeOrigin: true },
       '/test-supabase':{ target: 'http://localhost:8000', changeOrigin: true },
-      '/pnl':        { target: 'http://localhost:8000', changeOrigin: true },
-      '/snapshot':   { target: 'http://localhost:8000', changeOrigin: true },
+      '/pnl':          { target: 'http://localhost:8000', changeOrigin: true },
+      '/snapshot':     { target: 'http://localhost:8000', changeOrigin: true },
       '/ws': {
         target: 'ws://localhost:8000',
         ws: true,
         changeOrigin: true,
       },
     }
+  },
+  define: {
+    __API_URL__: JSON.stringify(
+      process.env.NODE_ENV === 'production' ? RAILWAY_URL : 'http://localhost:8000'
+    )
   }
 })

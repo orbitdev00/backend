@@ -189,8 +189,8 @@ export default function Landing({ onSwitch }) {
         <div className="lp-problem-grid">
           {[
             ['Rugs in seconds', 'You find a coin. It looks clean. You ape in. It rugs.'],
-            ['Late to the alpha', 'Real calls happen in private groups. You're always last.'],
-            ['No on-chain context', 'Charts tell you price. Not who's holding, who sold, or who bundled.'],
+            ['Late to the alpha', 'Real calls happen in private groups. You are always last.'],
+            ['No on-chain context', 'Charts tell you price. Not who is holding, who sold, or who bundled.'],
             ['Flying blind', 'Every trade feels like a coin flip because it basically is.'],
           ].map(([title, body], i) => (
             <Reveal key={i} delay={i * 80}>

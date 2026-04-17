@@ -21,7 +21,7 @@
 }
 .lb-row:last-child { border-bottom: none; }
 .lb-row:hover { background: #111; }
-.lb-row.lb-you { background: rgba(34,197,94,0.04); border-left: 2px solid var(--green); }
+.lb-row.lb-you { background: rgba(167,139,250,0.04); border-left: 2px solid var(--green); }
 .lb-rank { font-size: 14px; text-align: center; }
 .lb-user { display: flex; align-items: center; gap: 10px; font-weight: 400; color: #ddd; }
 .lb-avatar {

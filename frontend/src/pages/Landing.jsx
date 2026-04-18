@@ -189,6 +189,10 @@ export default function Landing({ onSwitch }) {
 
   const flyTo = (e, dest) => {
     if (bhRef.current.active) return
+    // Lock scroll immediately
+    document.body.style.overflow = 'hidden'
+    document.body.style.position = 'fixed'
+    document.body.style.width = '100%'
     const rect = e.currentTarget.getBoundingClientRect()
     const cx = rect.left + rect.width / 2
     const cy = rect.top + rect.height / 2
@@ -331,9 +335,11 @@ export default function Landing({ onSwitch }) {
         // Page elements scale toward black hole
         pageEls.forEach(el => {
           const normD=el._dist/maxDist
-          const lT=Math.min(1,et*(0.4+(1-normD)*0.8))
-          const ease=easeIO(lT)
-          const sc=Math.max(0,1-ease)
+          // All elements must reach sc=0 by t=1, closer ones get there sooner
+          const delay = normD * 0.3  // far elements start later
+          const localT = Math.min(1, Math.max(0, (et - delay) / (1 - delay)))
+          const ease = easeIO(localT)
+          const sc = Math.max(0, 1 - ease)
           el.style.transform=`scale(${sc})`
           el.style.opacity=t > 0.66 ? `${Math.max(0, 1 - (t - 0.66) / 0.34)}` : '1'
         })
@@ -357,6 +363,9 @@ export default function Landing({ onSwitch }) {
           })
           bhRef.current.active=false
           delete canvas.dataset.bhActive
+          document.body.style.overflow = ''
+          document.body.style.position = ''
+          document.body.style.width = ''
           const style=document.createElement('style')
           style.id='orbit-fadein'
           style.textContent=`body>*{animation:orbitFI 0.55s ease forwards}@keyframes orbitFI{from{opacity:0}to{opacity:1}}`

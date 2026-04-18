@@ -991,3 +991,31 @@
   padding-bottom: 48px !important;
   border-bottom: none !important;
 }
+
+/* ── Black hole z-index control ────────────────────── */
+/* Canvas starts at z-index 9 — below all page content */
+/* .lp-bh-sucking flips the relationship */
+
+.lp {
+  position: relative;
+  z-index: 10; /* sits above canvas z-index 9 */
+}
+
+.lp-bh-canvas {
+  z-index: 9 !important;
+}
+
+/* When sucking starts, drop page content below canvas */
+body.lp-bh-sucking .lp {
+  z-index: 8 !important;
+  pointer-events: none;
+}
+
+body.lp-bh-sucking .lp-bh-canvas {
+  z-index: 9999 !important;
+}
+
+/* Stars canvas always below page */
+.lp-canvas {
+  z-index: 0 !important;
+}

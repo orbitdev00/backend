@@ -177,6 +177,7 @@ export default function LandingBlackHole({ active, origin, onDone }) {
           if (lpCanvas) lpCanvas.style.display = 'none'
           lpHidden = true
           canvas.style.zIndex = '9999'
+          document.body.classList.add('lp-bh-sucking')
           state.phase = 'suck'; state.t0 = ts
         }
 
@@ -251,6 +252,7 @@ export default function LandingBlackHole({ active, origin, onDone }) {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
       if (lpCanvas) { lpCanvas.style.display = ''; lpCanvas.style.opacity = '' }
+      document.body.classList.remove('lp-bh-sucking')
       contentEls.forEach(el => {
         el.style.transform = ''
         el.style.opacity = ''
@@ -262,10 +264,11 @@ export default function LandingBlackHole({ active, origin, onDone }) {
   return (
     <canvas
       ref={canvasRef}
+      className="lp-bh-canvas"
       style={{
         display: 'none',
         position: 'fixed', inset: 0,
-        zIndex: 50,
+        zIndex: 9,
         pointerEvents: active ? 'all' : 'none',
       }}
     />

@@ -189,10 +189,13 @@ export default function Landing({ onSwitch }) {
 
   const flyTo = (e, dest) => {
     if (bhRef.current.active) return
-    // Lock scroll immediately
+    // Lock scroll without moving page
+    const scrollY = window.scrollY
     document.body.style.overflow = 'hidden'
+    document.body.style.top = `-${scrollY}px`
     document.body.style.position = 'fixed'
     document.body.style.width = '100%'
+    document.body.dataset.scrollY = scrollY
     const rect = e.currentTarget.getBoundingClientRect()
     const cx = rect.left + rect.width / 2
     const cy = rect.top + rect.height / 2
@@ -366,6 +369,8 @@ export default function Landing({ onSwitch }) {
           document.body.style.overflow = ''
           document.body.style.position = ''
           document.body.style.width = ''
+          document.body.style.top = ''
+          window.scrollTo(0, parseInt(document.body.dataset.scrollY || '0'))
           const style=document.createElement('style')
           style.id='orbit-fadein'
           style.textContent=`body>*{animation:orbitFI 0.55s ease forwards}@keyframes orbitFI{from{opacity:0}to{opacity:1}}`

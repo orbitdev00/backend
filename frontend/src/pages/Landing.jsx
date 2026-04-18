@@ -305,7 +305,7 @@ export default function Landing({ onSwitch }) {
       ctx.fillRect(0,0,W,H)
 
       if (state.phase === 'spawn') {
-        drawDisk(ease3(t)*130, ease3(t))
+        drawDisk(ease3(t)*65, ease3(t))
         // Draw stars normally during spawn
         for (const s of starSnap) {
           ctx.beginPath(); ctx.arc(s.x, s.y - (window.scrollY||0)*0.2, s.r, 0, Math.PI*2)
@@ -315,7 +315,7 @@ export default function Landing({ onSwitch }) {
 
       } else if (state.phase === 'absorb') {
         const et = easeIO(t)
-        drawDisk(130, 1)
+        drawDisk(65, 1)
         // Stars pulled toward black hole
         for (const s of starSnap) {
           const sy = s.y - (window.scrollY||0)*0.2
@@ -335,7 +335,7 @@ export default function Landing({ onSwitch }) {
           const ease=easeIO(lT)
           const sc=Math.max(0,1-ease)
           el.style.transform=`scale(${sc})`
-          el.style.opacity='1'
+          el.style.opacity=t > 0.66 ? `${Math.max(0, 1 - (t - 0.66) / 0.34)}` : '1'
         })
         if (t>=1) {
           pageEls.forEach(el=>{el.style.opacity='0';el.style.transform='scale(0)'})
@@ -344,7 +344,7 @@ export default function Landing({ onSwitch }) {
 
       } else if (state.phase === 'implode') {
         const et = easeIn(t)
-        const holeR = Math.max(0,130*(1-et))
+        const holeR = Math.max(0,65*(1-et))
         if(holeR>1) drawDisk(holeR,1-et*0.5)
         ctx.fillStyle=`rgba(0,0,0,${et})`
         ctx.fillRect(0,0,W,H)

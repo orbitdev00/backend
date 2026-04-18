@@ -797,6 +797,5 @@ export default function Landing({ onSwitch }) {
         </div>
       </footer>
     </div>
-    </>
   )
 }

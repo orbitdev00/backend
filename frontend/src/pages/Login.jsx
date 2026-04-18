@@ -29,7 +29,7 @@ export default function Login({ onSwitch, onTrial }) {
   }
 
   return (
-    <div className="auth-page">
+    <div className="auth-page orbit-page-fadein">
       <div className="auth-card">
         <img src={orbitPfp} alt="ORBIT" className="auth-logo" />
         <h1 className="auth-title">ORBIT</h1>

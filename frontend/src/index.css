@@ -51,3 +51,12 @@ body {
 .c-purple { color: #a78bfa !important; }
 .c-red    { color: #f87171 !important; }
 .c-yellow { color: #fbbf24 !important; }
+
+/* ── Page transition fade-in ──────────────────────── */
+.orbit-page-fadein {
+  animation: orbitPageFadeIn 0.55s ease forwards;
+}
+@keyframes orbitPageFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

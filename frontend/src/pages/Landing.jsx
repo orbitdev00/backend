@@ -257,8 +257,8 @@ export default function Landing({ onSwitch }) {
           </p>
         </Reveal>
         <Reveal delay={340} className="lp-hero-cta-wrap">
-          <button className="lp-cta-primary" onClick={() => onSwitch('signup')}>Create free account</button>
-          <button className="lp-cta-ghost" onClick={() => onSwitch('trial')}>Try one analysis free →</button>
+          <button className="lp-cta-primary" onClick={(e) => flyTo(e, 'signup')}>Create free account</button>
+          <button className="lp-cta-ghost" onClick={(e) => flyTo(e, 'trial')}>Try one analysis free →</button>
         </Reveal>
         <Reveal delay={440}>
           <div className="lp-hero-stats">

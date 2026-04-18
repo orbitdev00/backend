@@ -176,6 +176,7 @@ export default function LandingBlackHole({ active, origin, onDone }) {
         if (t >= 1) {
           if (lpCanvas) lpCanvas.style.display = 'none'
           lpHidden = true
+          canvas.style.zIndex = '9999'
           state.phase = 'suck'; state.t0 = ts
         }
 
@@ -231,6 +232,12 @@ export default function LandingBlackHole({ active, origin, onDone }) {
 
         if (t >= 1 && !state.called) {
           state.called = true
+          // Inject fade-in style for next page
+          const style = document.createElement('style')
+          style.id = 'orbit-fadein'
+          style.textContent = 'body > * { animation: orbitFadeIn 0.6s ease forwards !important } @keyframes orbitFadeIn { from { opacity: 0 } to { opacity: 1 } }'
+          document.head.appendChild(style)
+          setTimeout(() => { const s = document.getElementById('orbit-fadein'); if(s) s.remove() }, 800)
           if (onDone) onDone()
         }
       }
@@ -258,7 +265,7 @@ export default function LandingBlackHole({ active, origin, onDone }) {
       style={{
         display: 'none',
         position: 'fixed', inset: 0,
-        zIndex: 9999,
+        zIndex: 50,
         pointerEvents: active ? 'all' : 'none',
       }}
     />

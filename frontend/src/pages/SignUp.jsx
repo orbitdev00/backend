@@ -64,7 +64,7 @@ export default function SignUp({ onSwitch }) {
 
   if (success) {
     return (
-      <div className="auth-page">
+      <div className="auth-page orbit-page-fadein">
         <div className="auth-card">
           <img src={orbitPfp} alt="ORBIT" className="auth-logo" />
           <h1 className="auth-title">Check your email</h1>
@@ -90,7 +90,7 @@ export default function SignUp({ onSwitch }) {
   }
 
   return (
-    <div className="auth-page">
+    <div className="auth-page orbit-page-fadein">
       <div className="auth-card">
         <img src={orbitPfp} alt="ORBIT" className="auth-logo" />
         <h1 className="auth-title">ORBIT</h1>

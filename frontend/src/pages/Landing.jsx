@@ -298,8 +298,8 @@ export default function Landing({ onSwitch }) {
       }
 
       const maxR = Math.sqrt(W*W+H*H)
-      const PHASES = { grow:900, suck:1000, implode:500 }
-      const state = { phase:'grow', t0:performance.now(), called:false }
+      const PHASES = { suck:1200, implode:600 }
+      const state = { phase:'suck', t0:performance.now(), called:false }
 
       const frame = ts => {
         const dur = PHASES[state.phase]
@@ -307,13 +307,9 @@ export default function Landing({ onSwitch }) {
         bhCtx.fillStyle = '#000'
         bhCtx.fillRect(0,0,W,H)
 
-        if (state.phase === 'grow') {
-          drawDisk(ease3(t)*140, ease3(t))
-          if (t>=1) { state.phase='suck'; state.t0=ts }
-
-        } else if (state.phase === 'suck') {
+        if (state.phase === 'suck') {
           const et = easeIO(t)
-          drawDisk(140+et*10, 1)
+          drawDisk(130, 1)
           for (const s of starSnap) {
             const dist=Math.sqrt((s.x-cx)**2+(s.y-cy)**2)
             const lT=Math.min(1,et*(0.3+(1-dist/maxR)*0.8))

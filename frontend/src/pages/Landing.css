@@ -842,3 +842,52 @@
   .lp-problem-row { grid-template-columns: 1fr; }
   .lp-forum-thread-left { display: none; }
 }
+
+/* ── Label even bigger ─────────────────────────────── */
+.lp-label {
+  font-size: 16px !important;
+  letter-spacing: 5px !important;
+  font-weight: 600 !important;
+  margin-bottom: 28px !important;
+}
+
+/* ── Guessing underline ────────────────────────────── */
+.lp-underline {
+  text-decoration: underline;
+  text-decoration-color: var(--purple);
+  text-underline-offset: 6px;
+  text-decoration-thickness: 2px;
+}
+
+/* ── Mock summary grid ─────────────────────────────── */
+.lp-mock-summary {
+  margin-top: 32px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 32px;
+  padding: 28px 32px;
+  background: #080808;
+  border: 1px solid #141414;
+  border-radius: 6px;
+}
+.lp-mock-summary-item {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px; color: #888; font-weight: 300;
+}
+.lp-mock-summary-icon {
+  font-size: 7px; flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .lp-mock-summary { grid-template-columns: 1fr; }
+  .lp-label { font-size: 13px !important; letter-spacing: 3px !important; }
+}
+
+/* ── Community body text ───────────────────────────── */
+.lp-community-body {
+  font-family: 'Inter', sans-serif;
+  font-size: 16px; color: #888; font-weight: 300;
+  max-width: 540px; line-height: 1.75;
+  margin-bottom: 8px; margin-top: -20px;
+}

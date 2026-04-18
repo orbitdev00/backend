@@ -308,7 +308,7 @@ export default function Landing({ onSwitch }) {
       {/* ── MOCK ANALYZER ── */}
       <section className="lp-section lp-mock-section">
         <Reveal>
-          <div className="lp-label">Live demo</div>
+          <div className="lp-label">Token Intelligence</div>
           <h2 className="lp-h2">This is what you get.<br />In under 5 seconds.</h2>
         </Reveal>
         <div ref={mockRef} className={`lp-mock ${mockVisible ? 'lp-mock-go' : ''}`}>
@@ -385,9 +385,14 @@ export default function Landing({ onSwitch }) {
         </div>
 
         <Reveal delay={100}>
-          <button className="lp-cta-ghost" style={{marginTop:32}} onClick={() => onSwitch('trial')}>
-            Try it yourself — no account needed (yet) →
-          </button>
+          <div className="lp-mock-summary">
+            <div className="lp-mock-summary-item"><span className="lp-mock-summary-icon" style={{color:'#4ade80'}}>◆</span><span>Rug probability score from 0 to 100</span></div>
+            <div className="lp-mock-summary-item"><span className="lp-mock-summary-icon" style={{color:'#a78bfa'}}>◆</span><span>Purity score measuring holder legitimacy</span></div>
+            <div className="lp-mock-summary-item"><span className="lp-mock-summary-icon" style={{color:'#60a5fa'}}>◆</span><span>Bundle detection across all wallet clusters</span></div>
+            <div className="lp-mock-summary-item"><span className="lp-mock-summary-icon" style={{color:'#f59e0b'}}>◆</span><span>AI narrative with entry recommendation</span></div>
+            <div className="lp-mock-summary-item"><span className="lp-mock-summary-icon" style={{color:'#4ade80'}}>◆</span><span>Probability bands for $100K to $10M milestones</span></div>
+            <div className="lp-mock-summary-item"><span className="lp-mock-summary-icon" style={{color:'#f87171'}}>◆</span><span>Dev sell history and fresh wallet concentration</span></div>
+          </div>
         </Reveal>
       </section>
 
@@ -396,12 +401,15 @@ export default function Landing({ onSwitch }) {
         <div style={{borderTop:'1px solid var(--line)', paddingTop:80}}>
           <Reveal>
             <div className="lp-label">Trader Community</div>
-            <h2 className="lp-h2">Alpha shared in public.<br /><em>Reputation earned on-chain.</em></h2>
+            <h2 className="lp-h2">No influencers. No paid promotions.<br /><em>Just traders.</em></h2>
+            <p className="lp-community-body">
+              Post your analysis. Share your calls. Build a reputation based on what you actually say — not how many followers you have. The forum is merit-based. The chain keeps score.
+            </p>
           </Reveal>
           <Reveal delay={100}>
             <div className="lp-community-demo">
               <div className="lp-forum-header">
-                <span className="lp-forum-category">Calls</span>
+                <span className="lp-forum-category">Announcements</span>
                 <span className="lp-forum-category">Analysis</span>
                 <span className="lp-forum-category lp-forum-active">General</span>
                 <span className="lp-forum-category">Education</span>
@@ -429,6 +437,57 @@ export default function Landing({ onSwitch }) {
                     </div>
                     <div className="lp-forum-thread-title">{t.title}</div>
                     <div className="lp-forum-thread-foot">{t.replies} replies</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── ALERTS DEMO ── */}
+      <section className="lp-section lp-alerts-section">
+        <div style={{borderTop:'1px solid var(--line)', paddingTop:80}}>
+          <Reveal>
+            <div className="lp-label">Price Alerts</div>
+            <h2 className="lp-h2">Set it.<br /><em>Get notified. Act first.</em></h2>
+          </Reveal>
+          <Reveal delay={100}>
+            <div className="lp-alerts-demo">
+              <div className="lp-alerts-header">
+                <span className="lp-alerts-title">Watchlist</span>
+                <span className="lp-alerts-count">4 tokens</span>
+              </div>
+              {[
+                { name:'DOGE', ca:'7xK2...mF9p', target:'$8M', dir:'above', mc:'$5.15M', status:'watching', pct:64 },
+                { name:'PEPE2', ca:'9mN4...kL2w', target:'$500K', dir:'above', mc:'$487K', status:'close', pct:97 },
+                { name:'RUGME', ca:'3pQ8...xR7t', target:'$100K', dir:'below', mc:'$234K', status:'watching', pct:43 },
+                { name:'MOON', ca:'2kF1...vB9s', target:'$2M', dir:'above', mc:'$2.1M', status:'triggered', pct:100 },
+              ].map((a, i) => (
+                <div key={i} className={`lp-alert-row ${a.status === 'triggered' ? 'lp-alert-triggered' : ''}`}>
+                  <div className="lp-alert-coin">
+                    <span className="lp-alert-name">{a.name}</span>
+                    <span className="lp-alert-ca">{a.ca}</span>
+                  </div>
+                  <div className="lp-alert-target">
+                    <span className="lp-alert-target-label">Target</span>
+                    <span className="lp-alert-target-val">{a.target} {a.dir}</span>
+                  </div>
+                  <div className="lp-alert-mc">
+                    <span className="lp-alert-mc-label">Current MC</span>
+                    <span className="lp-alert-mc-val">{a.mc}</span>
+                  </div>
+                  <div className="lp-alert-bar-wrap">
+                    <div className="lp-alert-bar-track">
+                      <div className="lp-alert-bar-fill" style={{
+                        width:`${a.pct}%`,
+                        background: a.status==='triggered' ? '#4ade80' : a.status==='close' ? '#f59e0b' : '#a78bfa'
+                      }} />
+                    </div>
+                    <span className="lp-alert-pct">{a.pct}%</span>
+                  </div>
+                  <div className={`lp-alert-status lp-alert-${a.status}`}>
+                    {a.status === 'triggered' ? '🔔 Triggered' : a.status === 'close' ? 'Close' : 'Watching'}
                   </div>
                 </div>
               ))}

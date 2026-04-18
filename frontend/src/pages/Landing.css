@@ -978,3 +978,16 @@
   color: var(--card-color);
   opacity: 0.6;
 }
+
+/* ── Community note spacing ────────────────────────── */
+.lp-community-note {
+  margin-top: 16px !important;
+  margin-bottom: 32px !important;
+}
+
+/* ── Cupsey joke bottom padding ────────────────────── */
+.lp-joke-strip-center {
+  padding-top: 24px !important;
+  padding-bottom: 48px !important;
+  border-bottom: none !important;
+}

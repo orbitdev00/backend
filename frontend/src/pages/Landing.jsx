@@ -402,7 +402,7 @@ export default function Landing({ onSwitch }) {
       </section>
 
       {/* ── COMMUNITY DEMO ── */}
-      <section className="lp-section lp-community-section">
+      <section className="lp-section lp-community-section" id="section-community">
         <div style={{borderTop:'1px solid var(--line)', paddingTop:80}}>
           <Reveal>
             <div className="lp-label">Trader Community</div>
@@ -413,7 +413,7 @@ export default function Landing({ onSwitch }) {
           </Reveal>
           <Reveal delay={80}>
             <p className="lp-community-note">
-              Friendly reminder: the average X call lasts 9 minutes before the dev rugs and the account goes private. Orbit analysis lasts forever. Or until you close the tab.
+              Friendly reminder: the average X community is active for 9 minutes before the dev rugs and the account goes private. Orbit analysis lasts longer. Hopefully.
             </p>
           </Reveal>
           <Reveal delay={100}>

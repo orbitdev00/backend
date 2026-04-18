@@ -65,6 +65,11 @@ function FeaturesSection() {
       <Reveal>
         <div className="lp-label">The platform</div>
         <h2 className="lp-h2">Four tools.<br />One unfair advantage.</h2>
+        <div className="lp-platform-tool-labels">
+          {PLATFORM_CARDS.map((c, i) => (
+            <span key={i} className="lp-tool-label" style={{color: c.color, borderColor: c.color + '44'}}>{c.icon} {c.title}</span>
+          ))}
+        </div>
       </Reveal>
       <div className="lp-platform-grid">
         {PLATFORM_CARDS.map((c, i) => (
@@ -259,25 +264,25 @@ export default function Landing({ onSwitch }) {
           <div className="lp-label">The problem</div>
           <h2 className="lp-h2">Most traders lose<br />because they're guessing.</h2>
         </Reveal>
-        <div className="lp-problem-grid">
+        <div className="lp-problem-row">
           {[
-            ['Rugs in seconds', 'You find a coin. It looks clean. You ape in. It rugs.'],
-            ['Late to the alpha', 'Real calls happen in private groups. You are always last.'],
-            ['No on-chain context', 'Charts tell you price. Not who is holding, who sold, or who bundled.'],
-            ['Flying blind', 'Every trade feels like a coin flip because it basically is.'],
+            ['Rugs', 'You find a coin. It looks clean. You ape in. It rugs.'],
+            ['Late alpha', 'Real calls happen in private groups. You are always last.'],
+            ['No context', 'Charts show price. Not who is holding, who sold, or who bundled.'],
+            ['Coin flip', 'Every trade feels like a gamble because it basically is.'],
           ].map(([title, body], i) => (
-            <Reveal key={i} delay={i * 80}>
-              <div className="lp-prob-card">
-                <span className="lp-prob-num">0{i + 1}</span>
-                <div className="lp-prob-title">{title}</div>
-                <div className="lp-prob-body">{body}</div>
+            <Reveal key={i} delay={i * 60}>
+              <div className="lp-prob-pill">
+                <span className="lp-prob-pill-num">0{i+1}</span>
+                <span className="lp-prob-pill-title">{title}</span>
+                <span className="lp-prob-pill-body">{body}</span>
               </div>
             </Reveal>
           ))}
         </div>
-        <Reveal delay={200}>
+        <Reveal delay={160}>
           <div className="lp-problem-close">
-            You don't have a discipline problem.<br />
+            You don't have a discipline problem.{' '}
             <span className="lp-purple">You have a data problem.</span>
           </div>
         </Reveal>
@@ -386,6 +391,103 @@ export default function Landing({ onSwitch }) {
         </Reveal>
       </section>
 
+      {/* ── COMMUNITY DEMO ── */}
+      <section className="lp-section lp-community-section">
+        <div style={{borderTop:'1px solid var(--line)', paddingTop:80}}>
+          <Reveal>
+            <div className="lp-label">Trader Community</div>
+            <h2 className="lp-h2">Alpha shared in public.<br /><em>Reputation earned on-chain.</em></h2>
+          </Reveal>
+          <Reveal delay={100}>
+            <div className="lp-community-demo">
+              <div className="lp-forum-header">
+                <span className="lp-forum-category">Calls</span>
+                <span className="lp-forum-category">Analysis</span>
+                <span className="lp-forum-category lp-forum-active">General</span>
+                <span className="lp-forum-category">Education</span>
+              </div>
+              {[
+                { user:'orbitking', rep:847, badge:'Top Trader', time:'2m ago', title:'DOGE looking clean post-migration — rug score 8%, purity 81', replies:14, votes:32, tag:'Analysis' },
+                { user:'sol_runner', rep:512, badge:'Analyst', time:'7m ago', title:'Fresh wallet count spiked on this CA — potential bundle incoming', replies:6, votes:18, tag:'Warning' },
+                { user:'degenmode', rep:203, badge:'Member', time:'15m ago', title:'Been using Orbit for 2 weeks, up 14 SOL — leaderboard incoming', replies:22, votes:41, tag:'General' },
+              ].map((t, i) => (
+                <div key={i} className="lp-forum-thread">
+                  <div className="lp-forum-thread-left">
+                    <div className="lp-forum-avatar">{t.user[0].toUpperCase()}</div>
+                    <div className="lp-forum-votes">
+                      <span className="lp-forum-vote-up">▲</span>
+                      <span className="lp-forum-vote-n">{t.votes}</span>
+                    </div>
+                  </div>
+                  <div className="lp-forum-thread-body">
+                    <div className="lp-forum-thread-meta">
+                      <span className="lp-forum-user">{t.user}</span>
+                      <span className="lp-forum-rep">REP {t.rep}</span>
+                      <span className="lp-forum-badge">{t.badge}</span>
+                      <span className="lp-forum-time">{t.time}</span>
+                      <span className="lp-forum-tag">{t.tag}</span>
+                    </div>
+                    <div className="lp-forum-thread-title">{t.title}</div>
+                    <div className="lp-forum-thread-foot">{t.replies} replies</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── ALERTS DEMO ── */}
+      <section className="lp-section lp-alerts-section">
+        <div style={{borderTop:'1px solid var(--line)', paddingTop:80}}>
+          <Reveal>
+            <div className="lp-label">Price Alerts</div>
+            <h2 className="lp-h2">Set it.<br /><em>Get notified. Act first.</em></h2>
+          </Reveal>
+          <Reveal delay={100}>
+            <div className="lp-alerts-demo">
+              <div className="lp-alerts-header">
+                <span className="lp-alerts-title">Watchlist</span>
+                <span className="lp-alerts-count">4 tokens</span>
+              </div>
+              {[
+                { name:'DOGE', ca:'7xK2...mF9p', target:'$8M', dir:'above', mc:'$5.15M', status:'watching', pct:64 },
+                { name:'PEPE2', ca:'9mN4...kL2w', target:'$500K', dir:'above', mc:'$487K', status:'close', pct:97 },
+                { name:'RUGME', ca:'3pQ8...xR7t', target:'$100K', dir:'below', mc:'$234K', status:'watching', pct:43 },
+                { name:'MOON', ca:'2kF1...vB9s', target:'$2M', dir:'above', mc:'$2.1M', status:'triggered', pct:100 },
+              ].map((a, i) => (
+                <div key={i} className={`lp-alert-row ${a.status === 'triggered' ? 'lp-alert-triggered' : ''}`}>
+                  <div className="lp-alert-coin">
+                    <span className="lp-alert-name">{a.name}</span>
+                    <span className="lp-alert-ca">{a.ca}</span>
+                  </div>
+                  <div className="lp-alert-target">
+                    <span className="lp-alert-target-label">Target</span>
+                    <span className="lp-alert-target-val">{a.target} {a.dir}</span>
+                  </div>
+                  <div className="lp-alert-mc">
+                    <span className="lp-alert-mc-label">Current MC</span>
+                    <span className="lp-alert-mc-val">{a.mc}</span>
+                  </div>
+                  <div className="lp-alert-bar-wrap">
+                    <div className="lp-alert-bar-track">
+                      <div className="lp-alert-bar-fill" style={{
+                        width:`${a.pct}%`,
+                        background: a.status==='triggered' ? '#4ade80' : a.status==='close' ? '#f59e0b' : '#a78bfa'
+                      }} />
+                    </div>
+                    <span className="lp-alert-pct">{a.pct}%</span>
+                  </div>
+                  <div className={`lp-alert-status lp-alert-${a.status}`}>
+                    {a.status === 'triggered' ? '🔔 Triggered' : a.status === 'close' ? 'Close' : 'Watching'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       {/* ── WALLET ── */}
       <section className="lp-section lp-wallet">
         <div className="lp-wallet-grid">
@@ -417,11 +519,20 @@ export default function Landing({ onSwitch }) {
                 <div className="lp-wallet-card-fill" />
               </div>
               <div className="lp-wallet-card-ranks">
-                {[['#1','orbitking','38.7'],['#2','sol_runner','22.1'],['#3','7xK2...','14.2']].map(([rank, name, pnl]) => (
+                <div className="lp-rank-section-label">Highest PnL</div>
+                {[['#1','orbitking','38.7','#4ade80'],['#2','sol_runner','22.1','#4ade80'],['#3','7xK2...','14.2','#4ade80']].map(([rank, name, pnl, col]) => (
                   <div key={rank} className="lp-rank-row">
                     <span className="lp-rank-pos">{rank}</span>
                     <span className="lp-rank-name">{name}</span>
-                    <span className="lp-rank-pnl">+{pnl} SOL</span>
+                    <span className="lp-rank-pnl" style={{color:col}}>+{pnl} SOL</span>
+                  </div>
+                ))}
+                <div className="lp-rank-section-label lp-rank-section-label-red">Lowest PnL</div>
+                {[['#1','rekt_lord','-18.4','#f87171'],['#2','paper_hands','-12.1','#f87171'],['#3','fomo_bro','-9.3','#f87171']].map(([rank, name, pnl, col]) => (
+                  <div key={rank+name} className="lp-rank-row">
+                    <span className="lp-rank-pos">{rank}</span>
+                    <span className="lp-rank-name">{name}</span>
+                    <span className="lp-rank-pnl" style={{color:col}}>{pnl} SOL</span>
                   </div>
                 ))}
               </div>

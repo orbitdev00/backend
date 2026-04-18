@@ -662,3 +662,183 @@
   .lp-hero-h1 { font-size: 36px !important; }
   .lp-h2 { font-size: 36px !important; }
 }
+
+/* ── Label size increase ───────────────────────────── */
+.lp-label {
+  font-size: 13px !important;
+  letter-spacing: 4px !important;
+  margin-bottom: 24px !important;
+}
+.lp-label-lg {
+  font-size: 16px !important;
+  letter-spacing: 4px !important;
+}
+
+/* ── Problem pills (compact horizontal) ────────────── */
+.lp-problem-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+.lp-prob-pill {
+  background: #050505;
+  padding: 28px 22px;
+  display: flex; flex-direction: column; gap: 8px;
+  transition: background 0.2s;
+  position: relative; overflow: hidden;
+}
+.lp-prob-pill::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, var(--purple), transparent);
+  opacity:0; transition:opacity 0.3s;
+}
+.lp-prob-pill:hover { background: #0a0a0a; }
+.lp-prob-pill:hover::before { opacity:1; }
+.lp-prob-pill-num { font-family:var(--mono); font-size:9px; letter-spacing:2px; color:var(--purple); }
+.lp-prob-pill-title { font-family:var(--display); font-size:16px; font-weight:700; color:#fff; }
+.lp-prob-pill-body { font-family:'Inter',sans-serif; font-size:12px; color:#666; line-height:1.6; font-weight:300; }
+
+/* ── Tool labels above platform grid ──────────────── */
+.lp-platform-tool-labels {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-bottom: 40px; margin-top: -20px;
+}
+.lp-tool-label {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  border: 1px solid; padding: 5px 12px;
+  border-radius: 2px; display: inline-flex;
+  align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.02);
+}
+
+/* ── Rank section labels ───────────────────────────── */
+.lp-rank-section-label {
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: #4ade80; margin: 10px 0 6px;
+  padding-top: 10px; border-top: 1px solid #111;
+}
+.lp-rank-section-label:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+.lp-rank-section-label-red { color: #f87171 !important; }
+
+/* ── Community demo ────────────────────────────────── */
+.lp-community-demo {
+  background: #080808; border: 1px solid #141414;
+  border-radius: 6px; overflow: hidden;
+  margin-top: 40px;
+}
+.lp-forum-header {
+  display: flex; gap: 2px; padding: 12px 16px;
+  border-bottom: 1px solid #111; background: #060606;
+}
+.lp-forum-category {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 1px; color: #444;
+  padding: 5px 12px; border-radius: 2px;
+  cursor: default; text-transform: uppercase;
+  transition: color 0.15s;
+}
+.lp-forum-active {
+  color: var(--purple);
+  background: rgba(167,139,250,0.08);
+}
+.lp-forum-thread {
+  display: flex; gap: 0;
+  border-bottom: 1px solid #0d0d0d;
+  transition: background 0.15s;
+}
+.lp-forum-thread:last-child { border-bottom: none; }
+.lp-forum-thread:hover { background: #0a0a0a; }
+.lp-forum-thread-left {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 8px;
+  padding: 18px 16px; border-right: 1px solid #0d0d0d;
+  min-width: 60px;
+}
+.lp-forum-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--purple-dim); color: var(--purple);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--display); font-size: 13px; font-weight: 700;
+}
+.lp-forum-votes { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.lp-forum-vote-up { color: #444; font-size: 10px; cursor: default; }
+.lp-forum-vote-n { font-family: var(--mono); font-size: 11px; color: #666; }
+.lp-forum-thread-body { flex: 1; padding: 16px 20px; }
+.lp-forum-thread-meta {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap; margin-bottom: 8px;
+}
+.lp-forum-user { font-family: var(--mono); font-size: 11px; color: var(--purple); font-weight: 600; }
+.lp-forum-rep { font-family: var(--mono); font-size: 9px; color: #444; letter-spacing: 1px; }
+.lp-forum-badge {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 1px;
+  border: 1px solid #222; color: #555;
+  padding: 1px 7px; border-radius: 2px;
+}
+.lp-forum-time { font-family: var(--mono); font-size: 9px; color: #333; margin-left: auto; }
+.lp-forum-tag {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 1px;
+  color: var(--purple); border: 1px solid rgba(167,139,250,0.2);
+  padding: 1px 7px; border-radius: 2px;
+  background: rgba(167,139,250,0.05);
+}
+.lp-forum-thread-title { font-family: var(--display); font-size: 15px; font-weight: 600; color: #ddd; margin-bottom: 8px; line-height: 1.4; }
+.lp-forum-thread-foot { font-family: var(--mono); font-size: 10px; color: #444; letter-spacing: 1px; }
+
+/* ── Alerts demo ───────────────────────────────────── */
+.lp-alerts-demo {
+  background: #080808; border: 1px solid #141414;
+  border-radius: 6px; overflow: hidden; margin-top: 40px;
+}
+.lp-alerts-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 20px; border-bottom: 1px solid #111;
+  background: #060606;
+}
+.lp-alerts-title { font-family: var(--display); font-size: 13px; font-weight: 600; color: #ccc; letter-spacing: 0.5px; }
+.lp-alerts-count { font-family: var(--mono); font-size: 10px; color: #444; letter-spacing: 1px; }
+.lp-alert-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 1.5fr auto;
+  gap: 16px; align-items: center;
+  padding: 14px 20px; border-bottom: 1px solid #0a0a0a;
+  transition: background 0.15s;
+}
+.lp-alert-row:last-child { border-bottom: none; }
+.lp-alert-row:hover { background: #0a0a0a; }
+.lp-alert-triggered { background: rgba(74,222,128,0.03) !important; }
+.lp-alert-coin { display: flex; flex-direction: column; gap: 3px; }
+.lp-alert-name { font-family: var(--display); font-size: 14px; font-weight: 700; color: #fff; }
+.lp-alert-ca { font-family: var(--mono); font-size: 9px; color: #444; }
+.lp-alert-target { display: flex; flex-direction: column; gap: 2px; }
+.lp-alert-target-label { font-family: var(--mono); font-size: 9px; color: #444; letter-spacing: 1px; text-transform: uppercase; }
+.lp-alert-target-val { font-family: var(--mono); font-size: 12px; color: #aaa; font-weight: 600; }
+.lp-alert-mc { display: flex; flex-direction: column; gap: 2px; }
+.lp-alert-mc-label { font-family: var(--mono); font-size: 9px; color: #444; letter-spacing: 1px; text-transform: uppercase; }
+.lp-alert-mc-val { font-family: var(--mono); font-size: 12px; color: #ccc; }
+.lp-alert-bar-wrap { display: flex; align-items: center; gap: 8px; }
+.lp-alert-bar-track { flex: 1; height: 2px; background: #111; border-radius: 1px; overflow: hidden; min-width: 60px; }
+.lp-alert-bar-fill { height: 100%; border-radius: 1px; transition: width 0.8s ease; }
+.lp-alert-pct { font-family: var(--mono); font-size: 10px; color: #555; width: 32px; }
+.lp-alert-status { font-family: var(--mono); font-size: 10px; letter-spacing: 0.5px; white-space: nowrap; }
+.lp-alert-watching { color: #555; }
+.lp-alert-close { color: #f59e0b; }
+.lp-alert-triggered-status, .lp-alert-triggered { color: #4ade80; }
+
+/* ── Mobile ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .lp-problem-row { grid-template-columns: 1fr 1fr; }
+  .lp-alert-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .lp-alert-bar-wrap, .lp-alert-status { display: none; }
+}
+@media (max-width: 480px) {
+  .lp-problem-row { grid-template-columns: 1fr; }
+  .lp-forum-thread-left { display: none; }
+}

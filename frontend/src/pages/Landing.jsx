@@ -123,7 +123,6 @@ function Reveal({ children, delay = 0, className = '' }) {
     <div ref={ref} className={`lp-reveal ${inView ? 'lp-revealed' : ''} ${className}`}
       style={{ transitionDelay: `${delay}ms` }}>
       {children}
-      <LandingBlackHole active={bh.active} origin={bh.origin} onDone={onBhDone} />
     </div>
   )
 }
@@ -601,6 +600,8 @@ export default function Landing({ onSwitch }) {
           <span className="lp-joke-sub">You know what he does to charts. We all know.</span>
         </span>
       </div>
+
+      <LandingBlackHole active={bh.active} origin={bh.origin} onDone={onBhDone} />
 
       {/* ── FOOTER ── */}
       <footer className="lp-footer">

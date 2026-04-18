@@ -30,12 +30,20 @@
   overflow-x: hidden;
   opacity: 0;
   transition: opacity 0.8s ease;
+  position: relative;
+  z-index: 1;
 }
 .lp.lp-in { opacity: 1; }
 
 .lp-canvas {
   position: fixed; inset: 0;
   pointer-events: none; z-index: 0;
+}
+
+/* BH canvas sits behind star canvas */
+.lp-bh-canvas-el {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: -1;
 }
 
 /* ── Reveal animation ──────────────────────────────────── */

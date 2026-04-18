@@ -91,10 +91,10 @@
 /* ── HERO ──────────────────────────────────────────────── */
 .lp-hero {
   position: relative; z-index: 1;
-  min-height: 90vh;
+  min-height: 85vh;
   display: flex; flex-direction: column;
   justify-content: center; align-items: flex-start;
-  padding: 120px 40px 100px;
+  padding: 80px 40px 72px;
   max-width: 1100px; margin: 0 auto;
 }
 .lp-hero-glow {
@@ -203,7 +203,7 @@
 /* ── SECTIONS ──────────────────────────────────────────── */
 .lp-section {
   position: relative; z-index: 1;
-  padding: 120px 40px;
+  padding: 72px 40px;
   max-width: 1100px; margin: 0 auto;
 }
 
@@ -380,7 +380,7 @@
   border-top: 1px solid var(--line);
   text-align: center;
   position: relative;
-  padding: 140px 40px;
+  padding: 90px 40px;
 }
 .lp-final-glow {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
@@ -890,4 +890,46 @@
   font-size: 16px; color: #888; font-weight: 300;
   max-width: 540px; line-height: 1.75;
   margin-bottom: 8px; margin-top: -20px;
+}
+
+/* ── Smaller h2 variant ────────────────────────────── */
+.lp-h2-sm {
+  font-size: clamp(28px, 4vw, 48px) !important;
+  letter-spacing: -1px !important;
+}
+
+/* ── Joke strips ───────────────────────────────────── */
+.lp-joke-strip {
+  position: relative; z-index: 1;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: #030303;
+  padding: 18px 40px;
+  display: flex;
+  align-items: center;
+}
+.lp-joke-strip-center {
+  justify-content: center;
+  text-align: center;
+}
+.lp-joke-text {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #555;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.lp-joke-sub {
+  color: #333;
+  font-size: 11px;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .lp-section { padding: 56px 20px !important; }
+  .lp-joke-strip { padding: 16px 20px; }
+  .lp-joke-text { flex-direction: column; gap: 6px; }
 }

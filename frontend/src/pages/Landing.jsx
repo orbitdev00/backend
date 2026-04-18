@@ -258,6 +258,14 @@ export default function Landing({ onSwitch }) {
         </div>
       </div>
 
+      {/* ── X SHILL JOKE ── */}
+      <div className="lp-joke-strip">
+        <span className="lp-joke-text">
+          Friendly reminder: the average X call lasts 9 minutes before the dev rugs and the account goes private.
+          <span className="lp-joke-sub">Orbit analysis lasts forever. Or until you close the tab.</span>
+        </span>
+      </div>
+
       {/* ── PROBLEM ── */}
       <section className="lp-section lp-problem">
         <Reveal>
@@ -401,7 +409,7 @@ export default function Landing({ onSwitch }) {
         <div style={{borderTop:'1px solid var(--line)', paddingTop:80}}>
           <Reveal>
             <div className="lp-label">Trader Community</div>
-            <h2 className="lp-h2">No influencers. No paid promotions.<br /><em>Just traders.</em></h2>
+            <h2 className="lp-h2">No influencers.<br />No paid promotions.<br /><em>Just traders.</em></h2>
             <p className="lp-community-body">
               Post your analysis. Share your calls. Build a reputation based on what you actually say — not how many followers you have. The forum is merit-based. The chain keeps score.
             </p>
@@ -415,9 +423,9 @@ export default function Landing({ onSwitch }) {
                 <span className="lp-forum-category">Education</span>
               </div>
               {[
-                { user:'orbitking', rep:847, badge:'Top Trader', time:'2m ago', title:'DOGE looking clean post-migration — rug score 8%, purity 81', replies:14, votes:32, tag:'Analysis' },
-                { user:'sol_runner', rep:512, badge:'Analyst', time:'7m ago', title:'Fresh wallet count spiked on this CA — potential bundle incoming', replies:6, votes:18, tag:'Warning' },
-                { user:'degenmode', rep:203, badge:'Member', time:'15m ago', title:'Been using Orbit for 2 weeks, up 14 SOL — leaderboard incoming', replies:22, votes:41, tag:'General' },
+                { user:'sidewalk_sam', rep:12, badge:'Member', time:'4m ago', title:'I accidentally full ported into a coin and then shlaro sold his bundle and now I am sleeping on the sidewalk', replies:47, votes:203, tag:'General' },
+                { user:'sol_runner', rep:512, badge:'Analyst', time:'11m ago', title:'Orbit flagged 14% fresh wallets and 3 snipers on this CA before it rugged. I listened. First time in my life I listened.', replies:18, votes:89, tag:'Analysis' },
+                { user:'orbitking', rep:847, badge:'Top Trader', time:'28m ago', title:'Up 14 SOL this month. No it was not luck. Yes I will explain. No I will not take questions.', replies:62, votes:341, tag:'General' },
               ].map((t, i) => (
                 <div key={i} className="lp-forum-thread">
                   <div className="lp-forum-thread-left">
@@ -444,6 +452,14 @@ export default function Landing({ onSwitch }) {
           </Reveal>
         </div>
       </section>
+
+      {/* ── CUPSEY JOKE ── */}
+      <div className="lp-joke-strip lp-joke-strip-center">
+        <span className="lp-joke-text">
+          We genuinely hope Cupsey does not buy our coin.
+          <span className="lp-joke-sub">You know what he does to charts. We all know.</span>
+        </span>
+      </div>
 
       {/* ── ALERTS DEMO ── */}
       <section className="lp-section lp-alerts-section">
@@ -501,7 +517,7 @@ export default function Landing({ onSwitch }) {
         <div className="lp-wallet-grid">
           <Reveal>
             <div className="lp-label">On-Chain Leaderboard</div>
-            <h2 className="lp-h2"><em>Your PnL is already on-chain.</em><br />Might as well show it off.</h2>
+            <h2 className="lp-h2 lp-h2-sm"><em>Your PnL is already on-chain.</em><br />Might as well show it off.</h2>
             <p className="lp-wallet-body">
               Add your wallet and you are on the board. Win big and everyone knows.
               Lose big and... well, everyone still knows. Orbit tracks both sides — Highest PnL

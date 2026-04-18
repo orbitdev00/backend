@@ -202,88 +202,23 @@ export default function Landing({ onSwitch }) {
     bhRef.current.active = true
     canvas.dataset.bhActive = '1'
 
-    const W = window.innerWidth
-    const H = window.innerHeight
+    const ctx = canvas.getContext('2d')
+    const W = canvas.width
+    const H = canvas.height
 
     const ease3  = t => 1 - Math.pow(1 - t, 3)
     const easeIO = t => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2
     const easeIn = t => t * t
 
-    // Create BH canvas at z-index -1 — behind stars, behind .lp content
-    const bhCanvas = document.createElement('canvas')
-    bhCanvas.width = W
-    bhCanvas.height = H
-    bhCanvas.className = 'lp-bh-canvas-el'
-    document.body.appendChild(bhCanvas)
-    const bhCtx = bhCanvas.getContext('2d')
-
-    const NPARTS = 300
-    const parts = Array.from({ length: NPARTS }, (_, i) => ({
-      angle: (i / NPARTS) * Math.PI * 2 + Math.random() * 0.1,
-      rMult: 1.05 + Math.random() * 0.85,
-      speed: (0.007 + Math.random() * 0.011) * (i % 2 ? 1 : -1),
-      sz: 0.5 + Math.random() * 1.7,
-      bright: 0.4 + Math.random() * 0.6,
-      lane: Math.random(),
+    // Generate stars matching the visible starfield
+    const starSnap = Array.from({ length: 320 }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H + (window.scrollY || 0),
+      r: Math.random() * 1.2 + 0.2,
+      o: Math.random() * 0.5 + 0.15,
     }))
 
-    const starSnap = Array.from({ length: 250 }, () => ({
-      x: Math.random() * W, y: Math.random() * H,
-      r: Math.random() * 1.3 + 0.2, o: Math.random() * 0.6 + 0.2,
-    }))
-
-    const drawDisk = (holeR, alpha) => {
-      if (holeR < 1 || alpha <= 0) return
-      const diskY = holeR * 0.18
-      const glow = bhCtx.createRadialGradient(cx, cy, holeR*0.4, cx, cy, holeR*3.5)
-      glow.addColorStop(0, `rgba(120,80,220,${0.22*alpha})`)
-      glow.addColorStop(1, 'rgba(0,0,0,0)')
-      bhCtx.fillStyle = glow
-      bhCtx.beginPath(); bhCtx.arc(cx, cy, holeR*3.5, 0, Math.PI*2); bhCtx.fill()
-      bhCtx.save(); bhCtx.translate(cx, cy)
-      for (const p of parts) {
-        p.angle += p.speed
-        const r = holeR * p.rMult
-        const px = Math.cos(p.angle)*r, py = Math.sin(p.angle)*r*(diskY/holeR)
-        if (py > 0 || Math.sqrt(px*px+py*py) < holeR) continue
-        const a = p.bright*alpha*(1-p.lane*0.4)
-        bhCtx.beginPath(); bhCtx.arc(px, py, p.sz, 0, Math.PI*2)
-        bhCtx.fillStyle = p.lane<0.4 ? `rgba(180,140,255,${a})` : `rgba(255,255,255,${a*0.7})`
-        bhCtx.fill()
-      }
-      bhCtx.restore()
-      for (let i=0;i<3;i++) {
-        const rr=holeR*(1.06+i*0.06), a=(0.55-i*0.14)*alpha
-        const g=bhCtx.createRadialGradient(cx,cy,rr*0.88,cx,cy,rr*1.12)
-        g.addColorStop(0,'rgba(200,160,255,0)')
-        g.addColorStop(0.5,`rgba(200,160,255,${a*0.5})`)
-        g.addColorStop(0.65,`rgba(255,255,255,${a})`)
-        g.addColorStop(1,'rgba(200,160,255,0)')
-        bhCtx.beginPath(); bhCtx.arc(cx,cy,rr,0,Math.PI*2)
-        bhCtx.strokeStyle=g; bhCtx.lineWidth=holeR*0.055; bhCtx.stroke()
-      }
-      bhCtx.beginPath(); bhCtx.arc(cx,cy,holeR,0,Math.PI*2); bhCtx.fillStyle='#000'; bhCtx.fill()
-      bhCtx.save(); bhCtx.translate(cx,cy)
-      for (const p of parts) {
-        const r=holeR*p.rMult
-        const px=Math.cos(p.angle)*r, py=Math.sin(p.angle)*r*(diskY/holeR)
-        if (py<=0||Math.sqrt(px*px+py*py)<holeR) continue
-        const a=p.bright*alpha*1.3*(1-p.lane*0.3)
-        bhCtx.beginPath(); bhCtx.arc(px,py,p.sz*1.1,0,Math.PI*2)
-        bhCtx.fillStyle=p.lane<0.4?`rgba(180,140,255,${a})`:`rgba(255,255,255,${a*0.85})`
-        bhCtx.fill()
-      }
-      bhCtx.restore()
-      const ph=bhCtx.createRadialGradient(cx,cy,holeR*0.96,cx,cy,holeR*1.05)
-      ph.addColorStop(0,'rgba(200,160,255,0)')
-      ph.addColorStop(0.5,`rgba(220,180,255,${0.6*alpha})`)
-      ph.addColorStop(1,'rgba(200,160,255,0)')
-      bhCtx.beginPath(); bhCtx.arc(cx,cy,holeR,0,Math.PI*2)
-      bhCtx.strokeStyle=ph; bhCtx.lineWidth=holeR*0.04; bhCtx.stroke()
-      bhCtx.beginPath(); bhCtx.arc(cx,cy,holeR*0.97,0,Math.PI*2); bhCtx.fillStyle='#000'; bhCtx.fill()
-    }
-
-    // Page elements sucked in during absorb phase
+    // Page elements to absorb
     const pageEls = [...document.querySelectorAll(
       '.lp-nav, .lp-hero, .lp-ticker-outer, .lp-section, .lp-joke-strip, .lp-data-strip, .lp-wallet, .lp-final, .lp-footer'
     )].filter(el => { const r = el.getBoundingClientRect(); return r.width > 0 })
@@ -294,8 +229,70 @@ export default function Landing({ onSwitch }) {
       el.style.willChange = 'transform,opacity'
       el.style.transition = 'none'
     })
-    const maxDist = Math.max(...pageEls.map(e=>e._dist),1)
+    const maxDist = Math.max(...pageEls.map(e=>e._dist), 1)
     const maxR = Math.sqrt(W*W+H*H)
+
+    const NPARTS = 300
+    const parts = Array.from({ length: NPARTS }, (_, i) => ({
+      angle: (i/NPARTS)*Math.PI*2 + Math.random()*0.1,
+      rMult: 1.05 + Math.random()*0.85,
+      speed: (0.007+Math.random()*0.011)*(i%2?1:-1),
+      sz: 0.5+Math.random()*1.7,
+      bright: 0.4+Math.random()*0.6,
+      lane: Math.random(),
+    }))
+
+    const drawDisk = (holeR, alpha) => {
+      if (holeR < 1 || alpha <= 0) return
+      const diskY = holeR * 0.18
+      const glow = ctx.createRadialGradient(cx,cy,holeR*0.4,cx,cy,holeR*3.5)
+      glow.addColorStop(0, `rgba(120,80,220,${0.22*alpha})`)
+      glow.addColorStop(1, 'rgba(0,0,0,0)')
+      ctx.fillStyle = glow
+      ctx.beginPath(); ctx.arc(cx,cy,holeR*3.5,0,Math.PI*2); ctx.fill()
+      ctx.save(); ctx.translate(cx,cy)
+      for (const p of parts) {
+        p.angle += p.speed
+        const r=holeR*p.rMult
+        const px=Math.cos(p.angle)*r, py=Math.sin(p.angle)*r*(diskY/holeR)
+        if (py>0||Math.sqrt(px*px+py*py)<holeR) continue
+        const a=p.bright*alpha*(1-p.lane*0.4)
+        ctx.beginPath(); ctx.arc(px,py,p.sz,0,Math.PI*2)
+        ctx.fillStyle=p.lane<0.4?`rgba(180,140,255,${a})`:`rgba(255,255,255,${a*0.7})`
+        ctx.fill()
+      }
+      ctx.restore()
+      for (let i=0;i<3;i++) {
+        const rr=holeR*(1.06+i*0.06), a=(0.55-i*0.14)*alpha
+        const g=ctx.createRadialGradient(cx,cy,rr*0.88,cx,cy,rr*1.12)
+        g.addColorStop(0,'rgba(200,160,255,0)')
+        g.addColorStop(0.5,`rgba(200,160,255,${a*0.5})`)
+        g.addColorStop(0.65,`rgba(255,255,255,${a})`)
+        g.addColorStop(1,'rgba(200,160,255,0)')
+        ctx.beginPath(); ctx.arc(cx,cy,rr,0,Math.PI*2)
+        ctx.strokeStyle=g; ctx.lineWidth=holeR*0.055; ctx.stroke()
+      }
+      ctx.beginPath(); ctx.arc(cx,cy,holeR,0,Math.PI*2); ctx.fillStyle='#000'; ctx.fill()
+      ctx.save(); ctx.translate(cx,cy)
+      for (const p of parts) {
+        const r=holeR*p.rMult
+        const px=Math.cos(p.angle)*r, py=Math.sin(p.angle)*r*(diskY/holeR)
+        if(py<=0||Math.sqrt(px*px+py*py)<holeR) continue
+        const a=p.bright*alpha*1.3*(1-p.lane*0.3)
+        ctx.beginPath(); ctx.arc(px,py,p.sz*1.1,0,Math.PI*2)
+        ctx.fillStyle=p.lane<0.4?`rgba(180,140,255,${a})`:`rgba(255,255,255,${a*0.85})`
+        ctx.fill()
+      }
+      ctx.restore()
+      const ph=ctx.createRadialGradient(cx,cy,holeR*0.96,cx,cy,holeR*1.05)
+      ph.addColorStop(0,'rgba(200,160,255,0)')
+      ph.addColorStop(0.5,`rgba(220,180,255,${0.6*alpha})`)
+      ph.addColorStop(1,'rgba(200,160,255,0)')
+      ctx.beginPath(); ctx.arc(cx,cy,holeR,0,Math.PI*2)
+      ctx.strokeStyle=ph; ctx.lineWidth=holeR*0.04; ctx.stroke()
+      ctx.beginPath(); ctx.arc(cx,cy,holeR*0.97,0,Math.PI*2)
+      ctx.fillStyle='#000'; ctx.fill()
+    }
 
     const PHASES = { spawn:700, absorb:1100, implode:500 }
     const state = { phase:'spawn', t0:performance.now(), called:false }
@@ -303,50 +300,63 @@ export default function Landing({ onSwitch }) {
     const frame = ts => {
       const dur = PHASES[state.phase]
       const t = Math.min((ts-state.t0)/dur, 1)
-      bhCtx.clearRect(0,0,W,H)
+      // Fill black each frame — hides the page background behind the canvas
+      ctx.fillStyle = '#000'
+      ctx.fillRect(0,0,W,H)
 
       if (state.phase === 'spawn') {
-        // Grow from behind everything
         drawDisk(ease3(t)*130, ease3(t))
+        // Draw stars normally during spawn
+        for (const s of starSnap) {
+          ctx.beginPath(); ctx.arc(s.x, s.y - (window.scrollY||0)*0.2, s.r, 0, Math.PI*2)
+          ctx.fillStyle = `rgba(255,255,255,${s.o})`; ctx.fill()
+        }
         if (t>=1) { state.phase='absorb'; state.t0=ts }
 
       } else if (state.phase === 'absorb') {
         const et = easeIO(t)
         drawDisk(130, 1)
-        // Stars get pulled in
+        // Stars pulled toward black hole
         for (const s of starSnap) {
-          const dist=Math.sqrt((s.x-cx)**2+(s.y-cy)**2)
-          const lT=Math.min(1,et*(0.3+(1-dist/maxR)*0.8))
-          const ease=easeIO(lT)
-          const sx=cx+(s.x-cx)*(1-ease), sy=cy+(s.y-cy)*(1-ease)
+          const sy = s.y - (window.scrollY||0)*0.2
+          const dist = Math.sqrt((s.x-cx)**2+(sy-cy)**2)
+          const lT = Math.min(1, et*(0.3+(1-dist/maxR)*0.8))
+          const ease = easeIO(lT)
+          const sx2=cx+(s.x-cx)*(1-ease), sy2=cy+(sy-cy)*(1-ease)
           const sc=Math.max(0,1-ease)
           if(sc<0.01) continue
-          bhCtx.beginPath(); bhCtx.arc(sx,sy,s.r*sc,0,Math.PI*2)
-          bhCtx.fillStyle=`rgba(255,255,255,${s.o*sc})`; bhCtx.fill()
+          ctx.beginPath(); ctx.arc(sx2,sy2,s.r*sc,0,Math.PI*2)
+          ctx.fillStyle=`rgba(255,255,255,${s.o*sc})`; ctx.fill()
         }
         // Page elements scale toward black hole
         pageEls.forEach(el => {
-          const normD = el._dist/maxDist
-          const lT = Math.min(1, et*(0.4+(1-normD)*0.8))
-          const ease = easeIO(lT)
-          const sc = Math.max(0,1-ease)
+          const normD=el._dist/maxDist
+          const lT=Math.min(1,et*(0.4+(1-normD)*0.8))
+          const ease=easeIO(lT)
+          const sc=Math.max(0,1-ease)
           el.style.transform=`scale(${sc})`
           el.style.opacity=`${sc}`
         })
-        if (t>=1) { pageEls.forEach(el=>{el.style.opacity='0'}); state.phase='implode'; state.t0=ts }
+        if (t>=1) {
+          pageEls.forEach(el=>{el.style.opacity='0'})
+          state.phase='implode'; state.t0=ts
+        }
 
       } else if (state.phase === 'implode') {
         const et = easeIn(t)
-        const holeR=Math.max(0,130*(1-et))
+        const holeR = Math.max(0,130*(1-et))
         if(holeR>1) drawDisk(holeR,1-et*0.5)
-        bhCtx.fillStyle=`rgba(0,0,0,${et})`
-        bhCtx.fillRect(0,0,W,H)
+        ctx.fillStyle=`rgba(0,0,0,${et})`
+        ctx.fillRect(0,0,W,H)
         if (t>=1 && !state.called) {
           state.called=true
-          pageEls.forEach(el=>{el.style.transform='';el.style.opacity='';el.style.willChange=''})
+          pageEls.forEach(el=>{
+            el.style.transform=''
+            el.style.opacity=''
+            el.style.willChange=''
+          })
           bhRef.current.active=false
           delete canvas.dataset.bhActive
-          bhCanvas.remove()
           const style=document.createElement('style')
           style.id='orbit-fadein'
           style.textContent=`body>*{animation:orbitFI 0.55s ease forwards}@keyframes orbitFI{from{opacity:0}to{opacity:1}}`

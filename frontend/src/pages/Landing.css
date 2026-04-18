@@ -24,7 +24,6 @@
 
 .lp {
   min-height: 100vh;
-  background: #000;
   color: var(--white);
   font-family: var(--display);
   overflow-x: hidden;
@@ -38,12 +37,6 @@
 .lp-canvas {
   position: fixed; inset: 0;
   pointer-events: none; z-index: 0;
-}
-
-/* BH canvas sits behind star canvas */
-.lp-bh-canvas-el {
-  position: fixed; inset: 0;
-  pointer-events: none; z-index: -1;
 }
 
 /* ── Reveal animation ──────────────────────────────────── */

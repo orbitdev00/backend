@@ -349,7 +349,7 @@ export default function Landing({ onSwitch }) {
           bhCanvas.remove()
           const style=document.createElement('style')
           style.id='orbit-fadein'
-          style.textContent='body>*{animation:orbitFI 0.55s ease forwards}@keyframes orbitFI{from{opacity:0}to{opacity:1}}'
+          style.textContent=`body>*{animation:orbitFI 0.55s ease forwards}@keyframes orbitFI{from{opacity:0}to{opacity:1}}`
           document.head.appendChild(style)
           setTimeout(()=>{const s=document.getElementById('orbit-fadein');if(s)s.remove()},700)
           if(dest) onSwitch(dest)

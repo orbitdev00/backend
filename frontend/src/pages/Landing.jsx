@@ -28,6 +28,7 @@ const PLATFORM_CARDS = [
     icon: '⬡',
     num: '01',
     title: 'Token Intelligence',
+    scrollTo: 'section-analyzer',
     color: '#a78bfa',
     stats: ['Rug Probability', 'Bundle Detection', 'Fake Chart Score', 'Dev History'],
     body: 'Orbit pulls 20+ on-chain signals in real time and synthesizes everything into a plain-English verdict in under 5 seconds. Know before you buy.'
@@ -36,6 +37,7 @@ const PLATFORM_CARDS = [
     icon: '◈',
     num: '02',
     title: 'Trader Community',
+    scrollTo: 'section-community',
     color: '#60a5fa',
     stats: ['Forum Threads', 'Alpha Calls', 'Reputation System', 'Direct Messaging'],
     body: 'Threaded forum with voting, reputation scores, and a following feed. Your rep is built on what you actually say, not how loud you are.'
@@ -44,6 +46,7 @@ const PLATFORM_CARDS = [
     icon: '◆',
     num: '03',
     title: 'On-Chain Leaderboard',
+    scrollTo: 'section-leaderboard',
     color: '#4ade80',
     stats: ['Real DEX Data', 'Monthly PnL', 'Zero Self-Reporting', 'Wallet Verified'],
     body: 'Monthly rankings pulled from Raydium, Pump.fun, Jupiter, Orca, and Meteora. No screenshots. No lying. The chain does not forget.'
@@ -52,6 +55,7 @@ const PLATFORM_CARDS = [
     icon: '◎',
     num: '04',
     title: 'Price Alerts',
+    scrollTo: 'section-alerts',
     color: '#f59e0b',
     stats: ['15s Polling', 'Audio Alerts', 'Any Token', 'Cross-Device Sync'],
     body: 'Set a target MC, pick a direction, and get an audio alert the moment it triggers. Add as many tokens as you want.'
@@ -78,7 +82,8 @@ function FeaturesSection() {
               className={`lp-platform-card ${hovered === i ? 'lp-platform-hovered' : ''}`}
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
-              style={{'--card-color': c.color}}
+              onClick={() => { const el = document.getElementById(c.scrollTo); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}) }}
+              style={{'--card-color': c.color, cursor:'pointer'}}
             >
               <div className="lp-platform-card-top">
                 <span className="lp-platform-icon" style={{color: c.color}}>{c.icon}</span>
@@ -258,14 +263,6 @@ export default function Landing({ onSwitch }) {
         </div>
       </div>
 
-      {/* ── X SHILL JOKE ── */}
-      <div className="lp-joke-strip">
-        <span className="lp-joke-text">
-          Friendly reminder: the average X call lasts 9 minutes before the dev rugs and the account goes private.
-          <span className="lp-joke-sub">Orbit analysis lasts forever. Or until you close the tab.</span>
-        </span>
-      </div>
-
       {/* ── PROBLEM ── */}
       <section className="lp-section lp-problem">
         <Reveal>
@@ -314,7 +311,7 @@ export default function Landing({ onSwitch }) {
       <FeaturesSection />
 
       {/* ── MOCK ANALYZER ── */}
-      <section className="lp-section lp-mock-section">
+      <section className="lp-section lp-mock-section" id="section-analyzer">
         <Reveal>
           <div className="lp-label">Token Intelligence</div>
           <h2 className="lp-h2">This is what you get.<br />In under <span className="lp-purple">5 seconds.</span></h2>
@@ -414,6 +411,11 @@ export default function Landing({ onSwitch }) {
               Post your analysis. Share your calls. Build a reputation based on what you actually say — not how many followers you have. The forum is merit-based. The chain keeps score.
             </p>
           </Reveal>
+          <Reveal delay={80}>
+            <p className="lp-community-note">
+              Friendly reminder: the average X call lasts 9 minutes before the dev rugs and the account goes private. Orbit analysis lasts forever. Or until you close the tab.
+            </p>
+          </Reveal>
           <Reveal delay={100}>
             <div className="lp-community-demo">
               <div className="lp-forum-header">
@@ -423,17 +425,13 @@ export default function Landing({ onSwitch }) {
                 <span className="lp-forum-category">Education</span>
               </div>
               {[
-                { user:'sidewalk_sam', rep:12, badge:'Member', time:'4m ago', title:'I accidentally full ported into a coin and then shlaro sold his bundle and now I am sleeping on the sidewalk', replies:47, votes:203, tag:'General' },
-                { user:'sol_runner', rep:512, badge:'Analyst', time:'11m ago', title:'Orbit flagged 14% fresh wallets and 3 snipers on this CA before it rugged. I listened. First time in my life I listened.', replies:18, votes:89, tag:'Analysis' },
-                { user:'orbitking', rep:847, badge:'Top Trader', time:'28m ago', title:'Up 14 SOL this month. No it was not luck. Yes I will explain. No I will not take questions.', replies:62, votes:341, tag:'General' },
+                { user:'sidewalk_sam', rep:12, badge:'Member', time:'4m ago', title:'I accidentally full ported into a coin and then shlaro sold his bundle and now I am sleeping on the sidewalk', replies:47, votes:203, downvotes:0, tag:'General' },
+                { user:'newdegen99', rep:1, badge:'Member', time:'12m ago', title:'just started trading, when will I get rich', replies:892, votes:0, downvotes:891, tag:'General' },
+                { user:'definitely_not_sus', rep:203, badge:'Member', time:'1h ago', title:'How to Rugpull Coins: A Comprehensive In-Depth Guide for Beginners and Advanced Traders Alike', replies:1, votes:4, downvotes:0, tag:'Education' },
               ].map((t, i) => (
                 <div key={i} className="lp-forum-thread">
                   <div className="lp-forum-thread-left">
                     <div className="lp-forum-avatar">{t.user[0].toUpperCase()}</div>
-                    <div className="lp-forum-votes">
-                      <span className="lp-forum-vote-up">▲</span>
-                      <span className="lp-forum-vote-n">{t.votes}</span>
-                    </div>
                   </div>
                   <div className="lp-forum-thread-body">
                     <div className="lp-forum-thread-meta">
@@ -446,6 +444,10 @@ export default function Landing({ onSwitch }) {
                     <div className="lp-forum-thread-title">{t.title}</div>
                     <div className="lp-forum-thread-foot">{t.replies} replies</div>
                   </div>
+                  <div className="lp-forum-vote-col">
+                    {t.votes > 0 && <div className="lp-forum-vote-up-block"><span>▲</span><span>{t.votes}</span></div>}
+                    {t.downvotes > 0 && <div className="lp-forum-vote-dn-block"><span>▼</span><span>{t.downvotes}</span></div>}
+                  </div>
                 </div>
               ))}
             </div>
@@ -453,16 +455,8 @@ export default function Landing({ onSwitch }) {
         </div>
       </section>
 
-      {/* ── CUPSEY JOKE ── */}
-      <div className="lp-joke-strip lp-joke-strip-center">
-        <span className="lp-joke-text">
-          We genuinely hope Cupsey does not buy our coin.
-          <span className="lp-joke-sub">You know what he does to charts. We all know.</span>
-        </span>
-      </div>
-
       {/* ── ALERTS DEMO ── */}
-      <section className="lp-section lp-alerts-section">
+      <section className="lp-section lp-alerts-section" id="section-alerts">
         <div style={{borderTop:'1px solid var(--line)', paddingTop:80}}>
           <Reveal>
             <div className="lp-label">Price Alerts</div>
@@ -513,7 +507,7 @@ export default function Landing({ onSwitch }) {
       </section>
 
       {/* ── WALLET ── */}
-      <section className="lp-section lp-wallet">
+      <section className="lp-section lp-wallet" id="section-leaderboard">
         <div className="lp-wallet-grid">
           <Reveal>
             <div className="lp-label">On-Chain Leaderboard</div>
@@ -580,6 +574,14 @@ export default function Landing({ onSwitch }) {
           </div>
         </Reveal>
       </section>
+
+      {/* ── CUPSEY JOKE ── */}
+      <div className="lp-joke-strip lp-joke-strip-center">
+        <span className="lp-joke-text">
+          We genuinely hope Cupsey does not buy our coin.
+          <span className="lp-joke-sub">You know what he does to charts. We all know.</span>
+        </span>
+      </div>
 
       {/* ── FOOTER ── */}
       <footer className="lp-footer">

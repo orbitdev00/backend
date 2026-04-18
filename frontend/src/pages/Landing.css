@@ -993,29 +993,14 @@
 }
 
 /* ── Black hole z-index control ────────────────────── */
-/* Canvas starts at z-index 9 — below all page content */
-/* .lp-bh-sucking flips the relationship */
-
-.lp {
-  position: relative;
-  z-index: 10; /* sits above canvas z-index 9 */
-}
-
+/* BH canvas is a sibling BEFORE .lp in the DOM */
+/* .lp has z-index:10 inline, canvas has z-index:9 */
+/* So canvas paints below .lp content during spawn/grow */
 .lp-bh-canvas {
   z-index: 9 !important;
 }
 
-/* When sucking starts, drop page content below canvas */
+/* When sucking phase begins, canvas jumps to 9999 via JS */
 body.lp-bh-sucking .lp {
-  z-index: 8 !important;
   pointer-events: none;
-}
-
-body.lp-bh-sucking .lp-bh-canvas {
-  z-index: 9999 !important;
-}
-
-/* Stars canvas always below page */
-.lp-canvas {
-  z-index: 0 !important;
 }

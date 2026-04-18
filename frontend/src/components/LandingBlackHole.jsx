@@ -17,8 +17,9 @@ export default function LandingBlackHole({ active, origin, onDone }) {
     const H = canvas.height = window.innerHeight
     canvas.style.display = 'block'
     const ctx = canvas.getContext('2d')
+    const scrollY = window.scrollY || 0
 
-    // Black hole spawns at button click position
+    // Black hole spawns at button click position (viewport coords)
     const cx = origin.x
     const cy = origin.y
     const maxR = Math.sqrt(W * W + H * H) * 0.5
@@ -267,7 +268,10 @@ export default function LandingBlackHole({ active, origin, onDone }) {
       className="lp-bh-canvas"
       style={{
         display: 'none',
-        position: 'fixed', inset: 0,
+        position: 'fixed',
+        top: 0, left: 0,
+        width: '100vw',
+        height: '100vh',
         zIndex: 9,
         pointerEvents: active ? 'all' : 'none',
       }}

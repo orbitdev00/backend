@@ -124,6 +124,7 @@ function Reveal({ children, delay = 0, className = '' }) {
       style={{ transitionDelay: `${delay}ms` }}>
       {children}
     </div>
+    </>
   )
 }
 
@@ -216,7 +217,9 @@ export default function Landing({ onSwitch }) {
   }, [])
 
   return (
-    <div className={`lp ${visible ? 'lp-in' : ''}`}>
+    <>
+    <LandingBlackHole active={bh.active} origin={bh.origin} onDone={onBhDone} />
+    <div className={`lp ${visible ? 'lp-in' : ''}`} style={{position:'relative', zIndex:10}}>
       <canvas ref={canvasRef} className="lp-canvas" />
 
       {/* ── NAV ── */}
@@ -601,8 +604,6 @@ export default function Landing({ onSwitch }) {
         </span>
       </div>
 
-      <LandingBlackHole active={bh.active} origin={bh.origin} onDone={onBhDone} />
-
       {/* ── FOOTER ── */}
       <footer className="lp-footer">
         <div className="lp-footer-top">
@@ -640,5 +641,6 @@ export default function Landing({ onSwitch }) {
         </div>
       </footer>
     </div>
+    </>
   )
 }

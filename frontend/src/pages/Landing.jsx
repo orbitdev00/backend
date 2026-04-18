@@ -23,51 +23,70 @@ const FEATURES = [
 ]
 
 
-const FEATURE_DETAILS = [
+const PLATFORM_CARDS = [
   {
-    num: '01', title: 'Token Intelligence',
-    short: 'Rug probability, bundle detection, fake volume scoring, dev history.',
-    detail: 'Orbit pulls 20+ on-chain signals in real time: holder distribution, fresh wallet concentration, sniper count, dev sell history, liquidity depth, bonding curve progress, and migration status. An AI narrative synthesizes everything into a plain-English verdict in under 5 seconds.'
+    icon: '⬡',
+    num: '01',
+    title: 'Token Intelligence',
+    color: '#a78bfa',
+    stats: ['Rug Probability', 'Bundle Detection', 'Fake Chart Score', 'Dev History'],
+    body: 'Orbit pulls 20+ on-chain signals in real time and synthesizes everything into a plain-English verdict in under 5 seconds. Know before you buy.'
   },
   {
-    num: '02', title: 'Trader Community',
-    short: 'Forum built for real degens. Share analysis, post calls, discuss tokens.',
-    detail: 'Threaded forum with categories for calls, analysis, education, and general discussion. Voting system, reputation scores, direct messaging, and a following feed. Your rep is built on what you actually say, not how loud you are.'
+    icon: '◈',
+    num: '02',
+    title: 'Trader Community',
+    color: '#60a5fa',
+    stats: ['Forum Threads', 'Alpha Calls', 'Reputation System', 'Direct Messaging'],
+    body: 'Threaded forum with voting, reputation scores, and a following feed. Your rep is built on what you actually say, not how loud you are.'
   },
   {
-    num: '03', title: 'On-Chain Leaderboard',
-    short: 'Monthly PnL rankings pulled directly from DEX swap history.',
-    detail: 'We fetch your transaction history from Raydium, Pump.fun, Jupiter, Orca, and Meteora and calculate real net SOL gained or lost. No self-reporting. No screenshots. Connect your public wallet address and let the chain speak for you.'
+    icon: '◆',
+    num: '03',
+    title: 'On-Chain Leaderboard',
+    color: '#4ade80',
+    stats: ['Real DEX Data', 'Monthly PnL', 'Zero Self-Reporting', 'Wallet Verified'],
+    body: 'Monthly rankings pulled from Raydium, Pump.fun, Jupiter, Orca, and Meteora. No screenshots. No lying. The chain does not forget.'
   },
   {
-    num: '04', title: 'Price Alerts',
-    short: 'Get notified the moment a token hits your target market cap.',
-    detail: 'Add any token CA to your watchlist with a target MC and direction. Orbit polls DexScreener every 15 seconds and fires an audio alert the moment the threshold is crossed. Watchlist syncs across all your devices.'
+    icon: '◎',
+    num: '04',
+    title: 'Price Alerts',
+    color: '#f59e0b',
+    stats: ['15s Polling', 'Audio Alerts', 'Any Token', 'Cross-Device Sync'],
+    body: 'Set a target MC, pick a direction, and get an audio alert the moment it triggers. Add as many tokens as you want.'
   },
 ]
 
 function FeaturesSection() {
-  const [open, setOpen] = useState(null)
+  const [hovered, setHovered] = useState(null)
   return (
     <section className="lp-section lp-features">
       <Reveal>
         <div className="lp-label">The platform</div>
         <h2 className="lp-h2">Four tools.<br />One unfair advantage.</h2>
       </Reveal>
-      <div className="lp-feat-list">
-        {FEATURE_DETAILS.map((f, i) => (
-          <Reveal key={i} delay={i * 60}>
+      <div className="lp-platform-grid">
+        {PLATFORM_CARDS.map((c, i) => (
+          <Reveal key={i} delay={i * 80}>
             <div
-              className={`lp-feat-row ${open === i ? 'lp-feat-open' : ''}`}
-              onClick={() => setOpen(open === i ? null : i)}
+              className={`lp-platform-card ${hovered === i ? 'lp-platform-hovered' : ''}`}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+              style={{'--card-color': c.color}}
             >
-              <span className="lp-feat-num">{f.num}</span>
-              <div className="lp-feat-content">
-                <div className="lp-feat-title">{f.title}</div>
-                <div className="lp-feat-body">{f.short}</div>
-                <div className="lp-feat-detail">{f.detail}</div>
+              <div className="lp-platform-card-top">
+                <span className="lp-platform-icon" style={{color: c.color}}>{c.icon}</span>
+                <span className="lp-platform-num">{c.num}</span>
               </div>
-              <div className="lp-feat-arrow">{open === i ? '↓' : '→'}</div>
+              <div className="lp-platform-title">{c.title}</div>
+              <div className="lp-platform-stats">
+                {c.stats.map(s => (
+                  <span key={s} className="lp-platform-stat" style={{borderColor: c.color + '33', color: c.color}}>{s}</span>
+                ))}
+              </div>
+              <div className="lp-platform-body">{c.body}</div>
+              <div className="lp-platform-glow" style={{background: `radial-gradient(circle at 50% 100%, ${c.color}18 0%, transparent 70%)`}} />
             </div>
           </Reveal>
         ))}
@@ -264,6 +283,20 @@ export default function Landing({ onSwitch }) {
         </Reveal>
       </section>
 
+      {/* ── DATA STRIP ── */}
+      <div className="lp-data-strip">
+        <div className="lp-data-strip-inner">
+          {['20+ on-chain signals','AI-generated narrative','Rug probability scoring','Bundle wallet detection','Dev sell history','Fresh wallet analysis','Sniper detection','Migration tracking','Liquidity depth','Peak MC estimate',
+            '20+ on-chain signals','AI-generated narrative','Rug probability scoring','Bundle wallet detection','Dev sell history','Fresh wallet analysis','Sniper detection','Migration tracking','Liquidity depth','Peak MC estimate'
+          ].map((t, i) => (
+            <span key={i} className="lp-data-item">
+              <span className="lp-data-dot" />
+              {t}
+            </span>
+          ))}
+        </div>
+      </div>
+
       {/* ── FEATURES ── */}
       <FeaturesSection />
 
@@ -358,24 +391,39 @@ export default function Landing({ onSwitch }) {
         <div className="lp-wallet-grid">
           <Reveal>
             <div className="lp-label">Your wallet</div>
-            <h2 className="lp-h2">Optional.<br />Seriously.</h2>
+            <h2 className="lp-h2">Optional.<br /><em>But the leaderboard is not.</em></h2>
             <p className="lp-wallet-body">
-              Add your public Solana wallet if you want your monthly PnL on the leaderboard.
-              Read-only. No connection request, no signing, no approvals.
+              Add your public Solana wallet and let your on-chain history do the talking.
+              Monthly PnL is pulled directly from DEX swap data. Real numbers, real rankings.
+              The top traders are already on it.
             </p>
             <p className="lp-wallet-quip">
-              We pull read-only data. No connection request, no signing, no approvals.<br />
+              Read-only. No connection request, no signing, no approvals.<br />
               <em>We built a tool, not a wallet drainer.</em>
             </p>
+            <div className="lp-wallet-compete">
+              <span className="lp-wallet-compete-label">Current top trader</span>
+              <span className="lp-wallet-compete-val">+38.7 SOL this month</span>
+              <span className="lp-wallet-compete-q">Could that be you?</span>
+            </div>
           </Reveal>
           <Reveal delay={150}>
             <div className="lp-wallet-card">
               <div className="lp-wallet-card-label">Monthly PnL · April 2026</div>
               <div className="lp-wallet-card-val">+14.2 SOL</div>
-              <div className="lp-wallet-card-sub">Verified on-chain</div>
+              <div className="lp-wallet-card-sub">Verified on-chain · Rank #3</div>
               <div className="lp-wallet-card-addr">7xK2...mF9p</div>
               <div className="lp-wallet-card-bar">
                 <div className="lp-wallet-card-fill" />
+              </div>
+              <div className="lp-wallet-card-ranks">
+                {[['#1','orbitking','38.7'],['#2','sol_runner','22.1'],['#3','7xK2...','14.2']].map(([rank, name, pnl]) => (
+                  <div key={rank} className="lp-rank-row">
+                    <span className="lp-rank-pos">{rank}</span>
+                    <span className="lp-rank-name">{name}</span>
+                    <span className="lp-rank-pnl">+{pnl} SOL</span>
+                  </div>
+                ))}
               </div>
             </div>
           </Reveal>
@@ -391,7 +439,6 @@ export default function Landing({ onSwitch }) {
             One analysis.<br />
             <em>That's all it takes.</em>
           </h2>
-          <p className="lp-final-sub">No wallet required to start.</p>
           <div className="lp-final-btns">
             <button className="lp-cta-primary lp-cta-xl" onClick={() => onSwitch('signup')}>Create free account</button>
             <button className="lp-cta-ghost" onClick={() => onSwitch('trial')}>Try without account</button>

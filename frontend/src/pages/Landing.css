@@ -481,3 +481,184 @@
 .lp-feat-open .lp-feat-arrow {
   color: var(--purple);
 }
+
+/* ── Hero title smaller ────────────────────────────── */
+.lp-hero-h1 {
+  font-size: clamp(40px, 5.5vw, 72px) !important;
+  letter-spacing: -1.5px !important;
+}
+
+/* ── Section h2 titles bigger ──────────────────────── */
+.lp-h2 {
+  font-size: clamp(42px, 6vw, 72px) !important;
+  letter-spacing: -1.5px !important;
+  margin-bottom: 48px !important;
+}
+
+/* ── Problem cards spiced up ───────────────────────── */
+.lp-prob-card {
+  position: relative;
+  overflow: hidden;
+  transition: background 0.25s, transform 0.2s !important;
+}
+.lp-prob-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--purple), transparent);
+  opacity: 0; transition: opacity 0.3s;
+}
+.lp-prob-card:hover::before { opacity: 1; }
+.lp-prob-card:hover { transform: translateY(-2px); }
+.lp-prob-title {
+  font-size: 20px !important;
+  letter-spacing: -0.3px;
+}
+.lp-prob-body {
+  font-size: 15px !important;
+  color: #888 !important;
+  line-height: 1.7 !important;
+}
+.lp-prob-num {
+  font-size: 11px !important;
+  letter-spacing: 3px !important;
+}
+
+/* ── Data strip between sections ───────────────────── */
+.lp-data-strip {
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: #030303;
+  padding: 13px 0;
+  position: relative; z-index: 1;
+}
+.lp-data-strip-inner {
+  display: flex; white-space: nowrap;
+  animation: ticker 40s linear infinite reverse;
+}
+.lp-data-item {
+  font-family: var(--mono); font-size: 11px;
+  letter-spacing: 1.5px; color: #555;
+  text-transform: uppercase; padding: 0 28px;
+  display: inline-flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+.lp-data-dot {
+  width: 4px; height: 4px;
+  background: var(--purple); border-radius: 50%; opacity: 0.6;
+}
+
+/* ── Platform grid cards ───────────────────────────── */
+.lp-platform-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 8px;
+}
+.lp-platform-card {
+  background: #080808;
+  border: 1px solid #141414;
+  border-radius: 6px;
+  padding: 32px 28px 28px;
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  transition: border-color 0.25s, transform 0.2s;
+}
+.lp-platform-card:hover {
+  border-color: color-mix(in srgb, var(--card-color) 30%, transparent);
+  transform: translateY(-3px);
+}
+.lp-platform-glow {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  opacity: 0; transition: opacity 0.3s;
+}
+.lp-platform-card:hover .lp-platform-glow { opacity: 1; }
+
+.lp-platform-card-top {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; margin-bottom: 16px;
+}
+.lp-platform-icon { font-size: 28px; }
+.lp-platform-num {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 2px; color: #333;
+}
+.lp-platform-title {
+  font-family: var(--display); font-size: 20px;
+  font-weight: 700; color: #fff; margin-bottom: 14px;
+  letter-spacing: -0.3px;
+}
+.lp-platform-stats {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-bottom: 18px;
+}
+.lp-platform-stat {
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 1px; text-transform: uppercase;
+  border: 1px solid; padding: 3px 8px;
+  border-radius: 2px; opacity: 0.7;
+}
+.lp-platform-body {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px; color: #666;
+  line-height: 1.7; font-weight: 300;
+}
+
+/* ── Wallet compete block ───────────────────────────── */
+.lp-wallet-compete {
+  margin-top: 28px;
+  padding: 20px 24px;
+  background: rgba(74,222,128,0.04);
+  border: 1px solid rgba(74,222,128,0.15);
+  border-radius: 6px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.lp-wallet-compete-label {
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 2px; text-transform: uppercase; color: #555;
+}
+.lp-wallet-compete-val {
+  font-family: var(--display); font-size: 22px;
+  font-weight: 700; color: #4ade80; letter-spacing: -0.5px;
+}
+.lp-wallet-compete-q {
+  font-family: var(--mono); font-size: 11px; color: #555;
+}
+
+/* ── Leaderboard mini in wallet card ───────────────── */
+.lp-wallet-card-ranks {
+  margin-top: 20px;
+  border-top: 1px solid #111;
+  padding-top: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.lp-rank-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.lp-rank-pos {
+  font-family: var(--mono); font-size: 10px;
+  color: #444; width: 24px;
+}
+.lp-rank-name {
+  font-family: var(--mono); font-size: 12px;
+  color: #777; flex: 1;
+}
+.lp-rank-pnl {
+  font-family: var(--mono); font-size: 12px;
+  color: #4ade80; font-weight: 600;
+}
+
+/* ── Footer logo spacing ───────────────────────────── */
+.lp-footer-logo {
+  display: flex; align-items: center; gap: 14px !important;
+  margin-bottom: 14px;
+}
+
+/* ── Mobile ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .lp-platform-grid { grid-template-columns: 1fr; }
+  .lp-hero-h1 { font-size: 36px !important; }
+  .lp-h2 { font-size: 36px !important; }
+}

@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
 import orbitPfp from '../orbitPfp.js'
+import LandingBlackHole from '../components/LandingBlackHole'
 import './Landing.css'
 
 const SOCIALS = [
@@ -122,6 +123,7 @@ function Reveal({ children, delay = 0, className = '' }) {
     <div ref={ref} className={`lp-reveal ${inView ? 'lp-revealed' : ''} ${className}`}
       style={{ transitionDelay: `${delay}ms` }}>
       {children}
+      <LandingBlackHole active={bh.active} origin={bh.origin} onDone={onBhDone} />
     </div>
   )
 }
@@ -131,6 +133,7 @@ export default function Landing({ onSwitch }) {
   const scrollRef = useRef(0)
   const [visible, setVisible] = useState(false)
   const [mockVisible, setMockVisible] = useState(false)
+  const [bh, setBh] = useState({ active: false, origin: null, dest: null })
   const mockRef = useRef(null)
   const mockInView = useRef(false)
 
@@ -184,6 +187,22 @@ export default function Landing({ onSwitch }) {
     return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize) }
   }, [])
 
+  // Black hole navigation handler
+  const flyTo = (e, dest) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const origin = {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    }
+    setBh({ active: true, origin, dest })
+  }
+
+  const onBhDone = () => {
+    const dest = bh.dest
+    setBh({ active: false, origin: null, dest: null })
+    if (dest) onSwitch(dest)
+  }
+
   // Mock bar reveal
   useEffect(() => {
     if (!mockRef.current) return
@@ -215,8 +234,8 @@ export default function Landing({ onSwitch }) {
             ))}
           </div>
           <div className="lp-nav-divider" />
-          <button className="lp-nav-signin" onClick={() => onSwitch('login')}>Sign in</button>
-          <button className="lp-nav-cta" onClick={() => onSwitch('signup')}>Get started</button>
+          <button className="lp-nav-signin lp-nav-signin-fade" onClick={() => { document.querySelector('.lp').style.transition='opacity 0.5s ease'; document.querySelector('.lp').style.opacity='0'; setTimeout(() => onSwitch('login'), 480) }}>Sign in</button>
+          <button className="lp-nav-cta" onClick={(e) => flyTo(e, 'signup')}>Create account</button>
         </div>
       </nav>
 
@@ -569,8 +588,8 @@ export default function Landing({ onSwitch }) {
             <em>That's all it takes.</em>
           </h2>
           <div className="lp-final-btns">
-            <button className="lp-cta-primary lp-cta-xl" onClick={() => onSwitch('signup')}>Create free account</button>
-            <button className="lp-cta-ghost" onClick={() => onSwitch('trial')}>Try without account</button>
+            <button className="lp-cta-primary lp-cta-xl" onClick={(e) => flyTo(e, 'signup')}>Create free account</button>
+            <button className="lp-cta-ghost" onClick={(e) => flyTo(e, 'trial')}>Try without account</button>
           </div>
         </Reveal>
       </section>

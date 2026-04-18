@@ -262,7 +262,7 @@ export default function Landing({ onSwitch }) {
       <section className="lp-section lp-problem">
         <Reveal>
           <div className="lp-label">The problem</div>
-          <h2 className="lp-h2">Most traders lose<br />because they're guessing.</h2>
+          <h2 className="lp-h2">Most traders lose because<br />they are <span className="lp-purple lp-underline">guessing.</span></h2>
         </Reveal>
         <div className="lp-problem-row">
           {[
@@ -309,7 +309,7 @@ export default function Landing({ onSwitch }) {
       <section className="lp-section lp-mock-section">
         <Reveal>
           <div className="lp-label">Token Intelligence</div>
-          <h2 className="lp-h2">This is what you get.<br />In under 5 seconds.</h2>
+          <h2 className="lp-h2">This is what you get.<br />In under <span className="lp-purple">5 seconds.</span></h2>
         </Reveal>
         <div ref={mockRef} className={`lp-mock ${mockVisible ? 'lp-mock-go' : ''}`}>
           <div className="lp-mock-top">
@@ -496,76 +496,25 @@ export default function Landing({ onSwitch }) {
         </div>
       </section>
 
-      {/* ── ALERTS DEMO ── */}
-      <section className="lp-section lp-alerts-section">
-        <div style={{borderTop:'1px solid var(--line)', paddingTop:80}}>
-          <Reveal>
-            <div className="lp-label">Price Alerts</div>
-            <h2 className="lp-h2">Set it.<br /><em>Get notified. Act first.</em></h2>
-          </Reveal>
-          <Reveal delay={100}>
-            <div className="lp-alerts-demo">
-              <div className="lp-alerts-header">
-                <span className="lp-alerts-title">Watchlist</span>
-                <span className="lp-alerts-count">4 tokens</span>
-              </div>
-              {[
-                { name:'DOGE', ca:'7xK2...mF9p', target:'$8M', dir:'above', mc:'$5.15M', status:'watching', pct:64 },
-                { name:'PEPE2', ca:'9mN4...kL2w', target:'$500K', dir:'above', mc:'$487K', status:'close', pct:97 },
-                { name:'RUGME', ca:'3pQ8...xR7t', target:'$100K', dir:'below', mc:'$234K', status:'watching', pct:43 },
-                { name:'MOON', ca:'2kF1...vB9s', target:'$2M', dir:'above', mc:'$2.1M', status:'triggered', pct:100 },
-              ].map((a, i) => (
-                <div key={i} className={`lp-alert-row ${a.status === 'triggered' ? 'lp-alert-triggered' : ''}`}>
-                  <div className="lp-alert-coin">
-                    <span className="lp-alert-name">{a.name}</span>
-                    <span className="lp-alert-ca">{a.ca}</span>
-                  </div>
-                  <div className="lp-alert-target">
-                    <span className="lp-alert-target-label">Target</span>
-                    <span className="lp-alert-target-val">{a.target} {a.dir}</span>
-                  </div>
-                  <div className="lp-alert-mc">
-                    <span className="lp-alert-mc-label">Current MC</span>
-                    <span className="lp-alert-mc-val">{a.mc}</span>
-                  </div>
-                  <div className="lp-alert-bar-wrap">
-                    <div className="lp-alert-bar-track">
-                      <div className="lp-alert-bar-fill" style={{
-                        width:`${a.pct}%`,
-                        background: a.status==='triggered' ? '#4ade80' : a.status==='close' ? '#f59e0b' : '#a78bfa'
-                      }} />
-                    </div>
-                    <span className="lp-alert-pct">{a.pct}%</span>
-                  </div>
-                  <div className={`lp-alert-status lp-alert-${a.status}`}>
-                    {a.status === 'triggered' ? '🔔 Triggered' : a.status === 'close' ? 'Close' : 'Watching'}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
       {/* ── WALLET ── */}
       <section className="lp-section lp-wallet">
         <div className="lp-wallet-grid">
           <Reveal>
-            <div className="lp-label">Your wallet</div>
-            <h2 className="lp-h2">Optional.<br /><em>But the leaderboard is not.</em></h2>
+            <div className="lp-label">On-Chain Leaderboard</div>
+            <h2 className="lp-h2"><em>Your PnL is already on-chain.</em><br />Might as well show it off.</h2>
             <p className="lp-wallet-body">
-              Add your public Solana wallet and let your on-chain history do the talking.
-              Monthly PnL is pulled directly from DEX swap data. Real numbers, real rankings.
-              The top traders are already on it.
+              Add your wallet and you are on the board. Win big and everyone knows.
+              Lose big and... well, everyone still knows. Orbit tracks both sides — Highest PnL
+              and Lowest PnL, verified on-chain every month.
             </p>
             <p className="lp-wallet-quip">
               Read-only. No connection request, no signing, no approvals.<br />
-              <em>We built a tool, not a wallet drainer.</em>
+              <em>Either way, at least you showed up.</em>
             </p>
             <div className="lp-wallet-compete">
-              <span className="lp-wallet-compete-label">Current top trader</span>
-              <span className="lp-wallet-compete-val">+38.7 SOL this month</span>
-              <span className="lp-wallet-compete-q">Could that be you?</span>
+              <span className="lp-wallet-compete-label">Top trader this month</span>
+              <span className="lp-wallet-compete-val">+38.7 SOL</span>
+              <span className="lp-wallet-compete-q">Top spot is empty. Someone has to take it.</span>
             </div>
           </Reveal>
           <Reveal delay={150}>

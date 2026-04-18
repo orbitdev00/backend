@@ -294,7 +294,7 @@ export default function Landing({ onSwitch }) {
       ctx.fillStyle='#000'; ctx.fill()
     }
 
-    const PHASES = { spawn:700, absorb:1100, implode:500 }
+    const PHASES = { spawn:933, absorb:1467, implode:667 }
     const state = { phase:'spawn', t0:performance.now(), called:false }
 
     const frame = ts => {
@@ -335,10 +335,10 @@ export default function Landing({ onSwitch }) {
           const ease=easeIO(lT)
           const sc=Math.max(0,1-ease)
           el.style.transform=`scale(${sc})`
-          el.style.opacity=`${sc}`
+          el.style.opacity='1'
         })
         if (t>=1) {
-          pageEls.forEach(el=>{el.style.opacity='0'})
+          pageEls.forEach(el=>{el.style.opacity='0';el.style.transform='scale(0)'})
           state.phase='implode'; state.t0=ts
         }
 

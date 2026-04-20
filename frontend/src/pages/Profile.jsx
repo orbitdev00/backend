@@ -32,6 +32,8 @@ function OwnerPanel({ profile, setProfile }) {
   const ACTIONS = [
     { value: '', label: '-- Select action --' },
     { value: 'set_tier', label: 'Change membership tier' },
+    { value: 'add_mod', label: 'Add mod status' },
+    { value: 'remove_mod', label: 'Remove mod status' },
     { value: 'ban', label: 'Ban account (read-only)' },
     { value: 'unban', label: 'Unban account' },
     { value: 'delete', label: 'Delete account' },
@@ -39,6 +41,8 @@ function OwnerPanel({ profile, setProfile }) {
 
   const getConfirmText = () => {
     if (action === 'set_tier') return `Set @${profile?.username || 'user'} tier to ${tier.toUpperCase()}?`
+    if (action === 'add_mod') return `Give @${profile?.username || 'user'} mod status? They can delete threads and ban users.`
+    if (action === 'remove_mod') return `Remove mod status from @${profile?.username || 'user'}?`
     if (action === 'ban') return `Ban @${profile?.username || 'user'}? They will be read-only.`
     if (action === 'unban') return `Unban @${profile?.username || 'user'}?`
     if (action === 'delete') return `PERMANENTLY DELETE @${profile?.username || 'user'}'s account? This cannot be undone.`
@@ -56,6 +60,18 @@ function OwnerPanel({ profile, setProfile }) {
         if (error) throw error
         setProfile(p => ({ ...p, tier }))
         setMsg(`✓ Tier set to ${tier}`)
+      } else if (action === 'add_mod') {
+        const { error } = await supabase.from('user_reputation')
+          .update({ role: 'mod' })
+          .eq('user_id', profile.user_id)
+        if (error) throw error
+        setMsg('✓ Mod status granted')
+      } else if (action === 'remove_mod') {
+        const { error } = await supabase.from('user_reputation')
+          .update({ role: 'member' })
+          .eq('user_id', profile.user_id)
+        if (error) throw error
+        setMsg('✓ Mod status removed')
       } else if (action === 'ban') {
         const { error } = await supabase.from('user_reputation')
           .update({ role: 'banned' })
@@ -128,7 +144,7 @@ function OwnerPanel({ profile, setProfile }) {
       )}
 
       {msg && <div className={`profile-owner-msg ${msg.startsWith('Error') ? 'profile-owner-msg-err' : ''}`}>{msg}</div>}
-    </div>
+    </div></div>
   )
 }
 

@@ -60,3 +60,19 @@ body {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+
+/* ── Page scroll lock ───────────────────────────────── */
+.page-locked {
+  height: 100vh;
+  overflow: hidden;
+}
+.page-locked .scroll-inner {
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: #222 transparent;
+}
+.page-locked .scroll-inner::-webkit-scrollbar { width: 4px; }
+.page-locked .scroll-inner::-webkit-scrollbar-track { background: transparent; }
+.page-locked .scroll-inner::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }

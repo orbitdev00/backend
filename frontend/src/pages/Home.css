@@ -1,5 +1,6 @@
 .home-screen {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: #000;
   color: var(--text);
   font-family: var(--sans);
@@ -76,6 +77,8 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
   font-style: italic;
+  padding: 0 4px 4px 2px;
+  display: inline-block;
 }
 
 .home-hero-sub {
@@ -232,7 +235,4 @@
   display: inline;
   white-space: nowrap;
 }
-.home-hero-title {
-  overflow: visible;
-  white-space: normal;
-}
+

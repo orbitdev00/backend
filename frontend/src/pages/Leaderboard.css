@@ -1,10 +1,13 @@
 /* ── Screen & body ───────────────────────────────────── */
 .lb-screen {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: #080808;
   color: #ccc;
   font-family: 'Inter', system-ui, sans-serif;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .lb-body {
@@ -13,7 +16,14 @@
   padding: 36px 24px 48px;
   position: relative;
   z-index: 10;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #222 transparent;
 }
+.lb-body::-webkit-scrollbar { width: 4px; }
+.lb-body::-webkit-scrollbar-track { background: transparent; }
+.lb-body::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
 
 /* ── Header ──────────────────────────────────────────── */
 .lb-heading-wrap {

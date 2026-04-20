@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 import App from './App.jsx'
 import Home from './pages/Home.jsx'
@@ -52,8 +52,10 @@ function RootRoute() {
 function AppRoutes() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   return (
-    <Routes>
+    <PageTransition key={location.pathname}>
+    <Routes location={location}>
       <Route path="/login"          element={<><StarField /><Login onSwitch={(p) => navigate(p === 'login' ? '/login' : p === 'signup' ? '/signup' : p === 'forgot' ? '/forgot' : '/')} /></>} />
       <Route path="/signup"         element={<><StarField /><SignUp onSwitch={(p) => navigate(p === 'login' ? '/login' : p === 'signup' ? '/signup' : p === 'forgot' ? '/forgot' : '/')} /></>} />
       <Route path="/forgot"         element={<><StarField /><ForgotPassword onSwitch={(p) => navigate(p === 'login' ? '/login' : p === 'signup' ? '/signup' : p === 'forgot' ? '/forgot' : '/')} /></>} />
@@ -73,6 +75,7 @@ function AppRoutes() {
       <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </PageTransition>
   )
 }
 

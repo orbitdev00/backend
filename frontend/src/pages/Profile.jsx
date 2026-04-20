@@ -143,7 +143,7 @@ function OwnerPanel({ profile, setProfile }) {
         </div>
       )}
 
-      {msg && <div className={`profile-owner-msg ${msg.startsWith('Error') ? 'profile-owner-msg-err' : ''}`}>{msg}</div>}
+      {msg && <div className={'profile-owner-msg' + (msg.indexOf('Error') === 0 ? ' profile-owner-msg-err' : '')}>{msg}</div>}
     </div></div>
   )
 }

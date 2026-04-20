@@ -142,7 +142,7 @@ export default function Profile() {
   const [replies, setReplies]     = useState([])
   const [isFollowing, setIsFollowing] = useState(false)
   const [tab, setTab]             = useState('threads')
-  const OWNER_EMAIL = 'alxismatos@gmail.com'
+  const OWNER_EMAIL = 'orbitdev00@gmail.com'
   const [loading, setLoading]     = useState(true)
   const [dmOpen, setDmOpen]       = useState(false)
   const [pnlLoading, setPnlLoading] = useState(false)

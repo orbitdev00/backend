@@ -29,6 +29,18 @@ export default function NavBar({ active, onLogoClick }) {
   useEffect(() => {
     if (user) {
       getUserTier().then(d => setTier(d.tier || 'free'))
+      // Fetch unread DM count
+      const fetchUnread = async () => {
+        const { count } = await supabase
+          .from('direct_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('receiver_id', user.id)
+          .eq('read', false)
+        setUnreadDMs(count || 0)
+      }
+      fetchUnread()
+      const interval = setInterval(fetchUnread, 30000) // poll every 30s
+      return () => clearInterval(interval)
     }
   }, [user])
 
@@ -138,8 +150,11 @@ export default function NavBar({ active, onLogoClick }) {
         <div className="nb-right">
           {/* Inbox first */}
           {user && (
-            <button className="nb-inbox-btn nb-desktop" onClick={() => nav('/inbox')} title="Messages">
+            <button className="nb-inbox-btn nb-desktop" onClick={() => { nav('/inbox'); setUnreadDMs(0) }} title="Messages" style={{position:'relative'}}>
               ✉
+              {unreadDMs > 0 && (
+                <span className="nb-inbox-badge">{unreadDMs > 9 ? '9+' : unreadDMs}</span>
+              )}
             </button>
           )}
 

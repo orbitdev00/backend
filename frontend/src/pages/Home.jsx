@@ -15,7 +15,7 @@ const CARDS = [
     color: '#a78bfa',
     shadow: '0 0 40px rgba(167,139,250,0.15)',
     border: 'rgba(167,139,250,0.25)',
-    tag: 'AI POWERED',
+    tag: 'AI TRAINED',
   },
   {
     key: 'forum',
@@ -56,7 +56,7 @@ export default function Home() {
   const nav = useNavigate()
   const { user } = useAuth()
   const [visible, setVisible] = useState(false)
-  const username = user?.email?.split('@')[0] || 'trader'
+  const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'trader'
 
   useEffect(() => { setTimeout(() => setVisible(true), 60) }, [])
 

@@ -177,7 +177,7 @@ export default function Tracker() {
       <NavBar active="tracker" />
       <div className="tracker-body">
         <div className="tracker-header">
-          <h2>Tracker</h2>
+          <div className="tracker-heading-wrap"><h2>Tracker</h2><p>Watch coins · get alerted when targets hit.</p></div>
           <div className="tracker-tabs">
             <button className={`tracker-tab ${tab === 'alerts' ? 'active' : ''}`} onClick={() => setTab('alerts')}>
               Alerts {tracked.length > 0 && <span className="tracker-badge">{tracked.length}</span>}

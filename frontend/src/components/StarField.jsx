@@ -21,7 +21,7 @@ export default function StarField() {
       x:     (Math.random() - 0.5) * W(),
       y:     (Math.random() - 0.5) * H(),
       // Smaller: 0.15 - 0.75px
-      size:  0.15 + Math.random() * 0.6,
+      size:  0.3 + Math.random() * 0.9,
       // Base opacity lower
       opacity: 0.1 + Math.random() * 0.5,
       // Flicker params

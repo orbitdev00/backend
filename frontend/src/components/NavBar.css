@@ -1,17 +1,18 @@
 .navbar {
   display: flex; align-items: center; gap: 16px;
-  padding: 10px 24px;
+  padding: 14px 32px;
   border-bottom: 1px solid #222;
   position: sticky; top: 0; z-index: 100;
   background: #0d0d0d;
+  height: 64px;
 }
 
 .nb-logo {
   display: flex; align-items: center; gap: 8px;
   cursor: pointer; margin-right: 8px;
 }
-.nb-pfp { width: 26px; height: 26px; border-radius: 50%; border: 1px solid #333; object-fit: cover; }
-.nb-title { font-size: 13px; font-weight: 700; letter-spacing: 3px; color: #fff; }
+.nb-pfp { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #333; object-fit: cover; }
+.nb-title { font-size: 15px; font-weight: 700; letter-spacing: 3px; color: #fff; }
 .nb-version { font-size: 9px; color: #555; letter-spacing: 1px; }
 
 .nb-links { display: flex; gap: 2px; flex: 1; }

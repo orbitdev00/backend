@@ -156,9 +156,6 @@ export default function NavBar({ active, onLogoClick }) {
                   <div className="nb-email">{user.email}</div>
                   {tier !== 'free' && <div className="nb-tier-badge" style={{color: tier==='omega' ? '#f59e0b' : '#a78bfa'}}>{tier.toUpperCase()}</div>}
                   <div className="nb-divider" />
-                  <button className="nb-menu-btn" onClick={() => { nav('/profile/' + (username || user.email?.split('@')[0])); setShowMenu(false) }}>
-                    My Profile
-                  </button>
                   {tier === 'free' && (
                     <button className="nb-menu-btn nb-upgrade-btn" onClick={() => { setShowMenu(false); nav('/pricing') }}>
                       ⚡ Upgrade to Degen
@@ -169,6 +166,9 @@ export default function NavBar({ active, onLogoClick }) {
                       ⚡ Upgrade to Omega
                     </button>
                   )}
+                  <button className="nb-menu-btn" onClick={() => { nav('/profile/' + (username || user.email?.split('@')[0])); setShowMenu(false) }}>
+                    My Profile
+                  </button>
                   <button className="nb-menu-btn" onClick={() => { setShowAccount(true); setShowMenu(false) }}>
                     Account Settings
                   </button>

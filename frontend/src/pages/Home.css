@@ -14,8 +14,10 @@
   align-items: center;
   justify-content: center;
   min-height: calc(100vh - 56px);
-  padding: 48px 24px;
-  gap: 44px;
+  padding: 20px 24px 32px;
+  gap: 28px;
+  justify-content: flex-start;
+  padding-top: 40px;
   opacity: 0;
   transform: translateY(10px);
   transition: opacity 0.6s ease, transform 0.6s ease;
@@ -143,10 +145,10 @@
 .home-card-inner {
   position: relative;
   z-index: 1;
-  padding: 24px 22px 20px;
+  padding: 30px 26px 24px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   height: 100%;
 }
 
@@ -174,7 +176,7 @@
 }
 
 .home-card-label {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: #fff;
   letter-spacing: -0.3px;
@@ -182,8 +184,8 @@
 }
 
 .home-card-desc {
-  font-size: 12px;
-  color: #666;
+  font-size: 13px;
+  color: #777;
   line-height: 1.65;
   font-weight: 300;
   flex: 1;
@@ -225,4 +227,13 @@
 @media (max-width: 560px) {
   .home-grid { grid-template-columns: 1fr; }
   .home-hero-title { font-size: 32px; }
+}
+
+.home-hero-name {
+  display: inline;
+  white-space: nowrap;
+}
+.home-hero-title {
+  overflow: visible;
+  white-space: normal;
 }

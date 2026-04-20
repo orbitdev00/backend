@@ -37,6 +37,7 @@ const TIERS = [
       'Unlimited price tracker with alerts',
       'Post images in forum',
       'Priority analysis queue',
+      'Access to full pricing and upgrade page',
       'Degen badge on profile and leaderboard',
     ],
   },

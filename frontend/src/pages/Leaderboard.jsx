@@ -79,8 +79,8 @@ export default function Leaderboard() {
       <StarField />
       <NavBar active="leaderboard" />
       <div className="lb-body">
+        <div className="lb-heading-wrap"><h2>Leaderboard</h2><p>On-chain PnL · community rankings.</p></div>
         <div className="lb-header">
-          <h2>Leaderboard</h2>
           <div className="lb-tabs">
             <button className={`lb-tab ${tab === 'pnl' ? 'active' : ''}`} onClick={() => setTab('pnl')}>Monthly PnL</button>
             <button className={`lb-tab ${tab === 'reputation' ? 'active' : ''}`} onClick={() => setTab('reputation')}>Reputation</button>

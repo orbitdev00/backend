@@ -426,7 +426,7 @@ async def stream_analysis(websocket: WebSocket, mint: str):
         asyncio.create_task(_bg())
 
         # Log to Supabase
-        uid = request.query_params.get("user_id") or None
+        uid = websocket.query_params.get("user_id") or None
         # Rate limit check for WS stream
         if uid:
             rl = await check_rate_limit(uid)

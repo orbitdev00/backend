@@ -159,7 +159,7 @@ export default function App() {
 
   const {
     status, statusMsg, snapshot, prediction, preview, partials,
-    lastUpdated, analyze: streamAnalyze, refresh: streamRefresh, disconnect,
+    lastUpdated, rateLimit, analyze: streamAnalyze, refresh: streamRefresh, disconnect,
   } = useStreamAnalysis()
 
   // Handle Stripe payment success redirect

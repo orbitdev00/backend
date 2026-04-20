@@ -168,3 +168,20 @@
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.08);
 }
+
+/* ── Upgrade button ────────────────────────────────── */
+.nb-upgrade-btn {
+  color: #a78bfa !important;
+  border-top: 1px solid #1a1a1a;
+  padding-top: 10px !important;
+  font-weight: 600 !important;
+}
+.nb-upgrade-omega {
+  color: #f59e0b !important;
+}
+.nb-upgrade-btn:hover {
+  background: rgba(167,139,250,0.08) !important;
+}
+.nb-upgrade-omega:hover {
+  background: rgba(245,158,11,0.08) !important;
+}

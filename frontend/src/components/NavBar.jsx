@@ -159,6 +159,16 @@ export default function NavBar({ active, onLogoClick }) {
                   <button className="nb-menu-btn" onClick={() => { nav('/profile/' + (username || user.email?.split('@')[0])); setShowMenu(false) }}>
                     My Profile
                   </button>
+                  {tier === 'free' && (
+                    <button className="nb-menu-btn nb-upgrade-btn" onClick={() => { setShowAccount(true); setShowMenu(false) }}>
+                      ⚡ Upgrade to Degen
+                    </button>
+                  )}
+                  {tier === 'degen' && (
+                    <button className="nb-menu-btn nb-upgrade-btn nb-upgrade-omega" onClick={() => { setShowAccount(true); setShowMenu(false) }}>
+                      ⚡ Upgrade to Omega
+                    </button>
+                  )}
                   <button className="nb-menu-btn" onClick={() => { setShowAccount(true); setShowMenu(false) }}>
                     Account Settings
                   </button>

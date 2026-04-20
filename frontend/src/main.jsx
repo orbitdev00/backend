@@ -19,6 +19,7 @@ import Leaderboard from './pages/Leaderboard.jsx'
 import Profile from './pages/Profile.jsx'
 import Inbox from './pages/Inbox.jsx'
 import EditProfile from './pages/EditProfile.jsx'
+import Pricing from './pages/Pricing.jsx'
 import StarField from './components/StarField.jsx'
 import './index.css'
 import './mobile.css'
@@ -68,6 +69,7 @@ function AppRoutes() {
       <Route path="/profile/:username" element={<Profile />} />
       <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
       <Route path="/edit-profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
+      <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

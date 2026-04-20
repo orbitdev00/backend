@@ -160,12 +160,12 @@ export default function NavBar({ active, onLogoClick }) {
                     My Profile
                   </button>
                   {tier === 'free' && (
-                    <button className="nb-menu-btn nb-upgrade-btn" onClick={() => { setShowAccount(true); setShowMenu(false) }}>
+                    <button className="nb-menu-btn nb-upgrade-btn" onClick={() => { setShowMenu(false); nav('/pricing') }}>
                       ⚡ Upgrade to Degen
                     </button>
                   )}
                   {tier === 'degen' && (
-                    <button className="nb-menu-btn nb-upgrade-btn nb-upgrade-omega" onClick={() => { setShowAccount(true); setShowMenu(false) }}>
+                    <button className="nb-menu-btn nb-upgrade-btn nb-upgrade-omega" onClick={() => { setShowMenu(false); nav('/pricing') }}>
                       ⚡ Upgrade to Omega
                     </button>
                   )}

@@ -153,6 +153,7 @@ export default function App() {
   const [mint, setMint]                 = useState('')
   const [activeMint, setActiveMint]     = useState('')
   const [copied, setCopied]             = useState(false)
+  const [paymentSuccess, setPaymentSuccess] = useState(null)
   // Animation state machine: idle → animating → black → revealing → done
   const [phase, setPhase] = useState('idle')
   // phase: idle | animating | black | revealing

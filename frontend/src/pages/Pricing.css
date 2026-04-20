@@ -1,0 +1,176 @@
+.pricing-page {
+  min-height: 100vh;
+  background: #080808;
+  color: var(--text);
+  font-family: var(--sans);
+}
+
+.pricing-body {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 60px 24px 80px;
+}
+
+.pricing-header {
+  text-align: center;
+  margin-bottom: 56px;
+}
+
+.pricing-title {
+  font-size: 36px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.5px;
+  margin-bottom: 10px;
+}
+
+.pricing-sub {
+  font-size: 14px;
+  color: #666;
+  font-family: var(--mono);
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+}
+
+.pricing-manage {
+  background: none;
+  border: none;
+  color: var(--green);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: opacity 0.15s;
+}
+.pricing-manage:hover { opacity: 0.7; }
+
+/* Grid */
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 56px;
+}
+
+.pricing-card {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 10px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.pricing-card:hover { transform: translateY(-2px); }
+.pricing-card-popular { border-color: #a78bfa44; }
+.pricing-card-current { border-color: var(--tc) !important; }
+
+.pricing-sale-tag {
+  position: absolute; top: 0; right: 0;
+  background: #f59e0b; color: #000;
+  font-family: var(--mono); font-size: 8px;
+  font-weight: 700; letter-spacing: 1px;
+  padding: 4px 10px; border-radius: 0 10px 0 6px;
+}
+.pricing-popular-tag {
+  position: absolute; top: 0; right: 0;
+  background: #a78bfa; color: #000;
+  font-family: var(--mono); font-size: 8px;
+  font-weight: 700; letter-spacing: 1px;
+  padding: 4px 10px; border-radius: 0 10px 0 6px;
+}
+
+.pricing-card-top { margin-bottom: 24px; }
+.pricing-tier-name {
+  font-size: 18px; font-weight: 700;
+  letter-spacing: 1px; margin-bottom: 6px;
+}
+.pricing-tier-desc {
+  font-size: 12px; color: #666;
+  margin-bottom: 16px; font-weight: 300;
+}
+.pricing-price-row {
+  display: flex; align-items: baseline; gap: 3px;
+}
+.pricing-price-old {
+  font-family: var(--mono); font-size: 14px;
+  color: #444; text-decoration: line-through;
+  margin-right: 4px;
+}
+.pricing-price {
+  font-family: var(--mono); font-size: 28px;
+  font-weight: 700; color: #fff; letter-spacing: -0.5px;
+}
+.pricing-period {
+  font-size: 12px; color: #555;
+}
+
+.pricing-features {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column;
+  gap: 8px; flex: 1; margin-bottom: 24px;
+}
+.pricing-feature {
+  font-size: 12px; color: #999;
+  line-height: 1.5; display: flex;
+  gap: 8px; align-items: flex-start;
+}
+.pricing-feature span { flex-shrink: 0; font-size: 11px; margin-top: 1px; }
+
+.pricing-card-bottom { margin-top: auto; }
+.pricing-cta {
+  width: 100%; border: none; border-radius: 5px;
+  color: #000; font-family: var(--mono);
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 1px; padding: 11px;
+  cursor: pointer; text-transform: uppercase;
+  transition: opacity 0.15s;
+}
+.pricing-cta:hover { opacity: 0.85; }
+.pricing-cta:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.pricing-current-label {
+  text-align: center; font-family: var(--mono);
+  font-size: 10px; color: var(--tc);
+  letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 8px 0;
+}
+.pricing-downgrade-label {
+  text-align: center; font-family: var(--mono);
+  font-size: 10px; color: #333;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 8px 0;
+}
+
+/* Trust section */
+.pricing-trust {
+  border-top: 1px solid #111;
+  padding-top: 40px;
+}
+.pricing-trust-inner {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+.pricing-trust-item {
+  display: flex; gap: 14px; align-items: flex-start;
+}
+.pricing-trust-icon {
+  font-size: 20px; flex-shrink: 0;
+}
+.pricing-trust-title {
+  font-size: 13px; font-weight: 600;
+  color: #ddd; margin-bottom: 6px;
+}
+.pricing-trust-body {
+  font-size: 12px; color: #666;
+  line-height: 1.65; font-weight: 300;
+}
+
+@media (max-width: 768px) {
+  .pricing-grid { grid-template-columns: 1fr; }
+  .pricing-trust-inner { grid-template-columns: 1fr; }
+  .pricing-title { font-size: 28px; }
+}

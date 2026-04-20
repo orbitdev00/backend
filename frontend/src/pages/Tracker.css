@@ -75,3 +75,14 @@
 .tracker-tab.active { background: #1a1a1a; color: #fff; }
 .tracker-badge { background: var(--green); color: #000; border-radius: 10px; padding: 1px 6px; font-size: 9px; font-weight: 700; }
 .tr-note { font-size: 10px; color: #444; margin-top: 2px; font-weight: 300; }
+
+/* ── Solid content wrappers ────────────────────────── */
+.tracker-header, .tracker-body, .tracker-card,
+.tracker-empty, .tracker-form, .tracker-tabs-wrap {
+  position: relative; z-index: 10;
+  background: #0a0a0a;
+}
+.tracker-header {
+  background: linear-gradient(to bottom, #000 80%, transparent);
+  padding-top: 20px;
+}

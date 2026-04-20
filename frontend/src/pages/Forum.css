@@ -312,3 +312,18 @@
 }
 .fsidebar-feed-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .fsidebar-feed-user span { font-size: 10px; color: var(--green); }
+
+/* ── Solid content wrappers over starfield ─────────── */
+.forum-layout, .forum-header, .forum-thread, .forum-compose,
+.forum-search-results, .forum-sidebar, .forum-title-wrap {
+  position: relative; z-index: 10;
+  background: #0a0a0a;
+}
+.forum-title-wrap {
+  padding: 20px 0 12px;
+  background: linear-gradient(to bottom, #080808 80%, transparent);
+}
+.forum-thread {
+  background: #0d0d0d;
+  border: 1px solid #1e1e1e;
+}

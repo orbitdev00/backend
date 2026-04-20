@@ -118,3 +118,18 @@
 .hist-clear-all-btn:hover { border-color: var(--red); color: var(--red); }
 .ht-selected { border-color: var(--green) !important; }
 .ht-checkbox { accent-color: var(--green); cursor: pointer; margin: 0; }
+
+/* ── Solid content wrappers ────────────────────────── */
+.history-header, .history-body, .hist-card,
+.hist-empty, .hist-filters, .hist-title-wrap {
+  position: relative; z-index: 10;
+  background: #0a0a0a;
+}
+.history-header {
+  background: linear-gradient(to bottom, #000 80%, transparent);
+  padding-top: 20px;
+}
+.hist-card {
+  background: #0d0d0d;
+  border: 1px solid #1e1e1e;
+}

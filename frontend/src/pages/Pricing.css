@@ -8,20 +8,24 @@
 .pricing-body {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 60px 24px 80px;
+  padding: 20px 24px 20px;
+  height: calc(100vh - 56px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .pricing-header {
   text-align: center;
-  margin-bottom: 56px;
+  margin-bottom: 16px;
 }
 
 .pricing-title {
-  font-size: 36px;
+  font-size: 26px;
   font-weight: 700;
   color: #fff;
   letter-spacing: -0.5px;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .pricing-sub {
@@ -48,15 +52,16 @@
 .pricing-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 56px;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
 }
 
 .pricing-card {
   background: #0a0a0a;
   border: 1px solid #1a1a1a;
   border-radius: 10px;
-  padding: 28px 24px;
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -82,14 +87,14 @@
   padding: 4px 10px; border-radius: 0 10px 0 6px;
 }
 
-.pricing-card-top { margin-bottom: 24px; }
+.pricing-card-top { margin-bottom: 10px; }
 .pricing-tier-name {
   font-size: 18px; font-weight: 700;
   letter-spacing: 1px; margin-bottom: 6px;
 }
 .pricing-tier-desc {
-  font-size: 12px; color: #666;
-  margin-bottom: 16px; font-weight: 300;
+  font-size: 11px; color: #666;
+  margin-bottom: 8px; font-weight: 300;
 }
 .pricing-price-row {
   display: flex; align-items: baseline; gap: 3px;
@@ -100,7 +105,7 @@
   margin-right: 4px;
 }
 .pricing-price {
-  font-family: var(--mono); font-size: 28px;
+  font-family: var(--mono); font-size: 22px;
   font-weight: 700; color: #fff; letter-spacing: -0.5px;
 }
 .pricing-period {
@@ -110,7 +115,7 @@
 .pricing-features {
   list-style: none; padding: 0; margin: 0;
   display: flex; flex-direction: column;
-  gap: 8px; flex: 1; margin-bottom: 24px;
+  gap: 5px; flex: 1; margin-bottom: 10px;
 }
 .pricing-feature {
   font-size: 12px; color: #999;
@@ -204,9 +209,10 @@
 
 /* ── Themed trust section ──────────────────────────── */
 .pricing-trust {
-  border-top: 1px solid #111;
-  padding-top: 40px;
+  border-top: none;
+  padding-top: 8px;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 
@@ -214,13 +220,13 @@
 .pricing-trust-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  gap: 10px;
 }
 .pricing-trust-card {
   background: #0a0a0a;
   border: 1px solid #1a1a1a;
   border-radius: 8px;
-  padding: 24px 20px;
+  padding: 14px 16px;
   opacity: 0;
   animation: pricingCardIn 0.5s ease forwards;
   text-align: center;
@@ -233,15 +239,15 @@
 .pricing-trust-card:nth-child(3) { animation-delay: 0.6s; }
 
 .pricing-trust-card-icon {
-  font-size: 22px; margin-bottom: 12px; text-align: center;
+  font-size: 18px; margin-bottom: 6px; text-align: center;
 }
 .pricing-trust-card-title {
   font-size: 13px; font-weight: 600;
   color: #ddd; margin-bottom: 8px; text-align: center;
 }
 .pricing-trust-card-body {
-  font-size: 12px; color: #666;
-  line-height: 1.65; font-weight: 300; text-align: center;
+  font-size: 11px; color: #666;
+  line-height: 1.5; font-weight: 300; text-align: center;
 }
 
 @media (max-width: 768px) {

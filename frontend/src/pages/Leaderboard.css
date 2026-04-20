@@ -47,3 +47,13 @@
 /* Highest PnL tab — stays green since it's a positive indicator */
 .lb-pnl-toggle .lb-tab.active.pnl-high { border-color: #4ade80; color: #4ade80; }
 .lb-tab.active { background: #1a1a1a; color: #fff; }
+
+/* ── Solid content wrappers ────────────────────────── */
+.lb-header, .lb-body, .lb-table, .lb-tabs, .lb-title-wrap {
+  position: relative; z-index: 10;
+  background: #0a0a0a;
+}
+.lb-header {
+  background: linear-gradient(to bottom, #080808 80%, transparent);
+}
+.lb-table { background: #0d0d0d; }

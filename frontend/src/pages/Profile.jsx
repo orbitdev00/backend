@@ -150,7 +150,6 @@ export default function Profile() {
   const [dmBody, setDmBody]       = useState('')
   const [dmSending, setDmSending] = useState(false)
   const [dmSent, setDmSent]       = useState(false)
-  const [isOwner, setIsOwner]     = useState(false)
 
   useEffect(() => { loadProfile() }, [username])
 
@@ -167,9 +166,6 @@ export default function Profile() {
     if (!rep) { nav('/leaderboard'); return }
     // Try to get auth creation date for own profile
     setProfile(rep)
-
-    // Check if viewer is owner
-    setIsOwner(user?.email === OWNER_EMAIL)
 
     // Load badges
     const { data: ub } = await supabase.from('user_badges')
@@ -253,6 +249,7 @@ export default function Profile() {
   }
 
   const isOwnProfile = user?.id === profile?.user_id
+  const isOwner = user?.email === OWNER_EMAIL && !isOwnProfile
   const displayName = profile?.username || profile?.email?.split('@')[0]
 
   if (loading) return <div className="profile-screen"><NavBar /><div className="profile-loading">Loading...</div></div>
@@ -307,6 +304,9 @@ export default function Profile() {
                 ✉ Message
               </button>
             </div>
+          )}
+          {isOwner && !isOwnProfile && (
+            <OwnerPanel profile={profile} setProfile={setProfile} />
           )}
           {isOwnProfile && (
             <div style={{display:'flex',flexDirection:'column',gap:8,alignItems:'flex-end'}}>

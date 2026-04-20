@@ -1,8 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import { startCheckout, openBillingPortal } from '../lib/stripe'
-import { useEffect, useState } from 'react'
 import './Pricing.css'
 
 const TIERS = [

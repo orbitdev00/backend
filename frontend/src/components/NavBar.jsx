@@ -22,6 +22,8 @@ export default function NavBar({ active, onLogoClick }) {
   const [savingProfile, setSavingProfile] = useState(false)
   const [profileMsg, setProfileMsg]     = useState('')
   const [uploading, setUploading]       = useState(false)
+  const [tier, setTier]               = useState('free')
+  const [showPricing, setShowPricing]   = useState(false)
   const fileRef = useRef(null)
 
   useEffect(() => {

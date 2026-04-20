@@ -116,6 +116,8 @@
   font-size: 12px; color: #999;
   line-height: 1.5; display: flex;
   gap: 8px; align-items: flex-start;
+  justify-content: center;
+  text-align: center;
 }
 .pricing-feature span { flex-shrink: 0; font-size: 11px; margin-top: 1px; }
 
@@ -203,41 +205,11 @@
 /* ── Themed trust section ──────────────────────────── */
 .pricing-trust {
   border-top: 1px solid #111;
-  padding-top: 0;
+  padding-top: 40px;
   overflow: hidden;
 }
 
-.pricing-trust-ticker {
-  overflow: hidden;
-  border-bottom: 1px solid #111;
-  background: #040404;
-  padding: 10px 0;
-  display: flex;
-  white-space: nowrap;
-  animation: pricingTicker 25s linear infinite;
-  margin-bottom: 40px;
-}
-.pricing-trust-tick {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 2px;
-  color: #555;
-  text-transform: uppercase;
-  padding: 0 20px;
-  display: inline-flex;
-  align-items: center;
-  gap: 14px;
-  flex-shrink: 0;
-}
-.pricing-trust-sep {
-  color: var(--green);
-  font-size: 6px;
-  opacity: 0.6;
-}
-@keyframes pricingTicker {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
+
 
 .pricing-trust-cards {
   display: grid;
@@ -251,21 +223,25 @@
   padding: 24px 20px;
   opacity: 0;
   animation: pricingCardIn 0.5s ease forwards;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .pricing-trust-card:nth-child(1) { animation-delay: 0.4s; }
 .pricing-trust-card:nth-child(2) { animation-delay: 0.5s; }
 .pricing-trust-card:nth-child(3) { animation-delay: 0.6s; }
 
 .pricing-trust-card-icon {
-  font-size: 22px; margin-bottom: 12px;
+  font-size: 22px; margin-bottom: 12px; text-align: center;
 }
 .pricing-trust-card-title {
   font-size: 13px; font-weight: 600;
-  color: #ddd; margin-bottom: 8px;
+  color: #ddd; margin-bottom: 8px; text-align: center;
 }
 .pricing-trust-card-body {
   font-size: 12px; color: #666;
-  line-height: 1.65; font-weight: 300;
+  line-height: 1.65; font-weight: 300; text-align: center;
 }
 
 @media (max-width: 768px) {

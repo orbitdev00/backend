@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import NavBar from '../components/NavBar'
+import StarField from '../components/StarField'
 import './Leaderboard.css'
 
 export default function Leaderboard() {
@@ -75,6 +76,7 @@ export default function Leaderboard() {
 
   return (
     <div className="lb-screen">
+      <StarField />
       <NavBar active="leaderboard" />
       <div className="lb-body">
         <div className="lb-header">

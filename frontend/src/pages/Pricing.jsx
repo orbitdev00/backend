@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import NavBar from '../components/NavBar'
+import StarField from '../components/StarField'
 import { startCheckout, openBillingPortal } from '../lib/stripe'
 import './Pricing.css'
 
@@ -85,6 +86,7 @@ export default function Pricing({ currentTier = 'free' }) {
 
   return (
     <div className={`pricing-page ${visible ? "pricing-visible" : ""}`}>
+      <StarField />
       <NavBar active="" />
       <div className="pricing-body">
         <div className="pricing-header">
@@ -165,12 +167,7 @@ export default function Pricing({ currentTier = 'free' }) {
 
         {/* Stripe trust section */}
         <div className="pricing-trust">
-          <div className="pricing-trust-ticker">
-            {['SECURED BY STRIPE','256-BIT ENCRYPTION','CANCEL ANYTIME','NO HIDDEN FEES','INSTANT ACTIVATION','PCI COMPLIANT',
-              'SECURED BY STRIPE','256-BIT ENCRYPTION','CANCEL ANYTIME','NO HIDDEN FEES','INSTANT ACTIVATION','PCI COMPLIANT'].map((t,i) => (
-              <span key={i} className="pricing-trust-tick">{t}<span className="pricing-trust-sep">◆</span></span>
-            ))}
-          </div>
+
           <div className="pricing-trust-cards">
             {[
               { icon: '🔒', title: 'Secured by Stripe', body: 'Your payment info is encrypted and never stored on our servers. Stripe is used by millions of businesses worldwide and is fully PCI compliant.' },

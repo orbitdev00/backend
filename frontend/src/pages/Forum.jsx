@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import NavBar from '../components/NavBar'
+import StarField from '../components/StarField'
 import './Forum.css'
 
 function timeAgo(ts) {
@@ -182,6 +183,7 @@ export default function Forum() {
 
   return (
     <div className="forum-screen">
+      <StarField />
       <NavBar active="forum" />
       <div className="forum-body">
         <div className="forum-main">

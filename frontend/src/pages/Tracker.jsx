@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import NavBar from '../components/NavBar'
+import StarField from '../components/StarField'
 import './Tracker.css'
 
 const DEXSCREENER = 'https://api.dexscreener.com/latest/dex/tokens'
@@ -172,6 +173,7 @@ export default function Tracker() {
 
   return (
     <div className="tracker-screen">
+      <StarField />
       <NavBar active="tracker" />
       <div className="tracker-body">
         <div className="tracker-header">

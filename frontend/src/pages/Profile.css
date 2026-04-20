@@ -92,3 +92,74 @@
   font-size: 10px; color: #444; letter-spacing: 0.5px;
   margin-bottom: 10px; font-weight: 300;
 }
+
+/* ── Owner tier panel ──────────────────────────────── */
+.profile-owner-panel {
+  margin: 12px 0;
+  padding: 12px 14px;
+  background: rgba(167,139,250,0.06);
+  border: 1px solid rgba(167,139,250,0.2);
+  border-radius: 6px;
+}
+.profile-owner-label {
+  font-family: var(--mono);
+  font-size: 9px; letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--green); margin-bottom: 8px;
+}
+.profile-owner-row {
+  display: flex; gap: 8px; align-items: center;
+}
+.profile-owner-select {
+  background: #111; border: 1px solid #2a2a2a;
+  border-radius: 4px; color: var(--text);
+  font-family: var(--mono); font-size: 11px;
+  padding: 5px 8px; flex: 1; cursor: pointer;
+}
+.profile-owner-btn {
+  background: var(--green); border: none;
+  border-radius: 4px; color: #000;
+  font-family: var(--mono); font-size: 10px;
+  font-weight: 700; padding: 5px 14px;
+  cursor: pointer; letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: opacity 0.15s;
+}
+.profile-owner-btn:hover { opacity: 0.85; }
+.profile-owner-btn:disabled { opacity: 0.5; }
+.profile-owner-msg {
+  font-family: var(--mono); font-size: 10px;
+  color: #4ade80; margin-top: 6px;
+  letter-spacing: 0.5px;
+}
+
+/* ── Owner confirm dialog ──────────────────────────── */
+.profile-owner-btn-confirm {
+  margin-top: 8px; width: 100%;
+}
+.profile-owner-confirm {
+  margin-top: 10px;
+  padding: 12px;
+  background: rgba(239,68,68,0.06);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 5px;
+}
+.profile-owner-confirm-text {
+  font-size: 12px; color: #f87171;
+  margin-bottom: 10px; line-height: 1.5;
+  font-family: var(--mono);
+}
+.profile-owner-confirm-btns {
+  display: flex; gap: 8px;
+}
+.profile-owner-btn-cancel {
+  background: none; border: 1px solid #333;
+  border-radius: 4px; color: #666;
+  font-family: var(--mono); font-size: 10px;
+  font-weight: 600; padding: 5px 14px;
+  cursor: pointer; letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: border-color 0.15s;
+}
+.profile-owner-btn-cancel:hover { border-color: #555; color: #aaa; }
+.profile-owner-msg-err { color: #f87171 !important; }

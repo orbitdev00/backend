@@ -21,6 +21,117 @@ function fmtMC(n) {
   return `$${n.toFixed(0)}`
 }
 
+
+function OwnerPanel({ profile, setProfile }) {
+  const [action, setAction]       = useState('')
+  const [tier, setTier]           = useState(profile?.tier || 'free')
+  const [confirm, setConfirm]     = useState(false)
+  const [msg, setMsg]             = useState('')
+  const [saving, setSaving]       = useState(false)
+
+  const ACTIONS = [
+    { value: '', label: '-- Select action --' },
+    { value: 'set_tier', label: 'Change membership tier' },
+    { value: 'ban', label: 'Ban account (read-only)' },
+    { value: 'unban', label: 'Unban account' },
+    { value: 'delete', label: 'Delete account' },
+  ]
+
+  const getConfirmText = () => {
+    if (action === 'set_tier') return `Set @${profile?.username || 'user'} tier to ${tier.toUpperCase()}?`
+    if (action === 'ban') return `Ban @${profile?.username || 'user'}? They will be read-only.`
+    if (action === 'unban') return `Unban @${profile?.username || 'user'}?`
+    if (action === 'delete') return `PERMANENTLY DELETE @${profile?.username || 'user'}'s account? This cannot be undone.`
+    return ''
+  }
+
+  const execute = async () => {
+    setSaving(true)
+    setMsg('')
+    try {
+      if (action === 'set_tier') {
+        const { error } = await supabase.from('user_reputation')
+          .update({ tier })
+          .eq('user_id', profile.user_id)
+        if (error) throw error
+        setProfile(p => ({ ...p, tier }))
+        setMsg(`✓ Tier set to ${tier}`)
+      } else if (action === 'ban') {
+        const { error } = await supabase.from('user_reputation')
+          .update({ role: 'banned' })
+          .eq('user_id', profile.user_id)
+        if (error) throw error
+        setMsg('✓ Account banned')
+      } else if (action === 'unban') {
+        const { error } = await supabase.from('user_reputation')
+          .update({ role: 'member' })
+          .eq('user_id', profile.user_id)
+        if (error) throw error
+        setMsg('✓ Account unbanned')
+      } else if (action === 'delete') {
+        const { error } = await supabase.from('user_reputation')
+          .delete()
+          .eq('user_id', profile.user_id)
+        if (error) throw error
+        setMsg('✓ Account deleted')
+      }
+    } catch (e) {
+      setMsg('Error: ' + e.message)
+    }
+    setSaving(false)
+    setConfirm(false)
+    setTimeout(() => setMsg(''), 4000)
+  }
+
+  return (
+    <div className="profile-owner-panel">
+      <div className="profile-owner-label">👁️‍🗨️ Owner Controls</div>
+      <div className="profile-owner-row">
+        <select className="profile-owner-select" value={action} onChange={e => { setAction(e.target.value); setConfirm(false) }}>
+          {ACTIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+        </select>
+      </div>
+
+      {action === 'set_tier' && (
+        <div className="profile-owner-row" style={{marginTop:8}}>
+          <select className="profile-owner-select" value={tier} onChange={e => setTier(e.target.value)}>
+            <option value="free">Free</option>
+            <option value="degen">Degen</option>
+            <option value="omega">Omega</option>
+          </select>
+        </div>
+      )}
+
+      {action && !confirm && (
+        <button className="profile-owner-btn profile-owner-btn-confirm" onClick={() => setConfirm(true)}>
+          Apply
+        </button>
+      )}
+
+      {confirm && (
+        <div className="profile-owner-confirm">
+          <div className="profile-owner-confirm-text">{getConfirmText()}</div>
+          <div className="profile-owner-confirm-btns">
+            <button
+              className="profile-owner-btn"
+              style={{background: action === 'delete' ? '#ef4444' : undefined}}
+              onClick={execute}
+              disabled={saving}
+            >
+              {saving ? 'Working...' : 'Confirm'}
+            </button>
+            <button className="profile-owner-btn-cancel" onClick={() => setConfirm(false)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {msg && <div className={`profile-owner-msg ${msg.startsWith('Error') ? 'profile-owner-msg-err' : ''}`}>{msg}</div>}
+    </div>
+  )
+}
+
 export default function Profile() {
   const { username } = useParams()
   const nav = useNavigate()
@@ -31,6 +142,7 @@ export default function Profile() {
   const [replies, setReplies]     = useState([])
   const [isFollowing, setIsFollowing] = useState(false)
   const [tab, setTab]             = useState('threads')
+  const OWNER_EMAIL = 'alxismatos@gmail.com'
   const [loading, setLoading]     = useState(true)
   const [dmOpen, setDmOpen]       = useState(false)
   const [pnlLoading, setPnlLoading] = useState(false)
@@ -38,6 +150,7 @@ export default function Profile() {
   const [dmBody, setDmBody]       = useState('')
   const [dmSending, setDmSending] = useState(false)
   const [dmSent, setDmSent]       = useState(false)
+  const [isOwner, setIsOwner]     = useState(false)
 
   useEffect(() => { loadProfile() }, [username])
 
@@ -54,6 +167,9 @@ export default function Profile() {
     if (!rep) { nav('/leaderboard'); return }
     // Try to get auth creation date for own profile
     setProfile(rep)
+
+    // Check if viewer is owner
+    setIsOwner(user?.email === OWNER_EMAIL)
 
     // Load badges
     const { data: ub } = await supabase.from('user_badges')

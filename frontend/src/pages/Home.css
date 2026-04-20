@@ -116,21 +116,21 @@
   transform: translateY(-2px);
 }
 .card-icon {
-  font-size: 28px;
+  font-size: 32px;
   margin-bottom: 14px;
   color: var(--green);
 }
 .card-label {
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: var(--text);
+  color: #fff;
   margin-bottom: 10px;
 }
 .card-desc {
-  font-size: 11px;
-  color: var(--text-muted);
+  font-size: 13px;
+  color: #aaa;
   line-height: 1.6;
 }
 

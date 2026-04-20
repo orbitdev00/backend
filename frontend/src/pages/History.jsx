@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import NavBar from '../components/NavBar'
+import StarField from '../components/StarField'
 import './History.css'
 
 function fmtMC(n) {
@@ -85,6 +86,7 @@ export default function History() {
 
   return (
     <div className="history-screen">
+      <StarField />
       <NavBar active="history" />
       <div className="history-body">
         <div className="history-header">

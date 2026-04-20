@@ -426,10 +426,7 @@ async def stream_analysis(websocket: WebSocket, mint: str):
         asyncio.create_task(_bg())
 
         # Log to Supabase
-        async def _log():
-            try:
-                _loop = asyncio.get_event_loop()
-                uid = request.query_params.get("user_id") or None
+        uid = request.query_params.get("user_id") or None
         # Rate limit check for WS stream
         if uid:
             rl = await check_rate_limit(uid)
@@ -440,6 +437,9 @@ async def stream_analysis(websocket: WebSocket, mint: str):
                 })
                 await websocket.close()
                 return
+
+        async def _log():
+            try:
                 await log_prediction(snapshot, prediction, uid)
             except Exception as e:
                 print(f"[Supabase] {e}")

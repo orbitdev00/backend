@@ -27,7 +27,7 @@ app = FastAPI(title="Pump Analyzer API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "https://orbit-app.xyz", "https://www.orbit-app.xyz"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -489,6 +489,51 @@ async def test_supabase():
             })
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
+
+
+
+@app.post("/stripe/webhook")
+async def stripe_webhook(request: Request):
+    return await handle_webhook(request)
+
+
+@app.post("/stripe/create-checkout")
+async def stripe_checkout(request: Request):
+    body        = await request.json()
+    user_id     = body.get("user_id", "")
+    email       = body.get("email", "")
+    tier        = body.get("tier", "degen")
+    success_url = body.get("success_url", "https://orbit-app.xyz")
+    cancel_url  = body.get("cancel_url", "https://orbit-app.xyz")
+    if not user_id or not email:
+        return JSONResponse({"error": "user_id and email required"}, status_code=400)
+    return await create_checkout_session(user_id, email, tier, success_url, cancel_url)
+
+
+@app.post("/stripe/billing-portal")
+async def stripe_portal(request: Request):
+    body       = await request.json()
+    user_id    = body.get("user_id", "")
+    return_url = body.get("return_url", "https://orbit-app.xyz")
+    if not user_id:
+        return JSONResponse({"error": "user_id required"}, status_code=400)
+    return await create_billing_portal(user_id, return_url)
+
+
+@app.get("/tier")
+async def get_user_tier(user_id: str = ""):
+    if not user_id:
+        return JSONResponse({"error": "user_id required"}, status_code=400)
+    tier = await get_tier(user_id)
+    from tier_check import get_limits
+    return JSONResponse({"tier": tier, "limits": get_limits(tier)})
+
+
+@app.get("/usage")
+async def get_rate_limit_usage(user_id: str = ""):
+    if not user_id:
+        return JSONResponse({"error": "user_id required"}, status_code=400)
+    return JSONResponse(get_usage(user_id))
 
 
 @app.post("/outcome/{mint}")

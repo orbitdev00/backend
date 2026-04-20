@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import { startCheckout, openBillingPortal } from '../lib/stripe'
+import { useEffect, useState } from 'react'
 import './Pricing.css'
 
 const TIERS = [
@@ -15,12 +16,11 @@ const TIERS = [
     features: [
       '3 analyses per day',
       'Full analyzer results',
-      'Full forum access — post, reply, vote, DM',
-      'Share analysis — public shareable links',
-      'Price tracker — up to 3 coins',
-      'Leaderboard — connect wallet and compete',
-      'Badge system — earn and equip badges',
-      'Discord: general access',
+      'Full forum access · post, reply, vote, DM',
+      'Share analysis · public shareable links',
+      'Price tracker · up to 3 coins',
+      'Leaderboard · connect wallet and compete',
+      'Badge system · earn and equip badges',
     ],
   },
   {
@@ -38,7 +38,6 @@ const TIERS = [
       'Post images in forum',
       'Priority analysis queue',
       'Degen badge on profile and leaderboard',
-      'Discord: degen-lounge + orbit-calls',
     ],
   },
   {
@@ -52,15 +51,14 @@ const TIERS = [
     sale: true,
     features: [
       'Everything in Degen',
-      'Multi-wallet tracking — up to 5 wallets',
+      'Multi-wallet tracking · up to 5 wallets',
       'Custom alert conditions',
       'Omega-only forum category',
       'Maximum analysis depth',
       'Exclusive profile border',
-      'Omega badge — pulses on leaderboard',
+      'Omega badge · pulses on leaderboard',
       'Early beta access to new features',
       'Direct channel to Orbit devs',
-      'Discord: omega-only channel',
     ],
   },
 ]
@@ -68,6 +66,9 @@ const TIERS = [
 export default function Pricing({ currentTier = 'free' }) {
   const nav = useNavigate()
   const [loading, setLoading] = useState(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => { setTimeout(() => setVisible(true), 50) }, [])
 
   const handleUpgrade = async (tierId) => {
     setLoading(tierId)
@@ -84,11 +85,11 @@ export default function Pricing({ currentTier = 'free' }) {
   const isPaid = currentTier === 'degen' || currentTier === 'omega'
 
   return (
-    <div className="pricing-page">
+    <div className={`pricing-page ${visible ? "pricing-visible" : ""}`}>
       <NavBar active="" />
       <div className="pricing-body">
         <div className="pricing-header">
-          <h1 className="pricing-title">Choose your plan</h1>
+          <h1 className="pricing-title">Choose your plan.</h1>
           <p className="pricing-sub">
             Cancel anytime. Billed monthly. Powered by Stripe.
           </p>
@@ -165,28 +166,24 @@ export default function Pricing({ currentTier = 'free' }) {
 
         {/* Stripe trust section */}
         <div className="pricing-trust">
-          <div className="pricing-trust-inner">
-            <div className="pricing-trust-item">
-              <span className="pricing-trust-icon">🔒</span>
-              <div>
-                <div className="pricing-trust-title">Secured by Stripe</div>
-                <div className="pricing-trust-body">Your payment information is encrypted and never stored on our servers. Stripe is trusted by millions of businesses worldwide.</div>
+          <div className="pricing-trust-ticker">
+            {['SECURED BY STRIPE','256-BIT ENCRYPTION','CANCEL ANYTIME','NO HIDDEN FEES','INSTANT ACTIVATION','PCI COMPLIANT',
+              'SECURED BY STRIPE','256-BIT ENCRYPTION','CANCEL ANYTIME','NO HIDDEN FEES','INSTANT ACTIVATION','PCI COMPLIANT'].map((t,i) => (
+              <span key={i} className="pricing-trust-tick">{t}<span className="pricing-trust-sep">◆</span></span>
+            ))}
+          </div>
+          <div className="pricing-trust-cards">
+            {[
+              { icon: '🔒', title: 'Secured by Stripe', body: 'Your payment info is encrypted and never stored on our servers. Stripe is used by millions of businesses worldwide and is fully PCI compliant.' },
+              { icon: '↩', title: 'Cancel anytime', body: 'No contracts, no hidden fees. Cancel from account settings and keep your benefits until the end of your billing period.' },
+              { icon: '⚡', title: 'Instant activation', body: 'Your tier upgrades the moment payment clears. No waiting, no manual approval, no delays.' },
+            ].map((c, i) => (
+              <div key={i} className="pricing-trust-card" style={{animationDelay: `${i * 0.1}s`}}>
+                <div className="pricing-trust-card-icon">{c.icon}</div>
+                <div className="pricing-trust-card-title">{c.title}</div>
+                <div className="pricing-trust-card-body">{c.body}</div>
               </div>
-            </div>
-            <div className="pricing-trust-item">
-              <span className="pricing-trust-icon">↩</span>
-              <div>
-                <div className="pricing-trust-title">Cancel anytime</div>
-                <div className="pricing-trust-body">No contracts, no hidden fees. Cancel from your account settings and keep your benefits until the end of the billing period.</div>
-              </div>
-            </div>
-            <div className="pricing-trust-item">
-              <span className="pricing-trust-icon">⚡</span>
-              <div>
-                <div className="pricing-trust-title">Instant activation</div>
-                <div className="pricing-trust-body">Your tier upgrades immediately after payment. No waiting, no approval process.</div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>

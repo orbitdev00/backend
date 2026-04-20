@@ -174,3 +174,100 @@
   .pricing-trust-inner { grid-template-columns: 1fr; }
   .pricing-title { font-size: 28px; }
 }
+
+/* ── Page fade in ──────────────────────────────────── */
+.pricing-page {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+.pricing-page.pricing-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Card stagger animation ────────────────────────── */
+.pricing-card {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: pricingCardIn 0.5s ease forwards;
+}
+.pricing-grid .pricing-card:nth-child(1) { animation-delay: 0.1s; }
+.pricing-grid .pricing-card:nth-child(2) { animation-delay: 0.2s; }
+.pricing-grid .pricing-card:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes pricingCardIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Themed trust section ──────────────────────────── */
+.pricing-trust {
+  border-top: 1px solid #111;
+  padding-top: 0;
+  overflow: hidden;
+}
+
+.pricing-trust-ticker {
+  overflow: hidden;
+  border-bottom: 1px solid #111;
+  background: #040404;
+  padding: 10px 0;
+  display: flex;
+  white-space: nowrap;
+  animation: pricingTicker 25s linear infinite;
+  margin-bottom: 40px;
+}
+.pricing-trust-tick {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #555;
+  text-transform: uppercase;
+  padding: 0 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.pricing-trust-sep {
+  color: var(--green);
+  font-size: 6px;
+  opacity: 0.6;
+}
+@keyframes pricingTicker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.pricing-trust-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.pricing-trust-card {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 8px;
+  padding: 24px 20px;
+  opacity: 0;
+  animation: pricingCardIn 0.5s ease forwards;
+}
+.pricing-trust-card:nth-child(1) { animation-delay: 0.4s; }
+.pricing-trust-card:nth-child(2) { animation-delay: 0.5s; }
+.pricing-trust-card:nth-child(3) { animation-delay: 0.6s; }
+
+.pricing-trust-card-icon {
+  font-size: 22px; margin-bottom: 12px;
+}
+.pricing-trust-card-title {
+  font-size: 13px; font-weight: 600;
+  color: #ddd; margin-bottom: 8px;
+}
+.pricing-trust-card-body {
+  font-size: 12px; color: #666;
+  line-height: 1.65; font-weight: 300;
+}
+
+@media (max-width: 768px) {
+  .pricing-trust-cards { grid-template-columns: 1fr; }
+}

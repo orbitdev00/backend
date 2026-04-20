@@ -407,7 +407,7 @@ export default function Landing({ onSwitch }) {
         <div className="lp-nav-brand">
           <img src={orbitPfp} className="lp-nav-pfp" alt="" />
           <span className="lp-nav-name">ORBIT</span>
-          <span className="lp-nav-ver">v0.2</span>
+          <span className="lp-nav-ver">v0.4</span>
         </div>
         <div className="lp-nav-right">
           <div className="lp-nav-socials">
@@ -791,7 +791,7 @@ export default function Landing({ onSwitch }) {
             <div className="lp-footer-logo">
               <img src={orbitPfp} className="lp-nav-pfp" alt="" />
               <span className="lp-nav-name">ORBIT</span>
-              <span className="lp-nav-ver">v0.2</span>
+              <span className="lp-nav-ver">v0.4</span>
             </div>
             <p className="lp-footer-tag">On-chain intelligence for Solana traders.</p>
             <div className="lp-footer-status"><span className="lp-status-dot" />All systems operational</div>

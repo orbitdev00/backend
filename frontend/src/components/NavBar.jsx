@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import orbitPfp from '../kikoPfp.js'
+import orbitPfp from '../orbitPfp.js'
 import { useState, useRef, useEffect } from 'react'
 import './NavBar.css'
 import PricingPanel from './PricingPanel'

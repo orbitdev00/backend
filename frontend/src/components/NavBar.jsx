@@ -24,6 +24,7 @@ export default function NavBar({ active, onLogoClick }) {
   const [uploading, setUploading]       = useState(false)
   const [tier, setTier]               = useState('free')
   const [showPricing, setShowPricing]   = useState(false)
+  const [unreadDMs, setUnreadDMs]       = useState(0)
   const fileRef = useRef(null)
 
   useEffect(() => {

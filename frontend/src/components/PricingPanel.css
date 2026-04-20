@@ -1,0 +1,98 @@
+.pp-wrap { padding: 0 0 8px; }
+
+.pp-header {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.pp-title {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 1px; text-transform: uppercase;
+  color: var(--text-dim);
+}
+.pp-manage {
+  background: none; border: none;
+  color: var(--green); font-family: var(--mono);
+  font-size: 10px; cursor: pointer;
+  letter-spacing: 0.5px; padding: 0;
+  transition: opacity 0.15s;
+}
+.pp-manage:hover { opacity: 0.7; }
+
+.pp-current {
+  font-size: 11px; color: var(--text-dim);
+  margin-bottom: 14px; font-family: var(--mono);
+  letter-spacing: 0.5px;
+}
+
+.pp-grid {
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+.pp-card {
+  border: 1px solid #1e1e1e;
+  border-radius: 6px; padding: 16px;
+  position: relative; overflow: hidden;
+  transition: border-color 0.2s;
+}
+.pp-card-active {
+  border-color: var(--tier-color) !important;
+  background: color-mix(in srgb, var(--tier-color) 4%, transparent);
+}
+.pp-card:hover { border-color: #2e2e2e; }
+
+.pp-sale-badge {
+  position: absolute; top: 0; right: 0;
+  background: #f59e0b; color: #000;
+  font-family: var(--mono); font-size: 8px;
+  font-weight: 700; letter-spacing: 1px;
+  padding: 3px 8px; border-radius: 0 6px 0 6px;
+}
+
+.pp-card-header {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; margin-bottom: 12px;
+}
+.pp-tier-name {
+  font-size: 13px; font-weight: 600;
+  color: var(--tier-color); letter-spacing: 0.5px;
+}
+.pp-price-wrap { display: flex; align-items: baseline; gap: 2px; text-align: right; }
+.pp-price-old {
+  font-size: 11px; color: #555;
+  text-decoration: line-through;
+  font-family: var(--mono); margin-right: 4px;
+}
+.pp-price {
+  font-family: var(--mono); font-size: 15px;
+  font-weight: 700; color: var(--text);
+}
+.pp-period { font-size: 10px; color: #555; }
+
+.pp-features {
+  list-style: none; padding: 0; margin: 0 0 12px;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.pp-feature {
+  display: flex; align-items: flex-start; gap: 7px;
+  font-size: 11px; color: #999; line-height: 1.4;
+}
+.pp-check { font-size: 10px; flex-shrink: 0; margin-top: 1px; }
+
+.pp-cta {
+  width: 100%; border: none; border-radius: 4px;
+  color: #000; font-family: var(--mono);
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 1px; padding: 9px;
+  cursor: pointer; text-transform: uppercase;
+  transition: opacity 0.15s;
+}
+.pp-cta:hover { opacity: 0.85; }
+.pp-cta:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.pp-current-badge {
+  text-align: center; font-family: var(--mono);
+  font-size: 10px; color: var(--tier-color);
+  letter-spacing: 1px; padding: 6px 0 2px;
+  text-transform: uppercase;
+}

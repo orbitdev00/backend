@@ -162,6 +162,17 @@ export default function App() {
     lastUpdated, analyze: streamAnalyze, refresh: streamRefresh, disconnect,
   } = useStreamAnalysis()
 
+  // Handle Stripe payment success redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('payment') === 'success') {
+      const tier = params.get('tier') || 'degen'
+      setPaymentSuccess(tier)
+      window.history.replaceState({}, '', window.location.pathname)
+      setTimeout(() => setPaymentSuccess(null), 5000)
+    }
+  }, [])
+
   // Reset trial when user logs in
   useEffect(() => {
     if (user) { setIsTrial(false); setTrialBlocked(false) }
@@ -216,6 +227,20 @@ export default function App() {
   )
 
   if (isCallback) return <><StarField /><AuthCallback /></>
+
+  // Payment success toast
+  const PaymentToast = paymentSuccess ? (
+    <div style={{
+      position:'fixed', top:16, right:16, zIndex:9999,
+      background: paymentSuccess==='omega' ? '#f59e0b' : '#a78bfa',
+      color:'#000', fontFamily:'var(--mono)', fontSize:11,
+      fontWeight:700, letterSpacing:'1px', padding:'10px 18px',
+      borderRadius:6, boxShadow:'0 4px 20px rgba(0,0,0,0.4)',
+      animation:'fadeIn 0.3s ease',
+    }}>
+      🎉 Welcome to {paymentSuccess.toUpperCase()}! Your subscription is active.
+    </div>
+  ) : null
 
   if (!user && !isTrial) {
     if (authPage === 'signup') return <><StarField /><SignUp onSwitch={setAuthPage} /></>

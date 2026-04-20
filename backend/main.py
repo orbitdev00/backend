@@ -17,6 +17,9 @@ except Exception as e:
     async def check_trial(fp): return True
     async def consume_trial(fp, mint, ip=""): return True
 from engine.claude import analyze          # Claude Haiku — primary
+from rate_limiter import check_rate_limit, consume_rate_limit, get_usage
+from stripe_handler import create_checkout_session, create_billing_portal, handle_webhook
+from tier_check import get_tier, invalidate as invalidate_tier_cache
 from ml.predictor import predict_xgboost  # XGBoost — background signals
 from config import REFRESH_INTERVAL, MAX_AUTO_REFRESHES
 
@@ -24,12 +27,7 @@ app = FastAPI(title="Pump Analyzer API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "https://orbit-app.xyz",
-    "https://www.orbit-app.xyz",
-],
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -167,6 +165,17 @@ async def analyze_once(
         if not available:
             return JSONResponse({"error": "trial_used"}, status_code=403)
 
+    # Rate limit check for authenticated users
+    if user_id and not trial:
+        rl = await check_rate_limit(user_id)
+        if not rl["allowed"]:
+            return JSONResponse({
+                "error": "rate_limit_exceeded",
+                "message": rl.get("message", "Daily limit reached."),
+                "remaining": 0,
+                "limit": rl["limit"],
+            }, status_code=429)
+
     try:
         import time as _time
         t0 = _time.time()
@@ -186,12 +195,21 @@ async def analyze_once(
             await consume_trial(fingerprint, mint, ip)
             result["trial_consumed"] = True
 
+        # Consume rate limit slot
+        if user_id and not trial:
+            consume_rate_limit(user_id)
+
         async def _log():
             try:
                 await log_prediction(snapshot, prediction, user_id or None)
             except Exception as e:
                 print(f"[Supabase] Background log error: {e}")
         asyncio.create_task(_log())
+
+        # Add rate limit info to response
+        if user_id:
+            usage = get_usage(user_id)
+            result["rate_limit"] = usage
         return JSONResponse(result)
     except Exception as e:
         tb = traceback.format_exc()
@@ -412,6 +430,16 @@ async def stream_analysis(websocket: WebSocket, mint: str):
             try:
                 _loop = asyncio.get_event_loop()
                 uid = request.query_params.get("user_id") or None
+        # Rate limit check for WS stream
+        if uid:
+            rl = await check_rate_limit(uid)
+            if not rl["allowed"]:
+                await websocket.send_json({
+                    "type": "error",
+                    "data": {"message": rl.get("message", "Daily limit reached.")}
+                })
+                await websocket.close()
+                return
                 await log_prediction(snapshot, prediction, uid)
             except Exception as e:
                 print(f"[Supabase] {e}")

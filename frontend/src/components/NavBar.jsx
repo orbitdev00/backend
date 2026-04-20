@@ -1,9 +1,11 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import orbitPfp from "../orbitPfp.js";
+import orbitPfp from '../kikoPfp.js'
 import { useState, useRef, useEffect } from 'react'
 import './NavBar.css'
+import PricingPanel from './PricingPanel'
+import { getUserTier } from '../lib/stripe'
 
 export default function NavBar({ active, onLogoClick }) {
   const nav = useNavigate()
@@ -21,6 +23,12 @@ export default function NavBar({ active, onLogoClick }) {
   const [profileMsg, setProfileMsg]     = useState('')
   const [uploading, setUploading]       = useState(false)
   const fileRef = useRef(null)
+
+  useEffect(() => {
+    if (user) {
+      getUserTier().then(d => setTier(d.tier || 'free'))
+    }
+  }, [user])
 
   useEffect(() => {
     if (!user) return
@@ -144,6 +152,7 @@ export default function NavBar({ active, onLogoClick }) {
               {showMenu && (
                 <div className="nb-dropdown">
                   <div className="nb-email">{user.email}</div>
+                  {tier !== 'free' && <div className="nb-tier-badge" style={{color: tier==='omega' ? '#f59e0b' : '#a78bfa'}}>{tier.toUpperCase()}</div>}
                   <div className="nb-divider" />
                   <button className="nb-menu-btn" onClick={() => { nav('/profile/' + (username || user.email?.split('@')[0])); setShowMenu(false) }}>
                     My Profile

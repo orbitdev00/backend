@@ -24,12 +24,25 @@ export default function NavBar({ active, onLogoClick }) {
   const [uploading, setUploading]       = useState(false)
   const [tier, setTier]               = useState('free')
   const [showPricing, setShowPricing]   = useState(false)
+  const [showProfile, setShowProfile]   = useState(false)
+  const [showBadges, setShowBadges]     = useState(false)
+  const [allBadges, setAllBadges]       = useState([])
+  const [ownedBadgeIds, setOwnedBadgeIds] = useState(new Set())
   const [unreadDMs, setUnreadDMs]       = useState(0)
   const fileRef = useRef(null)
 
   useEffect(() => {
     if (user) {
       getUserTier().then(d => setTier(d.tier || 'free'))
+      // Fetch badges
+      const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+      Promise.all([
+        fetch(`${BACKEND}/badges/all`).then(r => r.json()).catch(() => ({ badges: [] })),
+        fetch(`${BACKEND}/badges/user/${user.id}`).then(r => r.json()).catch(() => ({ badges: [] })),
+      ]).then(([allRes, userRes]) => {
+        setAllBadges(allRes.badges || [])
+        setOwnedBadgeIds(new Set((userRes.badges || []).map(b => b.id)))
+      })
       // Fetch unread DM count
       const fetchUnread = async () => {
         const { count } = await supabase
@@ -183,8 +196,11 @@ export default function NavBar({ active, onLogoClick }) {
                       ⚡ Upgrade to Omega
                     </button>
                   )}
-                  <button className="nb-menu-btn" onClick={() => { nav('/profile/' + (username || user.id)); setShowMenu(false) }}>
+                  <button className="nb-menu-btn" onClick={() => { setShowProfile(true); setShowMenu(false) }}>
                     My Profile
+                  </button>
+                  <button className="nb-menu-btn" onClick={() => { setShowBadges(true); setShowMenu(false) }}>
+                    🏅 My Badges
                   </button>
                   <button className="nb-menu-btn" onClick={() => { setShowAccount(true); setShowMenu(false) }}>
                     Account Settings
@@ -266,6 +282,120 @@ export default function NavBar({ active, onLogoClick }) {
                 onClick={handleDeleteAccount}
               >
                 {deleting ? 'Deleting...' : 'Delete My Account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* My Profile Modal */}
+      {showProfile && (
+        <div className="nb-modal-overlay" onClick={() => setShowProfile(false)}>
+          <div className="nb-modal" onClick={e => e.stopPropagation()}>
+            <div className="nb-modal-header">
+              <span>MY PROFILE</span>
+              <button className="nb-modal-close" onClick={() => setShowProfile(false)}>✕</button>
+            </div>
+
+            {/* Avatar + name */}
+            <div className="nb-modal-section">
+              <div className="nb-pfp-row">
+                <div className="nb-pfp-preview" style={{width:52,height:52,fontSize:16}}>
+                  {pfpUrl
+                    ? <img src={pfpUrl} style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%'}} alt="" />
+                    : initials}
+                </div>
+                <div>
+                  <div style={{fontSize:14,fontWeight:600,color:'#fff',marginBottom:2}}>{username || 'No username set'}</div>
+                  <div style={{fontSize:10,color:'#555'}}>{user?.email}</div>
+                  {tier !== 'free' && (
+                    <div className="nb-tier-badge" style={{color: tier==='omega' ? '#f59e0b' : '#a78bfa', display:'inline-block', marginTop:4}}>
+                      {tier.toUpperCase()}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Bio */}
+            {bio && (
+              <div className="nb-modal-section">
+                <div className="nb-modal-label">Bio</div>
+                <div className="nb-modal-value" style={{lineHeight:1.5}}>{bio}</div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="nb-modal-section" style={{display:'flex',flexDirection:'column',gap:6,borderBottom:'none'}}>
+              <button className="nb-menu-btn" style={{padding:'8px 0',color:'var(--green)'}}
+                onClick={() => { setShowProfile(false); nav('/edit-profile') }}>
+                ✏️ Edit Profile →
+              </button>
+              <button className="nb-menu-btn" style={{padding:'8px 0',color:'#7eb8f7'}}
+                onClick={() => { setShowProfile(false); setShowBadges(true) }}>
+                🏅 View My Badges →
+              </button>
+              <button className="nb-menu-btn" style={{padding:'8px 0',color:'#94a3b8'}}
+                onClick={() => { setShowProfile(false); nav('/history') }}>
+                📊 Analysis History →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Badges Modal */}
+      {showBadges && (
+        <div className="nb-modal-overlay" onClick={() => setShowBadges(false)}>
+          <div className="nb-badges-modal" onClick={e => e.stopPropagation()}>
+            <div className="nb-modal-header">
+              <span>MY BADGES <span style={{color:'#333',fontWeight:400,fontSize:10,letterSpacing:0}}>· {ownedBadgeIds.size}/{allBadges.length} collected</span></span>
+              <button className="nb-modal-close" onClick={() => setShowBadges(false)}>✕</button>
+            </div>
+            <div className="nb-badges-scroll">
+              {allBadges.length === 0
+                ? <div style={{color:'#333',fontSize:12,textAlign:'center',padding:'32px 0'}}>Loading...</div>
+                : (() => {
+                    const CATS = {
+                      activity:'Activity', trading:'Trading · PnL', community:'Community',
+                      subscription:'Subscription', staff:'Staff', skill:'Skill', fun:'Fun · Rare'
+                    }
+                    const grouped = {}
+                    for (const b of allBadges) {
+                      if (!grouped[b.category]) grouped[b.category] = []
+                      grouped[b.category].push(b)
+                    }
+                    return Object.entries(grouped).map(([cat, badges]) => (
+                      <div key={cat} className="nb-badge-section">
+                        <div className="nb-badge-cat-label">{CATS[cat] || cat}</div>
+                        <div className="nb-badge-grid">
+                          {badges.map(b => {
+                            const owned = ownedBadgeIds.has(b.id)
+                            return (
+                              <div
+                                key={b.id}
+                                className={`nb-badge-item ${owned ? 'nb-badge-owned' : 'nb-badge-locked'}`}
+                                style={{'--bc': owned ? b.color : '#1a1a1a'}}
+                                title={owned ? `${b.name} — ${b.description}` : 'Not yet unlocked'}
+                              >
+                                <div className="nb-badge-emoji">{owned ? b.emoji : '◆'}</div>
+                                <div className="nb-badge-name">{owned ? b.name : '???'}</div>
+                                {owned && <div className={`nb-badge-rarity nb-badge-rarity--${b.rarity}`}>{b.rarity}</div>}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))
+                  })()
+              }
+            </div>
+            <div className="nb-badges-footer">
+              <span>{ownedBadgeIds.size} / {allBadges.length} collected</span>
+              <button className="nb-badges-manage-btn" onClick={() => { setShowBadges(false); nav('/badges') }}>
+                Manage equipped →
               </button>
             </div>
           </div>

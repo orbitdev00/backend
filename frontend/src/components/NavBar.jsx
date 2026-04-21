@@ -62,6 +62,7 @@ export default function NavBar({ active, onLogoClick }) {
     { key: 'forum',       label: 'Forum',       path: '/forum' },
     { key: 'tracker',     label: 'Tracker',     path: '/tracker' },
     { key: 'leaderboard', label: 'Leaderboard', path: '/leaderboard' },
+    { key: 'pricing',     label: 'Upgrade',     path: '/pricing' },
     { key: 'history',     label: 'History',     path: '/history' },
   ]
 

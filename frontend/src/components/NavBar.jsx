@@ -28,6 +28,8 @@ export default function NavBar({ active, onLogoClick }) {
   const [userBadges, setUserBadges]     = useState({ owned: [], all: [] })
   const [showSubscription, setShowSubscription] = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
+  const [showSubscription, setShowSubscription] = useState(false)
+  const [portalLoading, setPortalLoading] = useState(false)
   const [unreadDMs, setUnreadDMs]       = useState(0)
   const fileRef = useRef(null)
 
@@ -79,8 +81,9 @@ export default function NavBar({ active, onLogoClick }) {
     { key: 'forum',       label: 'Forum',       path: '/forum' },
     { key: 'tracker',     label: 'Tracker',     path: '/tracker' },
     { key: 'leaderboard', label: 'Leaderboard', path: '/leaderboard' },
-    { key: 'pricing',     label: 'Upgrade',     path: '/pricing' },
     { key: 'history',     label: 'History',     path: '/history' },
+    { key: 'badges',      label: 'Badges',      path: '/badges' },
+    { key: 'pricing',     label: 'Upgrade',     path: '/pricing' },
   ]
 
   const handleLogo = () => {

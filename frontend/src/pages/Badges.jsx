@@ -93,6 +93,8 @@ export default function Badges() {
   if (loading) return <div className="badges-loading">Loading badges...</div>;
 
   return (
+    <div className="badges-screen">
+    <NavBar active="badges" />
     <div className="badges-page">
       <div className="badges-header">
         <div className="badges-header__left">

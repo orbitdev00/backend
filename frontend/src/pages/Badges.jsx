@@ -155,5 +155,7 @@ export default function Badges() {
         </div>
       ))}
     </div>
+    </div>
+    </div>
   );
 }

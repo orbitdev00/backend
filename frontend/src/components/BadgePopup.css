@@ -1,0 +1,117 @@
+/* BadgePopup.css */
+
+.badge-popup {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 9999;
+  animation: popup-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.badge-popup__inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #0d1117;
+  border: 1px solid color-mix(in srgb, var(--badge-color) 60%, transparent);
+  border-radius: 14px;
+  padding: 14px 40px 14px 14px;
+  min-width: 280px;
+  max-width: 340px;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.04),
+    0 20px 40px rgba(0,0,0,0.7),
+    0 0 30px color-mix(in srgb, var(--badge-color) 20%, transparent);
+  overflow: hidden;
+}
+
+.badge-popup__glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 20% 50%, color-mix(in srgb, var(--badge-color) 12%, transparent), transparent 70%);
+  pointer-events: none;
+}
+
+.badge-popup__emoji-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--badge-color) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--badge-color) 50%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  flex-shrink: 0;
+  animation: popup-emoji-bounce 0.5s 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.badge-popup__label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--badge-color) 80%, #fff);
+  margin-bottom: 2px;
+}
+
+.badge-popup__name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1.2;
+  margin-bottom: 3px;
+}
+
+.badge-popup__desc {
+  font-size: 11.5px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.badge-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #475569;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+
+.badge-popup__close:hover {
+  color: #94a3b8;
+}
+
+/* Progress bar at bottom */
+.badge-popup__inner::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  background: var(--badge-color);
+  animation: popup-drain 5s linear forwards;
+  transform-origin: left;
+}
+
+@keyframes popup-slide-in {
+  from { opacity: 0; transform: translateX(60px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes popup-emoji-bounce {
+  from { transform: scale(0.5) rotate(-10deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes popup-drain {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}

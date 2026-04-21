@@ -55,3 +55,14 @@
 .ep-cancel:hover { border-color: #333; color: #aaa; }
 .ep-save { background: var(--green); border: none; border-radius: 4px; color: #000; font-family: inherit; font-size: 11px; font-weight: 600; padding: 8px 20px; cursor: pointer; }
 .ep-save:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.ep-onboarding-banner {
+  background: rgba(74,222,128,0.08);
+  border: 1px solid rgba(74,222,128,0.25);
+  border-radius: 6px;
+  color: #4ade80;
+  font-size: 13px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}

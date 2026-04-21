@@ -110,6 +110,11 @@ export default function SignUp({ onSwitch }) {
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="field">
+            <label>Username</label>
+            <input type="text" value={username} onChange={e => setUsername(e.target.value)}
+              placeholder="letters, numbers, underscores" required autoComplete="off" maxLength={30} />
+          </div>
+          <div className="field">
             <label>Email</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com" required autoComplete="email" />

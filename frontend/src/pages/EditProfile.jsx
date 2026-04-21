@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import NavBar from '../components/NavBar'
@@ -7,6 +7,8 @@ import './EditProfile.css'
 
 export default function EditProfile() {
   const nav = useNavigate()
+  const location = useLocation()
+  const isOnboarding = new URLSearchParams(location.search).get('onboarding') === '1'
   const { user } = useAuth()
   const [username, setUsername]   = useState('')
   const [bio, setBio]             = useState('')
@@ -103,6 +105,11 @@ export default function EditProfile() {
           <h2>Edit Profile</h2>
         </div>
 
+        {isOnboarding && (
+          <div className="ep-onboarding-banner">
+            👋 Welcome to Orbit! Set a username to finish setting up your account.
+          </div>
+        )}
         <div className="ep-card">
           {/* PFP */}
           <div className="ep-section">

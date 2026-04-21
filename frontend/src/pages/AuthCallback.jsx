@@ -21,10 +21,14 @@ export default function AuthCallback() {
 
         if (data.session) {
           setStatus('success')
-          // Redirect to app after short delay
-          setTimeout(() => {
-            window.location.href = '/'
-          }, 1500)
+          // Check if user has a username set
+          const { data: rep } = await supabase
+            .from('user_reputation')
+            .select('username')
+            .eq('user_id', data.session.user.id)
+            .single()
+          const dest = (!rep?.username) ? '/edit-profile?onboarding=1' : '/'
+          setTimeout(() => { window.location.href = dest }, 1500)
         } else {
           // Try exchanging the code from URL
           const params = new URLSearchParams(window.location.search)
@@ -38,7 +42,9 @@ export default function AuthCallback() {
             const { error: exchError } = await supabase.auth.exchangeCodeForSession(code)
             if (exchError) { setError(exchError.message); setStatus('error'); return }
             setStatus('success')
-            setTimeout(() => { window.location.href = '/' }, 1500)
+            const { data: { session: s2 } } = await supabase.auth.getSession()
+            const { data: rep2 } = await supabase.from('user_reputation').select('username').eq('user_id', s2?.user?.id).single()
+            setTimeout(() => { window.location.href = (!rep2?.username) ? '/edit-profile?onboarding=1' : '/' }, 1500)
           } else if (accessToken) {
             const { error: setErr } = await supabase.auth.setSession({
               access_token: accessToken,
@@ -46,7 +52,9 @@ export default function AuthCallback() {
             })
             if (setErr) { setError(setErr.message); setStatus('error'); return }
             setStatus('success')
-            setTimeout(() => { window.location.href = '/' }, 1500)
+            const { data: { session: s3 } } = await supabase.auth.getSession()
+            const { data: rep3 } = await supabase.from('user_reputation').select('username').eq('user_id', s3?.user?.id).single()
+            setTimeout(() => { window.location.href = (!rep3?.username) ? '/edit-profile?onboarding=1' : '/' }, 1500)
           } else {
             setError('No auth token found. Please try signing in again.')
             setStatus('error')

@@ -17,6 +17,7 @@ except Exception as e:
     async def check_trial(fp): return True
     async def consume_trial(fp, mint, ip=""): return True
 from engine.claude import analyze          # Claude Haiku — primary
+from badge_routes import badge_router
 from rate_limiter import check_rate_limit, consume_rate_limit, get_usage
 from stripe_handler import create_checkout_session, create_billing_portal, handle_webhook
 from tier_check import get_tier, invalidate as invalidate_tier_cache
@@ -24,6 +25,7 @@ from ml.predictor import predict_xgboost  # XGBoost — background signals
 from config import REFRESH_INTERVAL, MAX_AUTO_REFRESHES
 
 app = FastAPI(title="Pump Analyzer API")
+app.include_router(badge_router)
 
 app.add_middleware(
     CORSMiddleware,

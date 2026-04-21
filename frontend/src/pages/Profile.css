@@ -163,3 +163,21 @@
 }
 .profile-owner-btn-cancel:hover { border-color: #555; color: #aaa; }
 .profile-owner-msg-err { color: #f87171 !important; }
+
+/* ── Edit profile button (own profile) ─────────────── */
+.profile-edit-btn--primary {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  color: #94a3b8;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.profile-edit-btn--primary:hover {
+  border-color: var(--green);
+  color: var(--green);
+}

@@ -329,7 +329,7 @@ export default function Profile() {
           )}
           {isOwnProfile && (
             <div style={{display:'flex',flexDirection:'column',gap:8,alignItems:'flex-end'}}>
-              <button className="profile-edit-btn" onClick={() => nav('/edit-profile')}>Edit Profile</button>
+              <button className="profile-edit-btn profile-edit-btn--primary" onClick={() => nav('/edit-profile')}>✏️ Edit Profile</button>
               <button className="profile-edit-btn" onClick={refreshPnl} disabled={pnlLoading}
                 style={{fontSize:10, opacity: pnlLoading ? 0.5 : 1}}>
                 {pnlLoading ? 'Refreshing...' : '↻ Refresh Monthly PnL'}

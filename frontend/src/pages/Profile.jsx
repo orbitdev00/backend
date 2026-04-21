@@ -179,14 +179,17 @@ export default function Profile() {
         .select('*,total_pnl_pct,show_pnl,wallet_address').eq('user_id', username).single()
       rep = data
     }
-    if (!rep) { nav('/leaderboard'); return }
+    if (!rep) { setLoading(false); return }
     // Try to get auth creation date for own profile
     setProfile(rep)
 
-    // Load badges
-    const { data: ub } = await supabase.from('user_badges')
-      .select('forum_badges(*)').eq('user_id', rep.user_id)
-    setBadges(ub?.map(x => x.forum_badges) || [])
+    // Load equipped badges from new schema
+    try {
+      const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+      const res = await fetch(`${BACKEND}/badges/user/${rep.user_id}/equipped`)
+      const data = await res.json()
+      setBadges(data.equipped || [])
+    } catch(e) { setBadges([]) }
 
     // Load forum threads
     const { data: t } = await supabase.from('forum_threads')
@@ -288,8 +291,8 @@ export default function Profile() {
             {profile.bio && <div className="profile-bio">{profile.bio}</div>}
             <div className="profile-badges">
               {badges.map(b => (
-                <span key={b?.slug} className="profile-badge" style={{background: b?.color + '22', color: b?.color, border: `1px solid ${b?.color}44`}}>
-                  {b?.icon} {b?.name}
+                <span key={b?.id} className="profile-badge" style={{background: b?.color + '22', color: b?.color, border: `1px solid ${b?.color}44`}} title={b?.description}>
+                  {b?.emoji} {b?.name}
                 </span>
               ))}
             </div>

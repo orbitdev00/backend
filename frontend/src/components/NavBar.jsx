@@ -10,46 +10,38 @@ import { getUserTier, openBillingPortal } from '../lib/stripe'
 export default function NavBar({ active, onLogoClick }) {
   const nav = useNavigate()
   const { user, signOut } = useAuth()
-  const [showMenu, setShowMenu]         = useState(false)
-  const [showMobile, setShowMobile]     = useState(false)
-  const [showAccount, setShowAccount]   = useState(false)
-  const [deleting, setDeleting]         = useState(false)
+  const [showMenu, setShowMenu]           = useState(false)
+  const [showMobile, setShowMobile]       = useState(false)
+  const [showAccount, setShowAccount]     = useState(false)
+  const [deleting, setDeleting]           = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState('')
-  const [pfpUrl, setPfpUrl]             = useState(null)
-  const [username, setUsername]         = useState('')
-  const [bio, setBio]                   = useState('')
+  const [pfpUrl, setPfpUrl]               = useState(null)
+  const [username, setUsername]           = useState('')
+  const [bio, setBio]                     = useState('')
   const [wallet, setWallet]               = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
-  const [profileMsg, setProfileMsg]     = useState('')
-  const [uploading, setUploading]       = useState(false)
-  const [tier, setTier]               = useState('free')
-  const [showPricing, setShowPricing]   = useState(false)
-  const [showBadges, setShowBadges]     = useState(false)
-  const [userBadges, setUserBadges]     = useState({ owned: [], all: [] })
-  const [showSubscription, setShowSubscription] = useState(false)
+  const [profileMsg, setProfileMsg]       = useState('')
+  const [uploading, setUploading]         = useState(false)
+  const [tier, setTier]                   = useState('free')
+  const [showPricing, setShowPricing]     = useState(false)
+  const [userBadges, setUserBadges]       = useState({ owned: [], all: [], ownedIds: new Set() })
   const [portalLoading, setPortalLoading] = useState(false)
-  const [showSubscription, setShowSubscription] = useState(false)
-  const [portalLoading, setPortalLoading] = useState(false)
-  const [unreadDMs, setUnreadDMs]       = useState(0)
+  const [unreadDMs, setUnreadDMs]         = useState(0)
   const fileRef = useRef(null)
 
   useEffect(() => {
     if (user) {
       getUserTier().then(d => setTier(d.tier || 'free'))
-      // Fetch badges for panel
-      const fetchBadges = async () => {
-        try {
-          const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
-          const [allRes, userRes] = await Promise.all([
-            fetch(`${BACKEND}/badges/all`).then(r => r.json()),
-            fetch(`${BACKEND}/badges/user/${user.id}`).then(r => r.json()),
-          ])
-          const ownedIds = new Set((userRes.badges || []).map(b => b.id))
-          setUserBadges({ owned: userRes.badges || [], all: allRes.badges || [], ownedIds })
-        } catch(e) { console.error('badge fetch', e) }
-      }
-      fetchBadges()
-      // Fetch unread DM count
+
+      const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+      Promise.all([
+        fetch(`${BACKEND}/badges/all`).then(r => r.json()).catch(() => ({ badges: [] })),
+        fetch(`${BACKEND}/badges/user/${user.id}`).then(r => r.json()).catch(() => ({ badges: [] })),
+      ]).then(([allRes, userRes]) => {
+        const ownedIds = new Set((userRes.badges || []).map(b => b.id))
+        setUserBadges({ owned: userRes.badges || [], all: allRes.badges || [], ownedIds })
+      })
+
       const fetchUnread = async () => {
         const { count } = await supabase
           .from('direct_messages')
@@ -59,7 +51,7 @@ export default function NavBar({ active, onLogoClick }) {
         setUnreadDMs(count || 0)
       }
       fetchUnread()
-      const interval = setInterval(fetchUnread, 30000) // poll every 30s
+      const interval = setInterval(fetchUnread, 30000)
       return () => clearInterval(interval)
     }
   }, [user])
@@ -91,17 +83,6 @@ export default function NavBar({ active, onLogoClick }) {
     nav('/')
   }
 
-  const saveProfile = async () => {
-    setSavingProfile(true); setProfileMsg('')
-    await supabase.from('user_reputation').upsert({
-      user_id: user.id, email: user.email,
-      username: username.trim(), bio: bio.trim(), wallet_address: wallet.trim() || null,
-      avatar_url: pfpUrl || null, updated_at: new Date().toISOString()
-    })
-    setSavingProfile(false); setProfileMsg('Saved!')
-    setTimeout(() => setProfileMsg(''), 2000)
-  }
-
   const handleDeleteAccount = async () => {
     if (deleteConfirm !== user?.email) return
     setDeleting(true)
@@ -120,7 +101,6 @@ export default function NavBar({ active, onLogoClick }) {
     if (!file) return
     setUploading(true)
     try {
-      // Resize to max 256px via canvas before upload
       const bitmap = await createImageBitmap(file)
       const size = Math.min(bitmap.width, bitmap.height, 256)
       const canvas = document.createElement('canvas')
@@ -134,7 +114,6 @@ export default function NavBar({ active, onLogoClick }) {
       const { error: uploadErr } = await supabase.storage.from('avatars').upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
       if (uploadErr) { console.error('Upload error:', uploadErr); setUploading(false); return }
       const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-      // Add cache-bust
       const url = data.publicUrl + '?t=' + Date.now()
       setPfpUrl(url)
       await supabase.from('user_reputation').upsert({
@@ -156,7 +135,6 @@ export default function NavBar({ active, onLogoClick }) {
           <span className="nb-version">v0.4</span>
         </div>
 
-        {/* Desktop nav */}
         <nav className="nb-links nb-desktop">
           {links.map(l => (
             <button
@@ -170,7 +148,6 @@ export default function NavBar({ active, onLogoClick }) {
         </nav>
 
         <div className="nb-right">
-          {/* Inbox first */}
           {user && (
             <button className="nb-inbox-btn nb-desktop" onClick={() => { nav('/inbox'); setUnreadDMs(0) }} title="Messages" style={{position:'relative'}}>
               ✉
@@ -180,7 +157,6 @@ export default function NavBar({ active, onLogoClick }) {
             </button>
           )}
 
-          {/* Avatar with dropdown */}
           {user && (
             <div className="nb-avatar-wrap nb-desktop">
               <div className="nb-avatar" onClick={() => setShowMenu(p => !p)} title={user.email}>
@@ -191,7 +167,11 @@ export default function NavBar({ active, onLogoClick }) {
               {showMenu && (
                 <div className="nb-dropdown">
                   <div className="nb-email">{user.email}</div>
-                  {tier !== 'free' && <div className="nb-tier-badge" style={{color: tier==='omega' ? '#f59e0b' : '#a78bfa'}}>{tier.toUpperCase()}</div>}
+                  {tier !== 'free' && (
+                    <div className="nb-tier-badge" style={{color: tier==='omega' ? '#f59e0b' : '#a78bfa', margin:'0 14px 6px'}}>
+                      {tier.toUpperCase()}
+                    </div>
+                  )}
                   <div className="nb-divider" />
                   {tier === 'free' && (
                     <button className="nb-menu-btn nb-upgrade-btn" onClick={() => { setShowMenu(false); nav('/pricing') }}>
@@ -206,11 +186,8 @@ export default function NavBar({ active, onLogoClick }) {
                   <button className="nb-menu-btn" onClick={() => { nav('/profile/' + (username || user.id)); setShowMenu(false) }}>
                     My Profile
                   </button>
-                  <button className="nb-menu-btn" onClick={() => { setShowBadges(true); setShowMenu(false) }}>
+                  <button className="nb-menu-btn" onClick={() => { nav('/badges'); setShowMenu(false) }}>
                     🏅 My Badges
-                  </button>
-                  <button className="nb-menu-btn" onClick={() => { setShowSubscription(true); setShowMenu(false) }}>
-                    💳 Subscription
                   </button>
                   <button className="nb-menu-btn" onClick={() => { setShowAccount(true); setShowMenu(false) }}>
                     Account Settings
@@ -224,14 +201,12 @@ export default function NavBar({ active, onLogoClick }) {
             </div>
           )}
 
-          {/* Mobile hamburger */}
           <button className="nb-hamburger nb-mobile" onClick={() => setShowMobile(p => !p)}>
             {showMobile ? '✕' : '☰'}
           </button>
         </div>
       </header>
 
-      {/* Mobile menu */}
       {showMobile && (
         <div className="nb-mobile-menu">
           {links.map(l => (
@@ -268,12 +243,38 @@ export default function NavBar({ active, onLogoClick }) {
               <div className="nb-modal-value">{user?.email}</div>
             </div>
 
-            {/* Edit Profile link */}
+            {/* Subscription */}
             <div className="nb-modal-section">
-              <button className="nb-menu-btn" style={{padding:0, color:'var(--green)'}}
-                onClick={() => { setShowAccount(false); nav('/edit-profile') }}>
-                Edit Profile →
-              </button>
+              <div className="nb-modal-label">Subscription</div>
+              <div className="nb-sub-plan-row">
+                <div className="nb-sub-plan-name" style={{color: tier==='omega' ? '#f59e0b' : tier==='degen' ? '#a78bfa' : '#555'}}>
+                  {tier === 'omega' ? '🌌 Omega' : tier === 'degen' ? '🔥 Degen' : '⬜ Free'}
+                </div>
+                <div className="nb-sub-plan-price">
+                  {tier === 'omega' ? '$49.99/mo' : tier === 'degen' ? '$14.99/mo' : 'No charge'}
+                </div>
+              </div>
+              {tier === 'free' && (
+                <div style={{display:'flex', flexDirection:'column', gap:6, marginTop:10}}>
+                  <button className="nb-sub-upgrade-btn nb-sub-degen" onClick={() => { setShowAccount(false); nav('/pricing') }}>
+                    ⚡ Upgrade to Degen — $14.99/mo
+                  </button>
+                  <button className="nb-sub-upgrade-btn nb-sub-omega" onClick={() => { setShowAccount(false); nav('/pricing') }}>
+                    🌌 Upgrade to Omega — $49.99/mo
+                  </button>
+                </div>
+              )}
+              {tier === 'degen' && (
+                <button className="nb-sub-upgrade-btn nb-sub-omega" style={{marginTop:10}} onClick={() => { setShowAccount(false); nav('/pricing') }}>
+                  🌌 Upgrade to Omega — $49.99/mo
+                </button>
+              )}
+              {tier !== 'free' && (
+                <button className="nb-sub-portal-btn" style={{marginTop:10}} disabled={portalLoading}
+                  onClick={async () => { setPortalLoading(true); await openBillingPortal(); setPortalLoading(false) }}>
+                  {portalLoading ? 'Redirecting...' : 'Manage · Cancel · Invoices →'}
+                </button>
+              )}
             </div>
 
             {/* Delete Account */}
@@ -297,161 +298,6 @@ export default function NavBar({ active, onLogoClick }) {
           </div>
         </div>
       )}
-
-
-      {/* Badges Panel */}
-      {showBadges && (
-        <div className="nb-modal-overlay" onClick={() => setShowBadges(false)}>
-          <div className="nb-badges-panel" onClick={e => e.stopPropagation()}>
-            <div className="nb-modal-header">
-              <span>MY BADGES</span>
-              <button className="nb-modal-close" onClick={() => setShowBadges(false)}>✕</button>
-            </div>
-            <div className="nb-badges-scroll">
-              {userBadges.all.length === 0
-                ? <div className="nb-badges-empty">Loading...</div>
-                : (() => {
-                    const CATS = {
-                      activity: 'Activity', trading: 'Trading', community: 'Community',
-                      subscription: 'Subscription', staff: 'Staff', skill: 'Skill', fun: 'Fun · Rare'
-                    }
-                    const grouped = {}
-                    for (const b of userBadges.all) {
-                      if (!grouped[b.category]) grouped[b.category] = []
-                      grouped[b.category].push(b)
-                    }
-                    return Object.entries(grouped).map(([cat, badges]) => (
-                      <div key={cat} className="nb-badge-section">
-                        <div className="nb-badge-cat-label">{CATS[cat] || cat}</div>
-                        <div className="nb-badge-grid">
-                          {badges.map(b => {
-                            const owned = userBadges.ownedIds?.has(b.id)
-                            return (
-                              <div
-                                key={b.id}
-                                className={`nb-badge-item ${owned ? 'nb-badge-owned' : 'nb-badge-locked'}`}
-                                style={{'--bc': b.color}}
-                                title={owned ? b.name + ' — ' + b.description : '???'}
-                              >
-                                <div className="nb-badge-emoji">
-                                  {owned ? b.emoji : '◆'}
-                                </div>
-                                <div className="nb-badge-name">
-                                  {owned ? b.name : '???'}
-                                </div>
-                                {owned && (
-                                  <div className={`nb-badge-rarity nb-badge-rarity--${b.rarity}`}>
-                                    {b.rarity}
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ))
-                  })()
-              }
-            </div>
-            <div className="nb-badges-footer">
-              {userBadges.ownedIds?.size || 0} / {userBadges.all.length} collected
-              <button className="nb-badges-manage-btn" onClick={() => { setShowBadges(false); nav('/badges') }}>
-                Manage equipped badges →
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-      {/* Subscription Modal */}
-      {showSubscription && (
-        <div className="nb-modal-overlay" onClick={() => setShowSubscription(false)}>
-          <div className="nb-modal" onClick={e => e.stopPropagation()}>
-            <div className="nb-modal-header">
-              <span>SUBSCRIPTION</span>
-              <button className="nb-modal-close" onClick={() => setShowSubscription(false)}>✕</button>
-            </div>
-
-            {/* Current plan */}
-            <div className="nb-modal-section">
-              <div className="nb-modal-label">Current Plan</div>
-              <div className="nb-sub-plan-row">
-                <div className="nb-sub-plan-name" style={{color:
-                  tier === 'omega' ? '#f59e0b' :
-                  tier === 'degen' ? '#a78bfa' : '#555'
-                }}>
-                  {tier === 'omega' ? '🌌 Omega' : tier === 'degen' ? '🔥 Degen' : '⬜ Free'}
-                </div>
-                <div className="nb-sub-plan-price">
-                  {tier === 'omega' ? '$49.99/mo' : tier === 'degen' ? '$14.99/mo' : 'No charge'}
-                </div>
-              </div>
-              {tier === 'free' && (
-                <div className="nb-modal-hint">You are on the free plan · 3 analyses/day</div>
-              )}
-              {tier === 'degen' && (
-                <div className="nb-modal-hint">Unlimited analyses · Full history · Tracker</div>
-              )}
-              {tier === 'omega' && (
-                <div className="nb-modal-hint">Everything in Degen · Omega-only chat · Max depth · Up to 5 wallets</div>
-              )}
-            </div>
-
-            {/* Upgrade prompts for lower tiers */}
-            {tier === 'free' && (
-              <div className="nb-modal-section">
-                <div className="nb-modal-label">Upgrade</div>
-                <div style={{display:'flex', flexDirection:'column', gap:8}}>
-                  <button className="nb-sub-upgrade-btn nb-sub-degen" onClick={() => { setShowSubscription(false); nav('/pricing') }}>
-                    ⚡ Upgrade to Degen — $14.99/mo
-                  </button>
-                  <button className="nb-sub-upgrade-btn nb-sub-omega" onClick={() => { setShowSubscription(false); nav('/pricing') }}>
-                    🌌 Upgrade to Omega — $49.99/mo
-                  </button>
-                </div>
-              </div>
-            )}
-            {tier === 'degen' && (
-              <div className="nb-modal-section">
-                <div className="nb-modal-label">Upgrade</div>
-                <button className="nb-sub-upgrade-btn nb-sub-omega" onClick={() => { setShowSubscription(false); nav('/pricing') }}>
-                  🌌 Upgrade to Omega — $49.99/mo
-                </button>
-              </div>
-            )}
-
-            {/* Manage / cancel for paid tiers */}
-            {tier !== 'free' && (
-              <div className="nb-modal-section">
-                <div className="nb-modal-label">Manage</div>
-                <div className="nb-modal-hint" style={{marginBottom:10}}>
-                  Update payment method, view invoices, or cancel your subscription via the Stripe billing portal.
-                </div>
-                <button
-                  className="nb-sub-portal-btn"
-                  disabled={portalLoading}
-                  onClick={async () => {
-                    setPortalLoading(true)
-                    await openBillingPortal()
-                    setPortalLoading(false)
-                  }}
-                >
-                  {portalLoading ? 'Redirecting...' : 'Open Billing Portal →'}
-                </button>
-              </div>
-            )}
-
-            {/* Delete account stays in account settings */}
-            <div className="nb-modal-section" style={{borderBottom:'none', paddingTop:10}}>
-              <div style={{fontSize:10, color:'#2a2a2a'}}>
-                To delete your account, go to Account Settings.
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
     </>
   )
 }

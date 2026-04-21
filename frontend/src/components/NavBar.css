@@ -103,7 +103,8 @@
 .nb-modal {
   background: #111; border: 1px solid #2a2a2a;
   border-radius: 8px; width: 440px; max-width: 100%;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.6); overflow: hidden;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.6);
 }
 .nb-modal-header {
   display: flex; justify-content: space-between; align-items: center;

@@ -183,11 +183,11 @@ export default function NavBar({ active, onLogoClick }) {
                       ⚡ Upgrade to Omega
                     </button>
                   )}
-                  <button className="nb-menu-btn" onClick={() => { nav('/profile/' + (username || user.id)); setShowMenu(false) }}>
-                    My Profile
-                  </button>
                   <button className="nb-menu-btn" onClick={() => { nav('/badges'); setShowMenu(false) }}>
                     🏅 My Badges
+                  </button>
+                  <button className="nb-menu-btn" onClick={() => { nav('/profile/' + (username || user.id)); setShowMenu(false) }}>
+                    My Profile
                   </button>
                   <button className="nb-menu-btn" onClick={() => { setShowAccount(true); setShowMenu(false) }}>
                     Account Settings

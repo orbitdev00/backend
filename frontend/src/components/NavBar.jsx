@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import orbitPfp from '../orbitPfp.js'
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import './NavBar.css'
 import PricingPanel from './PricingPanel'
 import { getUserTier, openBillingPortal } from '../lib/stripe'
@@ -228,8 +229,8 @@ export default function NavBar({ active, onLogoClick }) {
         </div>
       )}
 
-      {/* Account Settings Modal */}
-      {showAccount && (
+      {/* Account Settings Modal — portalled to body so fixed positioning works on all pages */}
+      {showAccount && createPortal(
         <div className="nb-modal-overlay" onClick={() => setShowAccount(false)}>
           <div className="nb-modal" onClick={e => e.stopPropagation()}>
             <div className="nb-modal-header">
@@ -297,7 +298,7 @@ export default function NavBar({ active, onLogoClick }) {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </>
   )
 }

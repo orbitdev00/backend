@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { filterContent } from '../lib/contentFilter'
 import NavBar from '../components/NavBar'
+import { grantBadge } from '../hooks/useBadges'
 import './Forum.css'
 
 const REPLY_COOLDOWN = 15 * 1000
@@ -46,6 +47,7 @@ export default function ForumThread() {
   const [userNames, setUserNames] = useState({})
   const [userRole, setUserRole]   = useState('member')
   const [cooldown, setCooldown]   = useState(0)
+  const [grantedBadges, setGrantedBadges] = useState({})
 
   useEffect(() => { loadThread() }, [id])
 
@@ -179,6 +181,20 @@ export default function ForumThread() {
             <div className="fpost-footer-right">
               {!isOP && canDelete && (
                 <button className="fpost-delete" onClick={() => deletePost(post.id)}>🗑 Delete</button>
+              )}
+              {!isOP && canModerate && post.user_id !== user?.id && (
+                <button
+                  className="fpost-delete"
+                  style={{color: grantedBadges[post.id] ? '#4ade80' : '#a78bfa'}}
+                  onClick={async () => {
+                    if (grantedBadges[post.id]) return
+                    const res = await grantBadge(user.id, post.user_id, 'special', userRole)
+                    setGrantedBadges(prev => ({ ...prev, [post.id]: res.awarded ? 'granted' : 'exists' }))
+                  }}
+                  title="Grant Special badge"
+                >
+                  {grantedBadges[post.id] === 'granted' ? '⭐ Granted' : grantedBadges[post.id] === 'exists' ? '⭐ Has it' : '⭐ Special'}
+                </button>
               )}
               <div className="fpost-votes">
                 <button className={`fvote-btn ${votes[voteKey] === 1 ? 'voted-up' : ''}`}

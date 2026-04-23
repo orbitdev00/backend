@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import NavBar from '../components/NavBar'
+import { grantBadge } from '../hooks/useBadges'
 import './Profile.css'
 
 function timeAgo(ts) {
@@ -22,8 +23,11 @@ function fmtMC(n) {
 }
 
 
-function OwnerPanel({ profile, setProfile }) {
+function OwnerPanel({ profile, setProfile, currentUserId }) {
   const [action, setAction]       = useState('')
+  const [badgeId, setBadgeId]     = useState('')
+  const [badgeMsg, setBadgeMsg]   = useState('')
+  const [grantingBadge, setGrantingBadge] = useState(false)
   const [tier, setTier]           = useState(profile?.tier || 'free')
   const [confirm, setConfirm]     = useState(false)
   const [msg, setMsg]             = useState('')
@@ -144,6 +148,37 @@ function OwnerPanel({ profile, setProfile }) {
       )}
 
       {msg && <div className={msg.slice(0,5) === 'Error' ? 'profile-owner-msg profile-owner-msg-err' : 'profile-owner-msg'}>{msg}</div>}
+
+      {/* Badge Grant */}
+      <div style={{marginTop:12, paddingTop:12, borderTop:'1px solid #1a1a1a'}}>
+        <div className="profile-owner-label" style={{marginBottom:6}}>🏅 Grant Badge</div>
+        <div className="profile-owner-row">
+          <select className="profile-owner-select" value={badgeId} onChange={e => setBadgeId(e.target.value)}>
+            <option value="">-- Select badge --</option>
+            <option value="owner">🌀 Owner</option>
+            <option value="mod">🛡️ Mod</option>
+            <option value="beta_tester">🧪 Beta Tester</option>
+            <option value="orbit_dev">💻 Orbit Dev</option>
+            <option value="advisor">🎖️ Advisor</option>
+            <option value="special">⭐ Special</option>
+            <option value="cupsey_warning">☕ Cupsey Warning</option>
+          </select>
+          <button
+            className="profile-owner-btn"
+            disabled={!badgeId || grantingBadge}
+            onClick={async () => {
+              setGrantingBadge(true); setBadgeMsg('')
+              const res = await grantBadge(currentUserId, profile.user_id, badgeId, 'owner')
+              setBadgeMsg(res.error ? 'Error: ' + res.error : res.awarded ? '✓ Badge granted' : 'Already has badge')
+              setGrantingBadge(false)
+              setTimeout(() => setBadgeMsg(''), 3000)
+            }}
+          >
+            {grantingBadge ? '...' : 'Grant'}
+          </button>
+        </div>
+        {badgeMsg && <div className="profile-owner-msg">{badgeMsg}</div>}
+      </div>
     </div>
   )
 }
@@ -325,7 +360,7 @@ export default function Profile() {
             </div>
           )}
           {isOwner && !isOwnProfile && (
-            <OwnerPanel profile={profile} setProfile={setProfile} />
+            <OwnerPanel profile={profile} setProfile={setProfile} currentUserId={user?.id} />
           )}
           {isOwnProfile && (
             <div style={{display:'flex',flexDirection:'column',gap:8,alignItems:'flex-end'}}>

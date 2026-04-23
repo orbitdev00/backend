@@ -11,13 +11,14 @@ import StarField from './components/StarField'
 import CollapsiblePanel from './components/CollapsiblePanel'
 import kikoPfp from './orbitPfp.js'
 import { useAuth } from './context/AuthContext'
+import BadgePopup from './components/BadgePopup'
+import { supabase } from './lib/supabase'
 import Landing from './pages/Landing'
 import { useStreamAnalysis } from './hooks/useStreamAnalysis'
 import Login from './pages/Login'
 import SignUp from './pages/SignUp'
 import ForgotPassword from './pages/ForgotPassword'
 import AuthCallback from './pages/AuthCallback'
-import { supabase } from './lib/supabase'
 import BlackHole from './components/BlackHole'
 import StreamReveal from './components/StreamReveal'
 import './App.css'
@@ -118,6 +119,9 @@ function CyclingQuote({ quotes, interval = 5000 }) {
       >
         {current}
       </div>
+      {activeBadgePopup && (
+        <BadgePopup badge={activeBadgePopup} onClose={dismissBadgePopup} />
+      )}
     </div>
   )
 }
@@ -154,6 +158,9 @@ export default function App() {
   const [activeMint, setActiveMint]     = useState('')
   const [copied, setCopied]             = useState(false)
   const [paymentSuccess, setPaymentSuccess] = useState(null)
+  const [badgePopupQueue, setBadgePopupQueue] = useState([])
+  const [activeBadgePopup, setActiveBadgePopup] = useState(null)
+  const knownBadgeIdsRef = useRef(null)
   // Animation state machine: idle → animating → black → revealing → done
   const [phase, setPhase] = useState('idle')
   // phase: idle | animating | black | revealing
@@ -190,6 +197,8 @@ export default function App() {
     streamAnalyze(mintAddress).then(result => {
       if (result?.trialUsed) { setPhase('idle'); setTrialBlocked(true) }
       if (result?.trialConsumed) setIsTrial(true)
+      // Check for newly awarded badges ~3s after analysis (give backend time to write)
+      setTimeout(() => checkNewBadges(), 3000)
     })
   }, [streamAnalyze])
 
@@ -205,6 +214,58 @@ export default function App() {
       })
     }, 50)
   }, [user, isTrial, activeMint, streamRefresh])
+
+
+  // Check for newly awarded badges after analysis
+  const checkNewBadges = useCallback(async () => {
+    if (!user) return
+    const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+    try {
+      const res = await fetch(`${BACKEND}/badges/user/${user.id}`)
+      const data = await res.json()
+      const currentBadges = data.badges || []
+      const currentIds = new Set(currentBadges.map(b => b.id))
+
+      if (knownBadgeIdsRef.current === null) {
+        // First load — just store, don't popup
+        knownBadgeIdsRef.current = currentIds
+        return
+      }
+
+      // Find newly awarded badges
+      const newBadges = currentBadges.filter(b => !knownBadgeIdsRef.current.has(b.id))
+      if (newBadges.length > 0) {
+        knownBadgeIdsRef.current = currentIds
+        setBadgePopupQueue(prev => [...prev, ...newBadges])
+      }
+    } catch(e) {
+      console.error('[badges]', e)
+    }
+  }, [user])
+
+  // Initialize known badges on mount
+  useEffect(() => {
+    if (!user || knownBadgeIdsRef.current !== null) return
+    const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+    fetch(`${BACKEND}/badges/user/${user.id}`)
+      .then(r => r.json())
+      .then(data => {
+        knownBadgeIdsRef.current = new Set((data.badges || []).map(b => b.id))
+      })
+      .catch(() => {})
+  }, [user])
+
+  // Process popup queue
+  useEffect(() => {
+    if (activeBadgePopup || badgePopupQueue.length === 0) return
+    const [next, ...rest] = badgePopupQueue
+    setActiveBadgePopup(next)
+    setBadgePopupQueue(rest)
+  }, [badgePopupQueue, activeBadgePopup])
+
+  const dismissBadgePopup = useCallback(() => {
+    setActiveBadgePopup(null)
+  }, [])
 
   const copyCa = useCallback(() => {
     navigator.clipboard.writeText(activeMint).then(() => {
@@ -428,6 +489,9 @@ export default function App() {
         )}
 
       </div>
+      {activeBadgePopup && (
+        <BadgePopup badge={activeBadgePopup} onClose={dismissBadgePopup} />
+      )}
     </div>
   )
 }

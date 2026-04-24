@@ -119,9 +119,6 @@ function CyclingQuote({ quotes, interval = 5000 }) {
       >
         {current}
       </div>
-      {activeBadgePopup && (
-        <BadgePopup badge={activeBadgePopup} onClose={dismissBadgePopup} />
-      )}
     </div>
   )
 }

@@ -229,7 +229,7 @@ async def check_subscription_badges(user_id: str, tier: str):
 
 async def grant_badge_manual(granter_id: str, target_user_id: str, badge_id: str, granter_role: str) -> dict:
     """Manual badge grant for owner/mod."""
-    MANUAL_BADGES = {"owner", "mod", "beta_tester", "orbit_dev", "advisor", "special", "cupsey_warning"}
+    MANUAL_BADGES = {"owner", "mod", "beta_tester", "orbit_dev", "advisor", "special", "cupsey_warning", "og", "founding_omega", "founding_degen"}
     MOD_GRANTABLE = {"special"}
 
     if badge_id not in MANUAL_BADGES:
@@ -239,13 +239,17 @@ async def grant_badge_manual(granter_id: str, target_user_id: str, badge_id: str
     if granter_role not in ("mod", "owner"):
         return {"error": "Unauthorized"}
 
-    # Verify granter role from DB
-    rows = await _get("user_reputation", {"user_id": f"eq.{granter_id}", "select": "role"})
+    # Verify granter role from DB — owner email bypass
+    rows = await _get("user_reputation", {"user_id": f"eq.{granter_id}", "select": "role,email"})
     if not rows:
         return {"error": "Granter not found"}
     actual_role = rows[0].get("role")
-    if actual_role not in ("mod", "owner"):
+    actual_email = rows[0].get("email", "")
+    is_owner = actual_role == "owner" or actual_email == "orbitdev00@gmail.com"
+    if not is_owner and actual_role != "mod":
         return {"error": "Unauthorized"}
+    if actual_role == "mod" and badge_id not in MOD_GRANTABLE:
+        return {"error": "Mods can only grant the Special badge"}
 
     awarded = await award_badge(target_user_id, badge_id)
     return {"awarded": awarded, "badge_id": badge_id}

@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom'
 import './NavBar.css'
 import PricingPanel from './PricingPanel'
 import { getUserTier, openBillingPortal } from '../lib/stripe'
+import { grantBadge } from '../hooks/useBadges'
 
 export default function NavBar({ active, onLogoClick }) {
   const nav = useNavigate()
@@ -27,6 +28,9 @@ export default function NavBar({ active, onLogoClick }) {
   const [showPricing, setShowPricing]     = useState(false)
   const [userBadges, setUserBadges]       = useState({ owned: [], all: [], ownedIds: new Set() })
   const [portalLoading, setPortalLoading] = useState(false)
+  const [selfGrantId, setSelfGrantId]     = useState('')
+  const [selfGrantMsg, setSelfGrantMsg]   = useState('')
+  const [selfGranting, setSelfGranting]   = useState(false)
   const [unreadDMs, setUnreadDMs]         = useState(0)
   const fileRef = useRef(null)
 
@@ -243,6 +247,60 @@ export default function NavBar({ active, onLogoClick }) {
               <div className="nb-modal-label">Email</div>
               <div className="nb-modal-value">{user?.email}</div>
             </div>
+
+            {/* Owner — Grant badge to self */}
+            {tier === 'omega' || userRole === 'owner' ? null : null}
+            {username === 'Orbit_Dev' || user?.email === 'orbitdev00@gmail.com' ? (
+              <div className="nb-modal-section">
+                <div className="nb-modal-label">🏅 Grant Badge to Self</div>
+                <div style={{display:'flex', gap:6, marginTop:4}}>
+                  <select
+                    style={{flex:1, background:'#0d0d0d', border:'1px solid #2a2a2a', borderRadius:4, color:'#aaa', fontFamily:'var(--mono)', fontSize:11, padding:'6px 8px'}}
+                    value={selfGrantId}
+                    onChange={e => setSelfGrantId(e.target.value)}
+                  >
+                    <option value="">-- Select badge --</option>
+                    <option value="owner">🌀 Owner</option>
+                    <option value="mod">🛡️ Mod</option>
+                    <option value="beta_tester">🧪 Beta Tester</option>
+                    <option value="orbit_dev">💻 Orbit Dev</option>
+                    <option value="advisor">🎖️ Advisor</option>
+                    <option value="special">⭐ Special</option>
+                    <option value="cupsey_warning">☕ Cupsey Warning</option>
+                    <option value="og">👑 OG</option>
+                    <option value="founding_omega">🟣 Founding Omega</option>
+                    <option value="founding_degen">🔶 Founding Degen</option>
+                  </select>
+                  <button
+                    style={{background:'#1a1a1a', border:'1px solid #2a2a2a', borderRadius:4, color:'#94a3b8', fontFamily:'var(--mono)', fontSize:11, padding:'6px 14px', cursor:'pointer', whiteSpace:'nowrap'}}
+                    disabled={!selfGrantId || selfGranting}
+                    onClick={async () => {
+                      setSelfGranting(true); setSelfGrantMsg('')
+                      const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+                      try {
+                        const res = await fetch(`${BACKEND}/badges/grant`, {
+                          method: 'POST',
+                          headers: {'Content-Type': 'application/json'},
+                          body: JSON.stringify({
+                            granter_id: user.id,
+                            target_user_id: user.id,
+                            badge_id: selfGrantId,
+                            granter_role: 'owner',
+                          })
+                        })
+                        const data = await res.json()
+                        setSelfGrantMsg(data.error ? '✗ ' + data.error : data.awarded ? '✓ Granted' : '✓ Already owned')
+                      } catch(e) { setSelfGrantMsg('✗ Error') }
+                      setSelfGranting(false)
+                      setTimeout(() => setSelfGrantMsg(''), 3000)
+                    }}
+                  >
+                    {selfGranting ? '...' : 'Grant'}
+                  </button>
+                </div>
+                {selfGrantMsg && <div style={{fontSize:10, marginTop:6, color: selfGrantMsg.startsWith('✓') ? '#4ade80' : '#f87171', fontFamily:'var(--mono)'}}>{selfGrantMsg}</div>}
+              </div>
+            ) : null}
 
             {/* Subscription */}
             <div className="nb-modal-section">

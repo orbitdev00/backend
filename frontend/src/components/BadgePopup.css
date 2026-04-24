@@ -2,8 +2,9 @@
 
 .badge-popup {
   position: fixed;
-  bottom: 28px;
-  right: 28px;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 9999;
   animation: popup-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -102,8 +103,8 @@
 }
 
 @keyframes popup-slide-in {
-  from { opacity: 0; transform: translateX(60px) scale(0.95); }
-  to   { opacity: 1; transform: translateX(0) scale(1); }
+  from { opacity: 0; transform: translateX(-50%) translateY(-24px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
 }
 
 @keyframes popup-emoji-bounce {

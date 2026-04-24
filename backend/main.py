@@ -23,7 +23,6 @@ from badge_engine import (
     check_outcome_badges,
     check_pnl_badges,
     check_subscription_badges,
-    check_account_badges,
 )
 from rate_limiter import check_rate_limit, consume_rate_limit, get_usage
 from stripe_handler import create_checkout_session, create_billing_portal, handle_webhook
@@ -95,10 +94,7 @@ async def refresh_pnl(request: Request):
 
         # Fire PnL badge check
         try:
-            from supabase import create_client
-            from config import SUPABASE_URL, SUPABASE_SERVICE_KEY
-            sb = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-            await check_pnl_badges(sb, user_id)
+            await check_pnl_badges(user_id)
         except Exception as e:
             print(f"[Badges] pnl check error: {e}")
         return JSONResponse({**pnl, "wallet": wallet[:8] + "..." + wallet[-4:]})
@@ -220,11 +216,8 @@ async def analyze_once(
             try:
                 await log_prediction(snapshot, prediction, user_id or None)
                 if user_id:
-                    from supabase import create_client
-                    from config import SUPABASE_URL, SUPABASE_SERVICE_KEY
-                    sb = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
                     coin_age = snapshot.get("age_seconds")
-                    await check_analysis_badges(sb, user_id, snapshot, coin_age_seconds=coin_age)
+                    await check_analysis_badges(user_id, snapshot, coin_age_seconds=coin_age)
             except Exception as e:
                 print(f"[Supabase] Background log error: {e}")
         asyncio.create_task(_log())
@@ -465,11 +458,8 @@ async def stream_analysis(websocket: WebSocket, mint: str):
             try:
                 await log_prediction(snapshot, prediction, uid)
                 if uid:
-                    from supabase import create_client
-                    from config import SUPABASE_URL, SUPABASE_SERVICE_KEY
-                    sb = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
                     coin_age = snapshot.get("age_seconds")
-                    await check_analysis_badges(sb, uid, snapshot, coin_age_seconds=coin_age)
+                    await check_analysis_badges(uid, snapshot, coin_age_seconds=coin_age)
             except Exception as e:
                 print(f"[Supabase] {e}")
         asyncio.create_task(_log())
@@ -531,10 +521,7 @@ async def stripe_webhook(request: Request):
             import json as _json
             data = _json.loads(body)
             if data.get("user_id") and data.get("tier"):
-                from supabase import create_client
-                from config import SUPABASE_URL, SUPABASE_SERVICE_KEY
-                sb = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-                await check_subscription_badges(sb, data["user_id"], data["tier"])
+                await check_subscription_badges(data["user_id"], data["tier"])
     except Exception as e:
         print(f"[Badges] subscription check error: {e}")
     return result
@@ -591,10 +578,21 @@ async def submit_outcome(mint: str, actual_peak_mc: float, notes: str = ""):
             from supabase import create_client
             sb = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
             res = sb.table("predictions").select("user_id").eq("mint", mint).order("snapshot_timestamp", desc=True).limit(1).execute()
-            if res.data:
-                uid = res.data[0]["user_id"]
+            import httpx as _httpx
+            from config import SUPABASE_URL as _SB_URL, SUPABASE_SERVICE_KEY as _SB_KEY, SUPABASE_ANON_KEY as _SB_ANON
+            _key = _SB_KEY or _SB_ANON
+            _headers = {"apikey": _key, "Authorization": f"Bearer {_key}", "Prefer": "return=representation"}
+            async with _httpx.AsyncClient(timeout=10) as _client:
+                _resp = await _client.get(
+                    f"{_SB_URL}/rest/v1/predictions",
+                    params={"mint": f"eq.{mint}", "select": "user_id", "order": "snapshot_timestamp.desc", "limit": "1"},
+                    headers=_headers,
+                )
+                _rows = _resp.json() if _resp.status_code == 200 else []
+            if _rows:
+                uid = _rows[0]["user_id"]
                 was_rug = actual_peak_mc < 1000
-                await check_outcome_badges(sb, uid, mint, actual_peak_mc, was_rug)
+                await check_outcome_badges(uid, mint, actual_peak_mc, was_rug)
         except Exception as e:
             print(f"[Badges] outcome check error: {e}")
         return JSONResponse({"status": "recorded", "mint": mint, "actual_peak_mc": actual_peak_mc})

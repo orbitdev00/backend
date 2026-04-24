@@ -47,9 +47,10 @@ export function useStreamAnalysis() {
     const loggedIn = !!(session?.user?.id)
 
     const RAILWAY_HOST = RAILWAY_URL.replace('https://', '')
+    const userId = session?.user?.id ? `?user_id=${encodeURIComponent(session.user.id)}` : ''
     const wsUrl = IS_PROD
-      ? `wss://${RAILWAY_HOST}/ws/stream/${mint.trim()}`
-      : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/stream/${mint.trim()}`
+      ? `wss://${RAILWAY_HOST}/ws/stream/${mint.trim()}${userId}`
+      : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/stream/${mint.trim()}${userId}`
 
     console.log('[ORBIT] Connecting WebSocket:', wsUrl)
 

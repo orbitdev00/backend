@@ -31,6 +31,7 @@ export default function NavBar({ active, onLogoClick }) {
   const [selfGrantId, setSelfGrantId]     = useState('')
   const [selfGrantMsg, setSelfGrantMsg]   = useState('')
   const [selfGranting, setSelfGranting]   = useState(false)
+  const [userRole, setUserRole]           = useState('member')
   const [unreadDMs, setUnreadDMs]         = useState(0)
   const fileRef = useRef(null)
 
@@ -63,12 +64,13 @@ export default function NavBar({ active, onLogoClick }) {
 
   useEffect(() => {
     if (!user) return
-    supabase.from('user_reputation').select('username,bio,avatar_url').eq('user_id', user.id).single()
+    supabase.from('user_reputation').select('username,bio,avatar_url,role').eq('user_id', user.id).single()
       .then(({ data }) => {
         if (data?.username) setUsername(data.username)
         if (data?.bio) setBio(data.bio)
         if (data?.avatar_url) setPfpUrl(data.avatar_url)
         if (data?.wallet_address) setWallet(data.wallet_address)
+        if (data?.role) setUserRole(data.role)
       })
   }, [user])
 

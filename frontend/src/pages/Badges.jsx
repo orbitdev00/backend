@@ -58,16 +58,35 @@ export default function Badges() {
   async function handleEquipToggle(badge) {
     const owned = userBadges[badge.id]
     if (!owned) return
+
     if (owned.equipped) {
+      // Already equipped — unequip
       await unequipBadge(user.id, badge.id)
       setUserBadges(prev => ({ ...prev, [badge.id]: { ...prev[badge.id], equipped: false } }))
       setEquippedCount(c => c - 1)
-    } else {
-      if (equippedCount >= equipLimit) return
+    } else if (equippedCount < equipLimit) {
+      // Slot available — equip directly
       const res = await equipBadge(user.id, badge.id, tier)
       if (!res.error) {
         setUserBadges(prev => ({ ...prev, [badge.id]: { ...prev[badge.id], equipped: true } }))
         setEquippedCount(c => c + 1)
+      }
+    } else {
+      // At limit — auto-swap: unequip the oldest equipped badge, equip this one
+      const equippedIds = Object.entries(userBadges)
+        .filter(([, v]) => v.equipped)
+        .map(([id]) => id)
+      if (equippedIds.length === 0) return
+      const toSwap = equippedIds[0]
+      await unequipBadge(user.id, toSwap)
+      const res = await equipBadge(user.id, badge.id, tier)
+      if (!res.error) {
+        setUserBadges(prev => ({
+          ...prev,
+          [toSwap]: { ...prev[toSwap], equipped: false },
+          [badge.id]: { ...prev[badge.id], equipped: true },
+        }))
+        // equippedCount stays the same — swapped 1 for 1
       }
     }
   }
@@ -127,7 +146,7 @@ export default function Badges() {
                       className={`badge-card ${owned ? "badge-card--owned" : "badge-card--locked"} ${equipped ? "badge-card--equipped" : ""}`}
                       style={{ "--badge-color": badge.color }}
                       onClick={() => owned && handleEquipToggle(badge)}
-                      title={owned ? (equipped ? "Click to unequip" : canEquip ? "Click to equip" : "Equip limit reached") : "Not yet earned"}
+                      title={owned ? (equipped ? "Click to unequip" : equippedCount < equipLimit ? "Click to equip" : "Click to swap equipped badge") : "Not yet earned"}
                     >
                       <BadgeIcon badge={badge} size="lg" dimmed={!owned} showTooltip={!owned} />
                       <div className="badge-card__name">{badge.name}</div>

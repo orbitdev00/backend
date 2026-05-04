@@ -25,8 +25,26 @@ async def fetch_dexscreener(mint: str) -> dict:
     if not sol_pairs:
         return _empty()
 
-    sol_pairs.sort(key=lambda p: (p.get("liquidity") or {}).get("usd") or 0, reverse=True)
+    # Prefer migrated pairs (raydium, orca, meteora, pumpswap) over bonding curve
+    # Sort by: migrated first, then liquidity descending
+    def pair_priority(p):
+        dex = (p.get("dexId") or "").lower()
+        liq = (p.get("liquidity") or {}).get("usd") or 0
+        # pumpfun bonding curve = lowest priority
+        is_bonding = dex == "pump.fun" or (p.get("labels") and "v1" in str(p.get("labels")))
+        return (0 if is_bonding else 1, liq)
+
+    sol_pairs.sort(key=pair_priority, reverse=True)
     pair = sol_pairs[0]
+
+    # If selected pair has zero MC, try to get it from fdv or another pair
+    mc = float(pair.get("marketCap") or pair.get("fdv") or 0)
+    if mc == 0:
+        for fallback in sol_pairs[1:]:
+            mc_fb = float(fallback.get("marketCap") or fallback.get("fdv") or 0)
+            if mc_fb > 0:
+                pair = fallback
+                break
 
     info     = pair.get("info") or {}
     socials  = info.get("socials") or []

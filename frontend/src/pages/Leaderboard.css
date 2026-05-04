@@ -140,3 +140,99 @@
   .lb-head > span:last-child { display: none; }
   .lb-body { padding: 16px; }
 }
+
+/* ── Weekly Recap ────────────────────────────────────── */
+.lb-recap-card {
+  background: #0a0a0a;
+  border: 1px solid #1e1e1e;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.lb-recap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #141414;
+  background: #0d0d0d;
+}
+
+.lb-recap-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e2e8f0;
+  letter-spacing: 0.3px;
+}
+
+.lb-recap-week {
+  font-size: 10px;
+  color: #334155;
+  font-family: var(--mono);
+}
+
+.lb-recap-grid {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  gap: 0;
+}
+
+.lb-recap-section {
+  padding: 14px 16px;
+}
+
+.lb-recap-divider {
+  background: #141414;
+  width: 1px;
+}
+
+.lb-recap-section-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #334155;
+  margin-bottom: 10px;
+  font-family: var(--mono);
+}
+
+.lb-recap-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  border-bottom: 1px solid #0f0f0f;
+}
+.lb-recap-row:last-child { border-bottom: none; }
+.lb-recap-row:hover { opacity: 0.8; }
+
+.lb-recap-medal {
+  font-size: 14px;
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.lb-recap-name {
+  font-size: 12px;
+  color: #94a3b8;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-recap-val {
+  font-size: 11px;
+  font-family: var(--mono);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .lb-recap-grid { grid-template-columns: 1fr; }
+  .lb-recap-divider { display: none; }
+}

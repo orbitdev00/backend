@@ -13,8 +13,50 @@ export default function Leaderboard() {
   const [pnlSection, setPnlSection] = useState('high')
   const [leaders, setLeaders]       = useState([])
   const [loading, setLoading]       = useState(true)
+  const [recap, setRecap]             = useState(null)
 
   useEffect(() => { loadLeaderboard() }, [tab])
+  useEffect(() => { loadWeeklyRecap() }, [])
+
+  const loadWeeklyRecap = async () => {
+    const now = new Date()
+    const weekStart = new Date(now)
+    weekStart.setDate(now.getDate() - now.getDay()) // Sunday
+    weekStart.setHours(0,0,0,0)
+    const weekStartISO = weekStart.toISOString()
+
+    // Top PnL this week — use pnl_updated_at if available, else just use current standings
+    const { data: pnlData } = await supabase
+      .from('user_reputation')
+      .select('user_id,username,avatar_url,total_pnl_pct,wallet_address')
+      .not('total_pnl_pct', 'is', null)
+      .not('wallet_address', 'is', null)
+      .order('total_pnl_pct', { ascending: false })
+      .limit(3)
+
+    const { data: loserData } = await supabase
+      .from('user_reputation')
+      .select('user_id,username,avatar_url,total_pnl_pct,wallet_address')
+      .not('total_pnl_pct', 'is', null)
+      .not('wallet_address', 'is', null)
+      .order('total_pnl_pct', { ascending: true })
+      .limit(1)
+
+    const { data: repData } = await supabase
+      .from('user_reputation')
+      .select('user_id,username,avatar_url,score')
+      .gt('score', 0)
+      .order('score', { ascending: false })
+      .limit(1)
+
+    setRecap({
+      topPnl: pnlData || [],
+      worstPnl: loserData?.[0] || null,
+      topRep: repData?.[0] || null,
+      weekLabel: weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+        ' – ' + now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    })
+  }
 
   const loadLeaderboard = async () => {
     setLoading(true)
@@ -71,6 +113,75 @@ export default function Leaderboard() {
     </div>
   )
 
+
+  const WeeklyRecap = () => {
+    if (!recap) return null
+    const { topPnl, worstPnl, topRep, weekLabel } = recap
+    if (topPnl.length === 0 && !worstPnl && !topRep) return null
+
+    const Avatar = ({ row }) => (
+      <div className="lb-avatar" style={{width:32,height:32,fontSize:11}}>
+        {row?.avatar_url
+          ? <img src={row.avatar_url} alt="" />
+          : (row?.username || '?').slice(0,2).toUpperCase()}
+      </div>
+    )
+
+    return (
+      <div className="lb-recap-card">
+        <div className="lb-recap-header">
+          <span className="lb-recap-title">⚡ Weekly Recap</span>
+          <span className="lb-recap-week">{weekLabel}</span>
+        </div>
+        <div className="lb-recap-grid">
+          {/* Top PnL */}
+          <div className="lb-recap-section">
+            <div className="lb-recap-section-label">🏆 Top Traders</div>
+            {topPnl.map((row, i) => (
+              <div key={row.user_id} className="lb-recap-row" onClick={() => nav(`/profile/${row.username || row.user_id}`)}>
+                <span className="lb-recap-medal">{['🥇','🥈','🥉'][i]}</span>
+                <Avatar row={row} />
+                <span className="lb-recap-name">{row.username || '?'}</span>
+                <span className="lb-recap-val c-green">
+                  {Number(row.total_pnl_pct) > 0 ? '+' : ''}{Number(row.total_pnl_pct).toFixed(3)} SOL
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Divider */}
+          <div className="lb-recap-divider" />
+
+          {/* Worst + Top Rep */}
+          <div className="lb-recap-section">
+            {worstPnl && (
+              <>
+                <div className="lb-recap-section-label">💀 Biggest Loss</div>
+                <div className="lb-recap-row" onClick={() => nav(`/profile/${worstPnl.username || worstPnl.user_id}`)}>
+                  <span className="lb-recap-medal">💀</span>
+                  <Avatar row={worstPnl} />
+                  <span className="lb-recap-name">{worstPnl.username || '?'}</span>
+                  <span className="lb-recap-val c-red">{Number(worstPnl.total_pnl_pct).toFixed(3)} SOL</span>
+                </div>
+              </>
+            )}
+            {topRep && (
+              <>
+                <div className="lb-recap-section-label" style={{marginTop: worstPnl ? 14 : 0}}>🌟 Top Contributor</div>
+                <div className="lb-recap-row" onClick={() => nav(`/profile/${topRep.username || topRep.user_id}`)}>
+                  <span className="lb-recap-medal">🌟</span>
+                  <Avatar row={topRep} />
+                  <span className="lb-recap-name">{topRep.username || '?'}</span>
+                  <span className="lb-recap-val c-purple">{topRep.score} rep</span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const winners = leaders.filter(r => r.total_pnl_pct > 0)
   const losers  = [...leaders].filter(r => r.total_pnl_pct <= 0).reverse()
 
@@ -80,6 +191,7 @@ export default function Leaderboard() {
       <NavBar active="leaderboard" />
       <div className="lb-body">
         <div className="lb-heading-wrap"><h2>Leaderboard</h2><p>On-chain PnL · community rankings.</p></div>
+        <WeeklyRecap />
         <div className="lb-header">
           <div className="lb-tabs">
             <button className={`lb-tab ${tab === 'pnl' ? 'active' : ''}`} onClick={() => setTab('pnl')}>Monthly PnL</button>

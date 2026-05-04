@@ -204,5 +204,11 @@ setInterval(async () => {
   }
 }, POLL_MS)
 
+process.on('unhandledRejection', err => console.error('[Bot] Unhandled rejection:', err))
+process.on('uncaughtException', err => console.error('[Bot] Uncaught exception:', err))
+
+console.log('[Bot] Starting... TOKEN exists:', !!DISCORD_TOKEN, 'BACKEND:', ORBIT_BACKEND)
+
 client.once('ready', () => console.log(`[Orbit Bot] ${client.user.tag} online | Backend: ${ORBIT_BACKEND}`))
-client.login(DISCORD_TOKEN)
+client.on('error', err => console.error('[Bot] Client error:', err))
+client.login(DISCORD_TOKEN).catch(err => console.error('[Bot] Login failed:', err))

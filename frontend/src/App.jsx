@@ -304,6 +304,164 @@ export default function App() {
     } catch(e) { console.error('share error', e) }
   }, [activeMint])
 
+
+  const downloadAnalysisImage = useCallback(() => {
+    if (!snapshot || !prediction) return
+    const W = 1200, H = 630
+    const canvas = document.createElement('canvas')
+    canvas.width = W; canvas.height = H
+    const ctx = canvas.getContext('2d')
+    const PAD = 52
+
+    const fmtU = (n) => {
+      if (!n && n !== 0) return '—'
+      if (n >= 1_000_000) return '$' + (n/1_000_000).toFixed(2) + 'M'
+      if (n >= 1_000) return '$' + (n/1_000).toFixed(1) + 'K'
+      return '$' + n.toFixed(2)
+    }
+
+    function rrect(x, y, w, h, r, fill, stroke) {
+      ctx.beginPath()
+      ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r)
+      ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h)
+      ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r)
+      ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath()
+      if (fill) { ctx.fillStyle = fill; ctx.fill() }
+      if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1.5; ctx.stroke() }
+    }
+
+    function drawCirc(cx, cy, r, pct, col) {
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2)
+      ctx.strokeStyle = '#1e1e1e'; ctx.lineWidth = 9; ctx.stroke()
+      if (pct > 0) {
+        ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI/2, -Math.PI/2 + (pct/100)*Math.PI*2)
+        ctx.strokeStyle = col; ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt'
+      }
+    }
+
+    function sColor(v, hi, mid, highBad) {
+      if (highBad) return v >= hi ? '#ef4444' : v >= mid ? '#fbbf24' : '#4ade80'
+      return v >= hi ? '#4ade80' : v >= mid ? '#fbbf24' : '#ef4444'
+    }
+
+    // BG
+    const bg = ctx.createLinearGradient(0,0,0,H)
+    bg.addColorStop(0,'#060608'); bg.addColorStop(1,'#0a0a0f')
+    ctx.fillStyle = bg; ctx.fillRect(0,0,W,H)
+
+    // Stars
+    ;[...Array(80)].forEach((_,i) => {
+      const sx = ((i*137.508+42)%1)*W, sy = ((i*97.312+13)%1)*H
+      ctx.beginPath(); ctx.arc(sx,sy,i%3===0?1.5:0.8,0,Math.PI*2)
+      ctx.fillStyle = `rgba(255,255,255,${0.15+(i%5)*0.08})`; ctx.fill()
+    })
+
+    // Glow
+    const glow = ctx.createRadialGradient(W*0.85,H*0.15,0,W*0.85,H*0.15,380)
+    glow.addColorStop(0,'rgba(120,80,220,0.12)'); glow.addColorStop(1,'rgba(0,0,0,0)')
+    ctx.fillStyle = glow; ctx.fillRect(0,0,W,H)
+
+    // Card
+    rrect(PAD,PAD,W-PAD*2,H-PAD*2,16,'#0d0d0dcc','#1e1e1e')
+
+    // Header
+    rrect(PAD,PAD,W-PAD*2,56,0,'#0808088a',null)
+    ctx.strokeStyle='#161616'; ctx.lineWidth=1
+    ctx.beginPath(); ctx.moveTo(PAD,PAD+56); ctx.lineTo(W-PAD,PAD+56); ctx.stroke()
+    ctx.fillStyle='#fff'; ctx.font='700 14px monospace'; ctx.textAlign='left'
+    ctx.fillText('ORBIT', PAD+24, PAD+36)
+    ctx.fillStyle='#1e1e1e'; ctx.font='11px monospace'; ctx.textAlign='right'
+    ctx.fillText('orbit-app.xyz', W-PAD-24, PAD+36); ctx.textAlign='left'
+
+    // Coin name
+    const CY = PAD + 56 + 36
+    ctx.fillStyle='#f1f5f9'; ctx.font='800 32px sans-serif'
+    ctx.fillText((snapshot.name || '—').slice(0,28), PAD+24, CY)
+    ctx.fillStyle='#475569'; ctx.font='13px monospace'
+    ctx.fillText(`${snapshot.symbol || ''}  ·  MC: ${fmtU(snapshot.market_cap_usd)}`, PAD+24, CY+24)
+
+    // Divider
+    ctx.strokeStyle='#161616'; ctx.lineWidth=1
+    ctx.beginPath(); ctx.moveTo(PAD+24,CY+44); ctx.lineTo(W-PAD-24,CY+44); ctx.stroke()
+
+    const COL1X = PAD+24, COL2X = W/2+20, ROW2Y = CY+64
+
+    // Scores
+    ctx.fillStyle='#334155'; ctx.font='700 9px monospace'
+    ctx.fillText('SCORES', COL1X, ROW2Y+4)
+
+    const purity = Math.max(0, 100-(prediction.risk_score||0))
+    const rugP = Math.round(prediction.rug_probability??0)
+    const bundleP = Math.round(snapshot.bundle_confidence??0)
+    const scores = [
+      {label:'Rug %', val:rugP, col:sColor(rugP,70,40,true)},
+      {label:'Purity', val:Math.round(purity), col:sColor(purity,70,40,false)},
+      {label:'Bundle %', val:bundleP, col:sColor(bundleP,60,30,true)},
+    ]
+    scores.forEach((s,i) => {
+      const cx2 = COL1X+50+i*130, cy2 = ROW2Y+70
+      drawCirc(cx2,cy2,38,s.val,s.col)
+      ctx.fillStyle=s.col; ctx.font='700 20px sans-serif'; ctx.textAlign='center'
+      ctx.fillText(s.val,cx2,cy2+7)
+      ctx.fillStyle='#475569'; ctx.font='10px monospace'
+      ctx.fillText(s.label,cx2,cy2+56); ctx.textAlign='left'
+    })
+
+    // Momentum + Stage
+    const TAG_Y = ROW2Y+160
+    const mom = (prediction.momentum||'—').toUpperCase()
+    const stg = (prediction.stage||'—').replace(/_/g,' ').toUpperCase()
+    const mCol = {DEAD:'#475569',WEAK:'#64748b',BUILDING:'#fbbf24',STRONG:'#4ade80',PARABOLIC:'#4ade80'}[mom]||'#64748b'
+    rrect(COL1X,TAG_Y,160,40,6,'#111','#1e1e1e')
+    ctx.fillStyle='#475569'; ctx.font='9px monospace'; ctx.fillText('MOMENTUM',COL1X+12,TAG_Y+14)
+    ctx.fillStyle=mCol; ctx.font='700 13px sans-serif'; ctx.fillText(mom,COL1X+12,TAG_Y+30)
+    rrect(COL1X+172,TAG_Y,160,40,6,'#111','#1e1e1e')
+    ctx.fillStyle='#475569'; ctx.font='9px monospace'; ctx.fillText('STAGE',COL1X+184,TAG_Y+14)
+    ctx.fillStyle='#94a3b8'; ctx.font='700 13px sans-serif'; ctx.fillText(stg,COL1X+184,TAG_Y+30)
+
+    // Vertical divider
+    ctx.strokeStyle='#161616'; ctx.lineWidth=1
+    ctx.beginPath(); ctx.moveTo(W/2+4,CY+54); ctx.lineTo(W/2+4,H-PAD-60); ctx.stroke()
+
+    // Right — peak
+    ctx.fillStyle='#334155'; ctx.font='700 9px monospace'; ctx.fillText('ESTIMATED PEAK MC',COL2X,ROW2Y+4)
+    ctx.fillStyle='#a78bfa'; ctx.font='800 44px sans-serif'
+    ctx.fillText(fmtU(prediction.estimated_peak_mc),COL2X,ROW2Y+52)
+    ctx.fillStyle='#334155'; ctx.font='12px monospace'
+    ctx.fillText(`${fmtU(prediction.peak_mc_range?.low)} – ${fmtU(prediction.peak_mc_range?.high)}`,COL2X,ROW2Y+74)
+
+    // Prob bars
+    ctx.strokeStyle='#161616'
+    ctx.beginPath(); ctx.moveTo(COL2X,ROW2Y+90); ctx.lineTo(W-PAD-24,ROW2Y+90); ctx.stroke()
+    ctx.fillStyle='#334155'; ctx.font='700 9px monospace'; ctx.fillText('PROBABILITY OF REACHING',COL2X,ROW2Y+108)
+    const probs = prediction.probability_bands || {}
+    const pArr = [['$100K','100k'],['$250K','250k'],['$500K','500k'],['$1M','1m'],['$5M','5m']]
+    const BAR_W = W-PAD-24-COL2X-60
+    pArr.forEach(([lbl,key],i) => {
+      const val = Math.round(probs[key]||0), by = ROW2Y+124+i*36
+      ctx.fillStyle='#475569'; ctx.font='11px monospace'; ctx.fillText(lbl,COL2X,by+4)
+      const col = val>=50?'#4ade80':val>=25?'#fbbf24':'#ef4444'
+      const bx = COL2X+52
+      rrect(bx,by-6,BAR_W,10,5,'#1a1a1a',null)
+      if (val>0) rrect(bx,by-6,Math.max(10,BAR_W*val/100),10,5,col,null)
+      ctx.fillStyle=col; ctx.font='700 10px monospace'; ctx.textAlign='right'
+      ctx.fillText(`${val}%`,W-PAD-24,by+4); ctx.textAlign='left'
+    })
+
+    // Footer
+    ctx.strokeStyle='#161616'
+    ctx.beginPath(); ctx.moveTo(PAD,H-PAD-36); ctx.lineTo(W-PAD,H-PAD-36); ctx.stroke()
+    ctx.fillStyle='#2a2a2a'; ctx.font='11px monospace'
+    ctx.fillText('orbit-app.xyz',PAD+24,H-PAD-14)
+    ctx.fillStyle='#1a1a1a'; ctx.textAlign='right'
+    ctx.fillText(`orbit-app.xyz`,W-PAD-24,H-PAD-14); ctx.textAlign='left'
+
+    const link = document.createElement('a')
+    link.download = `orbit-${(snapshot.symbol||activeMint?.slice(0,8)||'analysis').toLowerCase()}.png`
+    link.href = canvas.toDataURL('image/png',1.0)
+    link.click()
+  }, [snapshot, prediction, activeMint])
+
   const copyCa = useCallback(() => {
     navigator.clipboard.writeText(activeMint).then(() => {
       setCopied(true)
@@ -477,6 +635,7 @@ export default function App() {
                       <button className="btn-copy-icon" onClick={copyCa} data-ca={activeMint} title={activeMint}>
                         {copied ? '✓' : '⧉'}
                       </button>
+                      <button className="btn-copy-icon" onClick={downloadAnalysisImage} title="Download analysis as image" style={{fontSize:'12px', letterSpacing:'0.5px'}}>↓ img</button>
                       <div className="coin-name-center">
                         <span className="coin-title-name">{(snapshot || partials?.market)?.name}</span>
                         <span className="coin-title-symbol">{(snapshot || partials?.market)?.symbol}</span>

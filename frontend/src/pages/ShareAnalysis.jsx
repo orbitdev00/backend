@@ -104,8 +104,9 @@ export default function ShareAnalysis() {
   }
   const momentum = (data.momentum || '—').toUpperCase()
   const stage    = (data.stage || '—').replace(/_/g, ' ')
-  const ts       = data.snapshot_timestamp
-    ? new Date(data.snapshot_timestamp).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' })
+  const tsRaw = data.snapshot_timestamp ? new Date(data.snapshot_timestamp) : null
+  const ts = tsRaw && !isNaN(tsRaw.getTime()) && tsRaw.getFullYear() > 1971
+    ? tsRaw.toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' })
     : '—'
 
   const momentumColor = {
@@ -114,146 +115,256 @@ export default function ShareAnalysis() {
 
 
   function downloadImage() {
+    // 1200x630 — standard OG/Twitter image size
+    const W = 1200, H = 630
     const canvas = document.createElement('canvas')
-    const W = 600, H = 420
-    canvas.width = W * 2
-    canvas.height = H * 2
+    canvas.width = W
+    canvas.height = H
     const ctx = canvas.getContext('2d')
-    ctx.scale(2, 2)
 
-    // Background
-    ctx.fillStyle = '#0d0d0d'
-    ctx.roundRect(0, 0, W, H, 14)
-    ctx.fill()
+    const PAD = 52
 
-    // Border
-    ctx.strokeStyle = '#1e1e1e'
-    ctx.lineWidth = 1
-    ctx.stroke()
+    // ── helpers ──────────────────────────────────────────
+    function drawRoundRect(x, y, w, h, r, fill, stroke) {
+      ctx.beginPath()
+      ctx.moveTo(x + r, y)
+      ctx.lineTo(x + w - r, y)
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r)
+      ctx.lineTo(x + w, y + h - r)
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+      ctx.lineTo(x + r, y + h)
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r)
+      ctx.lineTo(x, y + r)
+      ctx.quadraticCurveTo(x, y, x + r, y)
+      ctx.closePath()
+      if (fill) { ctx.fillStyle = fill; ctx.fill() }
+      if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1.5; ctx.stroke() }
+    }
 
-    // Header bar
-    ctx.fillStyle = '#080808'
-    ctx.fillRect(0, 0, W, 48)
-    ctx.strokeStyle = '#161616'
-    ctx.beginPath(); ctx.moveTo(0, 48); ctx.lineTo(W, 48); ctx.stroke()
+    function drawCircle(cx, cy, r, pct, trackColor, fillColor) {
+      // Track
+      ctx.beginPath()
+      ctx.arc(cx, cy, r, 0, Math.PI * 2)
+      ctx.strokeStyle = trackColor
+      ctx.lineWidth = 9
+      ctx.stroke()
+      // Fill arc
+      if (pct > 0) {
+        ctx.beginPath()
+        ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + (pct / 100) * Math.PI * 2)
+        ctx.strokeStyle = fillColor
+        ctx.lineWidth = 9
+        ctx.lineCap = 'round'
+        ctx.stroke()
+        ctx.lineCap = 'butt'
+      }
+    }
 
-    // Brand
-    ctx.fillStyle = '#fff'
-    ctx.font = '700 11px monospace'
-    ctx.letterSpacing = '3px'
-    ctx.fillText('ORBIT', 20, 30)
+    function drawBar(x, y, w, h, pct, trackColor, fillColor) {
+      drawRoundRect(x, y, w, h, h / 2, trackColor, null)
+      if (pct > 0) {
+        const fw = Math.max(h, w * pct / 100)
+        drawRoundRect(x, y, fw, h, h / 2, fillColor, null)
+      }
+    }
 
-    // orbit-app.xyz
-    ctx.fillStyle = '#333'
-    ctx.font = '10px monospace'
-    ctx.fillText('orbit-app.xyz', W - 110, 30)
+    function scoreColor(val, threshHigh, threshMid, highBad) {
+      // highBad=true means high value = red (rug%), false means high = green (purity)
+      if (highBad) return val >= threshHigh ? '#ef4444' : val >= threshMid ? '#fbbf24' : '#4ade80'
+      return val >= threshHigh ? '#4ade80' : val >= threshMid ? '#fbbf24' : '#ef4444'
+    }
 
-    // Coin name
+    // ── background ───────────────────────────────────────
+    // Deep space gradient
+    const bg = ctx.createLinearGradient(0, 0, 0, H)
+    bg.addColorStop(0, '#060608')
+    bg.addColorStop(1, '#0a0a0f')
+    ctx.fillStyle = bg
+    ctx.fillRect(0, 0, W, H)
+
+    // Subtle star field
+    const starSeed = [...Array(80)].map((_, i) => ({
+      x: ((i * 137.508 + 42) % 1) * W,
+      y: ((i * 97.312 + 13) % 1) * H,
+      r: (i % 3 === 0 ? 1.5 : 0.8),
+      o: 0.15 + (i % 5) * 0.08,
+    }))
+    starSeed.forEach(s => {
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2)
+      ctx.fillStyle = `rgba(255,255,255,${s.o})`; ctx.fill()
+    })
+
+    // Purple glow top-right
+    const glow = ctx.createRadialGradient(W * 0.85, H * 0.15, 0, W * 0.85, H * 0.15, 380)
+    glow.addColorStop(0, 'rgba(120, 80, 220, 0.12)')
+    glow.addColorStop(1, 'rgba(0,0,0,0)')
+    ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H)
+
+    // Card
+    drawRoundRect(PAD, PAD, W - PAD * 2, H - PAD * 2, 16, '#0d0d0dcc', '#1e1e1e')
+
+    // ── header strip ─────────────────────────────────────
+    const HH = 56
+    drawRoundRect(PAD, PAD, W - PAD * 2, HH, 0, '#0808088a', null)
+    ctx.strokeStyle = '#161616'; ctx.lineWidth = 1
+    ctx.beginPath(); ctx.moveTo(PAD, PAD + HH); ctx.lineTo(W - PAD, PAD + HH); ctx.stroke()
+
+    // ORBIT brand
+    ctx.fillStyle = '#ffffff'
+    ctx.font = '700 14px monospace'
+    ctx.textAlign = 'left'
+    ctx.fillText('ORBIT', PAD + 24, PAD + 36)
+
+    // Powered tag
+    ctx.fillStyle = '#a78bfa'
+    ctx.font = '700 10px monospace'
+    ctx.fillText('AI ANALYSIS', PAD + 88, PAD + 36)
+
+    // orbit-app.xyz right
+    ctx.fillStyle = '#2a2a2a'
+    ctx.font = '11px monospace'
+    ctx.textAlign = 'right'
+    ctx.fillText('orbit-app.xyz', W - PAD - 24, PAD + 36)
+    ctx.textAlign = 'left'
+
+    // ── coin identity ────────────────────────────────────
+    const CY = PAD + HH + 44
     ctx.fillStyle = '#f1f5f9'
-    ctx.font = '800 24px Inter, sans-serif'
-    ctx.fillText(data.name || '—', 20, 88)
+    ctx.font = '800 42px sans-serif'
+    ctx.fillText(data.name || '—', PAD + 24, CY)
 
-    // Symbol + MC
+    // Symbol pill
+    const symX = PAD + 24
+    const nameW = ctx.measureText(data.name || '—').width + 12
+    ctx.fillStyle = '#1e1e1e'
+    drawRoundRect(symX + nameW, CY - 22, ctx.measureText(data.symbol || '').width + 20, 26, 4, '#1a1a1a', '#2a2a2a')
     ctx.fillStyle = '#64748b'
+    ctx.font = '700 13px monospace'
+    ctx.fillText(data.symbol || '', symX + nameW + 10, CY - 4)
+
+    // MC at analysis
+    ctx.fillStyle = '#334155'
     ctx.font = '13px monospace'
-    ctx.fillText(`${data.symbol || ''}  ·  ${fmtUSD(data.market_cap_at_analysis)} at analysis`, 20, 110)
+    ctx.fillText(`MC at analysis: ${fmtUSD(data.market_cap_at_analysis)}`, PAD + 24, CY + 26)
 
-    // Divider
-    ctx.strokeStyle = '#161616'
-    ctx.beginPath(); ctx.moveTo(20, 124); ctx.lineTo(W - 20, 124); ctx.stroke()
+    // ── divider ───────────────────────────────────────────
+    ctx.strokeStyle = '#161616'; ctx.lineWidth = 1
+    ctx.beginPath(); ctx.moveTo(PAD + 24, CY + 46); ctx.lineTo(W - PAD - 24, CY + 46); ctx.stroke()
 
-    // Scores row
+    // ── LEFT COLUMN — scores ─────────────────────────────
+    const COL1X = PAD + 24
+    const COL2X = W / 2 + 20
+    const ROW2Y = CY + 66
+
+    // Section label
+    ctx.fillStyle = '#334155'
+    ctx.font = '700 9px monospace'
+    ctx.fillText('SCORES', COL1X, ROW2Y + 4)
+
     const scores = [
-      { label: 'Rug %', val: rugProb, color: rugColor(rugProb) },
-      { label: 'Purity', val: purity, color: purityColor(purity) },
-      { label: 'Bundle %', val: data.bundle_impact ?? 0, color: '#a78bfa' },
+      { label: 'Rug %',    val: Math.round(rugProb), color: scoreColor(rugProb, 70, 40, true) },
+      { label: 'Purity',   val: Math.round(purity),  color: scoreColor(purity, 70, 40, false) },
+      { label: 'Bundle %', val: Math.round(data.bundle_confidence ?? 0), color: scoreColor(data.bundle_confidence ?? 0, 60, 30, true) },
     ]
+
+    const CR = 38
     scores.forEach((s, i) => {
-      const x = 60 + i * 160
-      // Circle
-      ctx.beginPath()
-      ctx.arc(x, 168, 30, -Math.PI/2, -Math.PI/2 + (s.val/100) * Math.PI * 2)
-      ctx.strokeStyle = s.color
-      ctx.lineWidth = 5
-      ctx.stroke()
-      ctx.beginPath()
-      ctx.arc(x, 168, 30, 0, Math.PI * 2)
-      ctx.strokeStyle = '#1e1e1e'
-      ctx.lineWidth = 5
-      ctx.stroke()
-      // Score text
+      const cx = COL1X + 50 + i * 130
+      const cy = ROW2Y + 70
+      drawCircle(cx, cy, CR, s.val, '#1e1e1e', s.color)
       ctx.fillStyle = s.color
-      ctx.font = '700 16px Inter'
+      ctx.font = '700 20px sans-serif'
       ctx.textAlign = 'center'
-      ctx.fillText(s.val, x, 174)
-      // Label
-      ctx.fillStyle = '#64748b'
+      ctx.fillText(s.val, cx, cy + 7)
+      ctx.fillStyle = '#475569'
       ctx.font = '10px monospace'
-      ctx.fillText(s.label, x, 216)
+      ctx.fillText(s.label, cx, cy + CR + 18)
     })
     ctx.textAlign = 'left'
 
-    // Estimated peak
-    ctx.strokeStyle = '#161616'
-    ctx.beginPath(); ctx.moveTo(20, 234); ctx.lineTo(W - 20, 234); ctx.stroke()
+    // Momentum + Stage tags
+    const TAG_Y = ROW2Y + 160
+    const mColor = { DEAD:'#475569', WEAK:'#64748b', BUILDING:'#fbbf24', STRONG:'#4ade80', PARABOLIC:'#4ade80' }[momentum] || '#64748b'
+    drawRoundRect(COL1X, TAG_Y, 160, 40, 6, '#111', '#1e1e1e')
+    ctx.fillStyle = '#475569'; ctx.font = '9px monospace'
+    ctx.fillText('MOMENTUM', COL1X + 12, TAG_Y + 14)
+    ctx.fillStyle = mColor; ctx.font = '700 13px sans-serif'
+    ctx.fillText(momentum, COL1X + 12, TAG_Y + 30)
 
-    ctx.fillStyle = '#475569'
-    ctx.font = '9px monospace'
-    ctx.fillText('ESTIMATED PEAK', 20, 254)
+    drawRoundRect(COL1X + 172, TAG_Y, 160, 40, 6, '#111', '#1e1e1e')
+    ctx.fillStyle = '#475569'; ctx.font = '9px monospace'
+    ctx.fillText('STAGE', COL1X + 184, TAG_Y + 14)
+    ctx.fillStyle = '#94a3b8'; ctx.font = '700 13px sans-serif'
+    ctx.fillText(stage.toUpperCase(), COL1X + 184, TAG_Y + 30)
+
+    // ── divider vertical ─────────────────────────────────
+    ctx.strokeStyle = '#161616'; ctx.lineWidth = 1
+    ctx.beginPath(); ctx.moveTo(W / 2 + 4, CY + 56); ctx.lineTo(W / 2 + 4, H - PAD - 60); ctx.stroke()
+
+    // ── RIGHT COLUMN — peak + prob bars ──────────────────
+    // Estimated peak
+    ctx.fillStyle = '#334155'; ctx.font = '700 9px monospace'
+    ctx.fillText('ESTIMATED PEAK MC', COL2X, ROW2Y + 4)
 
     ctx.fillStyle = '#a78bfa'
-    ctx.font = '800 28px Inter'
-    ctx.fillText(fmtUSD(data.estimated_peak_mc), 20, 284)
+    ctx.font = '800 44px sans-serif'
+    ctx.fillText(fmtUSD(data.estimated_peak_mc), COL2X, ROW2Y + 52)
 
-    ctx.fillStyle = '#475569'
-    ctx.font = '11px monospace'
-    ctx.fillText(`${fmtUSD(data.peak_mc_low)} – ${fmtUSD(data.peak_mc_high)}`, 20, 302)
+    ctx.fillStyle = '#334155'; ctx.font = '12px monospace'
+    ctx.fillText(`${fmtUSD(data.peak_mc_low)} – ${fmtUSD(data.peak_mc_high)}`, COL2X, ROW2Y + 74)
 
     // Prob bars
+    ctx.strokeStyle = '#161616'
+    ctx.beginPath(); ctx.moveTo(COL2X, ROW2Y + 90); ctx.lineTo(W - PAD - 24, ROW2Y + 90); ctx.stroke()
+
+    ctx.fillStyle = '#334155'; ctx.font = '700 9px monospace'
+    ctx.fillText('PROBABILITY OF REACHING', COL2X, ROW2Y + 108)
+
     const probData = [
       ['$100K', data.prob_100k || 0],
       ['$250K', data.prob_250k || 0],
       ['$500K', data.prob_500k || 0],
       ['$1M',   data.prob_1m   || 0],
+      ['$5M',   data.prob_5m   || 0],
     ]
-    const bx = 310, bw = 260
-    ctx.fillStyle = '#475569'
-    ctx.font = '9px monospace'
-    ctx.fillText('PROBABILITY OF REACHING', bx, 254)
-
+    const BAR_W = W - PAD - 24 - COL2X - 60
     probData.forEach(([label, val], i) => {
-      const by = 270 + i * 28
-      ctx.fillStyle = '#64748b'
-      ctx.font = '10px monospace'
-      ctx.fillText(label, bx, by + 4)
-      // Track
-      ctx.fillStyle = '#1e1e1e'
-      ctx.roundRect(bx + 44, by - 7, bw - 80, 8, 4)
-      ctx.fill()
-      // Fill
+      const by = ROW2Y + 124 + i * 36
+      ctx.fillStyle = '#475569'; ctx.font = '11px monospace'
+      ctx.fillText(label, COL2X, by + 4)
+      const barX = COL2X + 52
       const col = val >= 50 ? '#4ade80' : val >= 25 ? '#fbbf24' : '#ef4444'
-      ctx.fillStyle = col
-      ctx.roundRect(bx + 44, by - 7, Math.max(4, (bw - 80) * val / 100), 8, 4)
-      ctx.fill()
-      // Pct
-      ctx.fillStyle = col
-      ctx.font = '10px monospace'
+      drawBar(barX, by - 6, BAR_W, 10, val, '#1a1a1a', col)
+      ctx.fillStyle = col; ctx.font = '700 10px monospace'
       ctx.textAlign = 'right'
-      ctx.fillText(`${val}%`, bx + bw, by + 4)
+      ctx.fillText(`${val}%`, W - PAD - 24, by + 4)
       ctx.textAlign = 'left'
     })
 
-    // Footer
+    // ── footer ────────────────────────────────────────────
     ctx.strokeStyle = '#161616'
-    ctx.beginPath(); ctx.moveTo(0, H - 38); ctx.lineTo(W, H - 38); ctx.stroke()
-    ctx.fillStyle = '#2a2a2a'
-    ctx.font = '10px monospace'
-    ctx.fillText(`Analyzed ${ts}  ·  orbit-app.xyz/share/${data.id}`, 20, H - 16)
+    ctx.beginPath(); ctx.moveTo(PAD, H - PAD - 36); ctx.lineTo(W - PAD, H - PAD - 36); ctx.stroke()
+
+    // Fix timestamp — parse correctly
+    let tsDisplay = '—'
+    if (data.snapshot_timestamp) {
+      const parsed = new Date(data.snapshot_timestamp)
+      if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 1971) {
+        tsDisplay = parsed.toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' })
+      }
+    }
+
+    ctx.fillStyle = '#2a2a2a'; ctx.font = '11px monospace'
+    ctx.fillText(`Analyzed ${tsDisplay}`, PAD + 24, H - PAD - 14)
+    ctx.textAlign = 'right'
+    ctx.fillStyle = '#1e1e1e'
+    ctx.fillText(`orbit-app.xyz/share/${id}`, W - PAD - 24, H - PAD - 14)
+    ctx.textAlign = 'left'
 
     // Download
     const link = document.createElement('a')
-    link.download = `orbit-${data.symbol || data.mint?.slice(0,8)}.png`
-    link.href = canvas.toDataURL('image/png')
+    link.download = `orbit-${(data.symbol || data.mint?.slice(0,8) || 'analysis').toLowerCase()}.png`
+    link.href = canvas.toDataURL('image/png', 1.0)
     link.click()
   }
 
@@ -291,7 +402,7 @@ export default function ShareAnalysis() {
         <div className="sa-circles">
           <CircleSmall score={rugProb} label="Rug %" color={rugColor(rugProb)} />
           <CircleSmall score={purity}  label="Purity" color={purityColor(purity)} />
-          <CircleSmall score={data.bundle_impact ?? 0} label="Bundle %" color={data.bundle_impact > 60 ? '#ef4444' : data.bundle_impact > 30 ? '#fbbf24' : '#4ade80'} />
+          <CircleSmall score={Math.round(data.bundle_confidence ?? 0)} label="Bundle %" color={data.bundle_confidence > 60 ? '#ef4444' : data.bundle_confidence > 30 ? '#fbbf24' : '#4ade80'} />
         </div>
 
         {/* Momentum + Stage */}

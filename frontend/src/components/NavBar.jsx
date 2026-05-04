@@ -139,7 +139,7 @@ export default function NavBar({ active, onLogoClick }) {
         <div className="nb-logo" onClick={handleLogo}>
           <img src={orbitPfp} className="nb-pfp" alt="" />
           <span className="nb-title">ORBIT</span>
-          <span className="nb-version">v0.4</span>
+          <span className="nb-version">v0.5</span>
         </div>
 
         <nav className="nb-links nb-desktop">

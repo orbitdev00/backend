@@ -214,7 +214,7 @@ VITE_SUPABASE_ANON_KEY
 ---
 
 ## Current Version
-- **v0.4** — shown in NavBar and Landing page
+- **v0.5** — shown in NavBar and Landing page
 
 ---
 
@@ -236,13 +236,15 @@ VITE_SUPABASE_ANON_KEY
 - [x] Page transitions (fade-up on route change)
 - [x] StarField on all pages (flicker, slow, small)
 - [x] Page scroll locking (content scrolls inside blocks)
+- [x] Badge system — 36 badges, award engine, equip controls, popup notifications
+- [x] Badges page (/badges) with NavBar, category filters, locked/unlocked grid
+- [x] Google signup onboarding — forces username set on first login
+- [x] NavBar overhaul — profile routing fix, badges in nav, subscription in account settings, portal modals
 
 ---
 
 ## Pending / To Build (v0.5+)
-- [ ] Badge system — 46 badges, equip, earn, pop-up notification
-- [ ] Degen can equip multiple badges (vs 1 for free)
-- [ ] Onboarding flow — set username → run first analysis
+- [ ] Onboarding flow — run first analysis after username set
 - [ ] Share analysis — public shareable link per result
 - [ ] Nightly PnL sync — Railway cron job
 - [ ] Discord bot — update to Railway URL
@@ -253,10 +255,26 @@ VITE_SUPABASE_ANON_KEY
 
 ---
 
+## Devlog
+
+---
+
+### v0.5 — Badge System, NavBar Overhaul, Auth Fix
+Badge system shipped. 36 badges, equip system, locked/unlocked UI. NavBar overhauled — profile routing fixed, badges in nav, subscription moved into account settings, modals portal to body so they center correctly on all pages. Google signup now forces username set on first login.
+
+---
+
+### v0.4 — Subscription System, UI Polish, Admin Controls
+- Created Stripe account · products: Degen $14.99/mo · Omega $49.99/mo (launch price $24.99 for 7 days via coupon)
+- New `/pricing` route · full tier comparison page · 3 cards with feature lists
+- Upgrade button in NavBar dropdown (purple for free · gold for degen) navigates to /pricing
+
+---
+
 ## Claude Preferences (always follow these)
 - Always include the full `git add ... && git commit -m "..." && git push` command at the end
 - Never use em dashes (—) anywhere in UI text · use `·` or reword
 - Direct, no fluff, max technical depth
 - When making file changes, output the files and use present_files tool
 - Don't create a devlog unless explicitly asked
-- The user's name is Alex (Aya)
+- The user's name is Kyomo

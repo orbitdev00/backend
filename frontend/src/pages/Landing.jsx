@@ -151,8 +151,8 @@ export default function Landing({ onSwitch }) {
 
     const resize = () => {
       canvas.width = window.innerWidth
-      canvas.height = window.innerHeight + 400
-      stars = Array.from({ length: 320 }, () => ({
+      canvas.height = document.documentElement.scrollHeight
+      stars = Array.from({ length: 600 }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
         r: Math.random() * 1.2 + 0.2,
@@ -169,9 +169,8 @@ export default function Landing({ onSwitch }) {
       stars.forEach(s => {
         const o = Math.max(0.02, Math.min(0.9, s.o + Math.sin(t * 0.001 * s.speed * 60 + s.phase) * 0.25))
         const r = Math.max(0.1, s.r + Math.sin(t * 0.0008 * s.speed * 60 + s.phase) * 0.2)
-        const py = s.y - scroll * s.depth
         ctx.beginPath()
-        ctx.arc(s.x, py, r, 0, Math.PI * 2)
+        ctx.arc(s.x, s.y, r, 0, Math.PI * 2)
         ctx.fillStyle = `rgba(255,255,255,${o})`
         ctx.fill()
       })
@@ -180,8 +179,13 @@ export default function Landing({ onSwitch }) {
 
     resize()
     window.addEventListener('resize', resize)
+    // Recheck page height periodically as content loads
+    const heightInterval = setInterval(() => {
+      const newH = document.documentElement.scrollHeight
+      if (canvas.height !== newH) resize()
+    }, 1000)
     raf = requestAnimationFrame(draw)
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize) }
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); clearInterval(heightInterval) }
   }, [])
 
   // Black hole drawn directly on the star canvas (already behind everything)

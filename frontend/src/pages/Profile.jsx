@@ -284,7 +284,8 @@ export default function Profile() {
     setPnlLoading(true); setPnlMsg('')
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const resp = await fetch('/pnl/refresh', {
+      const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+      const resp = await fetch(`${BACKEND}/pnl/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

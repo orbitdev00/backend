@@ -240,6 +240,25 @@ export default function App() {
     }
   }, [user])
 
+  // Auto-run from onboarding
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const mintParam = params.get('mint')
+    const fromOnboarding = params.get('onboarding') === '1'
+    if (mintParam && fromOnboarding) {
+      setMintAddress(mintParam)
+      setTimeout(() => {
+        streamAnalyze(mintParam).then(result => {
+          if (result?.trialUsed) { setPhase('idle'); setTrialBlocked(true) }
+          if (result?.trialConsumed) setIsTrial(true)
+          setTimeout(() => checkNewBadges(), 3000)
+        })
+        setPhase('animating')
+        setActiveMint(mintParam)
+      }, 400)
+    }
+  }, [])
+
   // Initialize known badges on mount
   useEffect(() => {
     if (!user || knownBadgeIdsRef.current !== null) return

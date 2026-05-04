@@ -21,6 +21,7 @@ import Inbox from './pages/Inbox.jsx'
 import EditProfile from './pages/EditProfile.jsx'
 import Pricing from './pages/Pricing.jsx'
 import Badges from './pages/Badges.jsx'
+import Onboarding from './pages/Onboarding.jsx'
 import PageTransition from './components/PageTransition.jsx'
 import StarField from './components/StarField.jsx'
 import './index.css'
@@ -75,6 +76,7 @@ function AppRoutes() {
       <Route path="/edit-profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
       <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
       <Route path="/badges" element={<ProtectedRoute><Badges /></ProtectedRoute>} />
+      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </PageTransition>

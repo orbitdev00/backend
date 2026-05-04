@@ -91,7 +91,11 @@ export default function EditProfile() {
     if (saveErr) { setError(saveErr.message); setSaving(false); return }
     setMsg('Profile saved!')
     setSaving(false)
-    setTimeout(() => nav(`/profile/${username.trim()}`), 800)
+    if (isOnboarding) {
+      setTimeout(() => nav('/onboarding'), 800)
+    } else {
+      setTimeout(() => nav(`/profile/${username.trim()}`), 800)
+    }
   }
 
   const initials = username?.slice(0,2).toUpperCase() || user?.email?.slice(0,2).toUpperCase()
@@ -101,8 +105,8 @@ export default function EditProfile() {
       <NavBar />
       <div className="ep-body">
         <div className="ep-header">
-          <button className="ep-back" onClick={() => nav(-1)}>← Back</button>
-          <h2>Edit Profile</h2>
+          {!isOnboarding && <button className="ep-back" onClick={() => nav(-1)}>← Back</button>}
+          <h2>{isOnboarding ? 'Set Up Your Profile' : 'Edit Profile'}</h2>
         </div>
 
         {isOnboarding && (
@@ -187,9 +191,9 @@ export default function EditProfile() {
           {msg && <div className="ep-success">{msg}</div>}
 
           <div className="ep-actions">
-            <button className="ep-cancel" onClick={() => nav(-1)}>Cancel</button>
+            {!isOnboarding && <button className="ep-cancel" onClick={() => nav(-1)}>Cancel</button>}
             <button className="ep-save" onClick={save} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Profile'}
+              {saving ? 'Saving...' : isOnboarding ? 'Continue →' : 'Save Profile'}
             </button>
           </div>
         </div>

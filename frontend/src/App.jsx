@@ -154,6 +154,7 @@ export default function App() {
   const [mint, setMint]                 = useState('')
   const [activeMint, setActiveMint]     = useState('')
   const [copied, setCopied]             = useState(false)
+  const [sharecopied, setShareCopied]   = useState(false)
   const [paymentSuccess, setPaymentSuccess] = useState(null)
   const [badgePopupQueue, setBadgePopupQueue] = useState([])
   const [activeBadgePopup, setActiveBadgePopup] = useState(null)
@@ -282,6 +283,26 @@ export default function App() {
   const dismissBadgePopup = useCallback(() => {
     setActiveBadgePopup(null)
   }, [])
+
+  const shareAnalysis = useCallback(async () => {
+    if (!activeMint) return
+    // Fetch the most recent prediction id for this mint
+    try {
+      const { data } = await supabase
+        .from('predictions')
+        .select('id')
+        .eq('mint', activeMint)
+        .order('snapshot_timestamp', { ascending: false })
+        .limit(1)
+        .single()
+      if (data?.id) {
+        const url = `${window.location.origin}/share/${data.id}`
+        navigator.clipboard.writeText(url)
+        setShareCopied(true)
+        setTimeout(() => setShareCopied(false), 2000)
+      }
+    } catch(e) { console.error('share error', e) }
+  }, [activeMint])
 
   const copyCa = useCallback(() => {
     navigator.clipboard.writeText(activeMint).then(() => {
@@ -463,6 +484,7 @@ export default function App() {
                         {snapshot?.king_of_the_hill && <span className="badge badge-yellow">👑 KOTH</span>}
                       </div>
                       <button className="btn-refresh-inline" onClick={handleRefresh} title="Refresh analysis">↻</button>
+                      <button className="btn-refresh-inline" onClick={shareAnalysis} title="Share analysis" style={{marginLeft:4, color: sharecopied ? '#4ade80' : undefined}}>{sharecopied ? '✓' : '↗'}</button>
                     </div>
                   </div>
                   </StreamReveal>

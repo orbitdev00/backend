@@ -4,7 +4,6 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "npm install && node orbit_discord_bot.js",
     "restartPolicyType": "ALWAYS",
     "restartPolicyMaxRetries": 3
   }

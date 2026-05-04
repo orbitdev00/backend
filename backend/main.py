@@ -2,6 +2,7 @@ import asyncio
 import json
 import time
 import traceback
+import os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -18,6 +19,7 @@ except Exception as e:
     async def consume_trial(fp, mint, ip=""): return True
 from engine.claude import analyze          # Claude Haiku — primary
 from badge_routes import badge_router
+from pnl_sync import sync_all_wallets
 from badge_engine import (
     check_analysis_badges,
     check_outcome_badges,
@@ -32,6 +34,36 @@ from config import REFRESH_INTERVAL, MAX_AUTO_REFRESHES
 
 app = FastAPI(title="Pump Analyzer API")
 app.include_router(badge_router)
+
+# ── Nightly PnL sync ─────────────────────────────────────────────────────────
+import asyncio as _asyncio
+from datetime import datetime as _dt, timezone as _tz
+
+async def _nightly_pnl_loop():
+    """Runs sync_all_wallets every 24h, starting at next midnight UTC."""
+    while True:
+        now = _dt.now(_tz.utc)
+        # Seconds until next midnight UTC
+        secs_until_midnight = (24 - now.hour) * 3600 - now.minute * 60 - now.second
+        print(f"[PnL Sync] Next run in {secs_until_midnight//3600}h {(secs_until_midnight%3600)//60}m")
+        await _asyncio.sleep(secs_until_midnight)
+        try:
+            await sync_all_wallets()
+        except Exception as e:
+            print(f"[PnL Sync] Cron error: {e}")
+
+@app.on_event("startup")
+async def start_pnl_cron():
+    _asyncio.create_task(_nightly_pnl_loop())
+
+@app.post("/admin/pnl-sync")
+async def manual_pnl_sync(request: Request):
+    """Manual trigger — call from Railway or curl."""
+    secret = request.headers.get("x-admin-secret", "")
+    if secret != (os.getenv("ADMIN_SECRET") or ""):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    _asyncio.create_task(sync_all_wallets())
+    return JSONResponse({"status": "sync started"})
 
 app.add_middleware(
     CORSMiddleware,

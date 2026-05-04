@@ -6,7 +6,7 @@ const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js')
 require('dotenv').config()
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN
-const ORBIT_BACKEND = process.env.ORBIT_BACKEND || 'http://localhost:8000'
+const ORBIT_BACKEND = process.env.ORBIT_BACKEND || 'https://backend-production-a427a.up.railway.app'
 const DEXSCREENER   = 'https://api.dexscreener.com/tokens/v1/solana'
 const POLL_MS       = 15_000
 
@@ -41,8 +41,10 @@ async function fetchDex(mint) {
 
 async function fetchSnapshot(mint) {
   try {
-    const res = await fetch(`${ORBIT_BACKEND}/snapshot/${mint}`, { signal: AbortSignal.timeout(25000) })
-    return res.ok ? res.json() : null
+    const res = await fetch(`${ORBIT_BACKEND}/debug/${mint}`, { signal: AbortSignal.timeout(25000) })
+    if (!res.ok) return null
+    const d = await res.json()
+    return d.snapshot || d
   } catch { return null }
 }
 
@@ -118,7 +120,7 @@ async function buildMessage(mint) {
   const embed = new EmbedBuilder()
     .setColor(color)
     .setDescription(lines.join('\n'))
-    .setFooter({ text: `Orbit v0.0 · ${new Date().toLocaleTimeString()}` })
+    .setFooter({ text: `Orbit v0.5 · ${new Date().toLocaleTimeString()}` })
 
   return { embeds: [embed] }
 }
@@ -160,8 +162,26 @@ client.on('messageCreate', async msg => {
     return msg.reply(`**Active:**\n${list}`)
   }
 
+
+  if (cmd === '!pnl') {
+    const wallet = args[1]
+    if (!wallet || wallet.length < 20) return msg.reply('Usage: `!pnl <wallet>`')
+    const pending = await msg.reply('⬡ Fetching PnL...')
+    try {
+      const res = await fetch(`${ORBIT_BACKEND}/pnl/${wallet}`, { signal: AbortSignal.timeout(30000) })
+      const data = await res.json()
+      if (data.error) { await pending.edit(`❌ ${data.error}`); return }
+      const net = data.total_pnl_pct ?? data.net_sol
+      const sign = net >= 0 ? '+' : ''
+      await pending.edit(`💰 **PnL for** \`${wallet.slice(0,8)}...\`\n**Net SOL:** ${sign}${net?.toFixed(4)} SOL\n**Trades:** ${data.trade_count || 0} · **Tokens:** ${data.tokens_traded || 0}`)
+    } catch (e) {
+      await pending.edit(`❌ ${e.message}`)
+    }
+    return
+  }
+
   if (cmd === '!orbit' || cmd === '!help') {
-    return msg.reply('**Orbit Bot**\n`!a <CA>` — analyze\n`!track <CA> <MC> above|below` — price alert\n`!untrack <CA>` — remove\n`!trackers` — list')
+    return msg.reply('**Orbit Bot**\n`!a <CA>` — analyze\n`!pnl <wallet>` — monthly PnL\n`!track <CA> <MC> above|below` — price alert\n`!untrack <CA>` — remove\n`!trackers` — list')
   }
 })
 

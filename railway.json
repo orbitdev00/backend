@@ -5,7 +5,7 @@
   },
   "deploy": {
     "startCommand": "npm install && node orbit_discord_bot.js",
-    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyType": "ALWAYS",
     "restartPolicyMaxRetries": 3
   }
 }

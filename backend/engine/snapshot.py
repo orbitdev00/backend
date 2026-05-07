@@ -52,21 +52,17 @@ async def build_snapshot(mint: str, ws_broadcast=None) -> dict:
         )
     else:
         # ETH: use Etherscan for holders + GoPlus for security
-        import asyncio as _asyncio2
+        print(f"[ETH] Running Etherscan + GoPlus for {mint[:10]}...")
         try:
-            eth_holders, gop = await _asyncio2.gather(
+            eth_holders, gop = await asyncio.gather(
                 fetch_etherscan_holders(mint),
-                fetch_goplus(mint),
+                _safe_goplus(mint),
             )
-        except Exception:
-            try:
-                eth_holders, gop = await _asyncio2.gather(
-                    fetch_etherscan_holders(mint),
-                    fetch_goplus(mint),
-                )
-            except Exception:
-                eth_holders = {}
-                gop = {}
+            print(f"[ETH] eth_holders keys: {list(eth_holders.keys()) if eth_holders else 'empty'}")
+        except Exception as e:
+            print(f"[ETH] aggregator error: {e}")
+            eth_holders = {}
+            gop = {}
         # Map etherscan data into sol-shaped dict
         sol = {
             "top_holders": eth_holders.get("top_holders", []),

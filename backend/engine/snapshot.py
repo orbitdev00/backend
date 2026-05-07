@@ -6,7 +6,7 @@ from aggregator.solscan import fetch_solscan
 from aggregator.helius import fetch_helius, fetch_funding_sources, fetch_insider_signals
 from aggregator.goplus import fetch_goplus
 from aggregator.devhistory import fetch_dev_history
-from aggregator.etherscan import fetch_etherscan_holders
+from aggregator.moralis import fetch_moralis_holders
 
 
 def detect_chain(address: str) -> str:
@@ -55,7 +55,7 @@ async def build_snapshot(mint: str, ws_broadcast=None) -> dict:
         print(f"[ETH] Running Etherscan + GoPlus for {mint[:10]}...")
         try:
             eth_holders, gop = await asyncio.gather(
-                fetch_etherscan_holders(mint),
+                fetch_moralis_holders(mint),
                 _safe_goplus(mint),
             )
             print(f"[ETH] eth_holders keys: {list(eth_holders.keys()) if eth_holders else 'empty'}")

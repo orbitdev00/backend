@@ -34,13 +34,24 @@ export default function ForumCategory() {
 
     const { data: threads } = await supabase
       .from('forum_threads')
-      .select('id,title,author_email,reply_count,view_count,vote_score,created_at,last_reply_at,pinned,locked')
+      .select('id,title,author_email,user_id,reply_count,view_count,vote_score,created_at,last_reply_at,pinned,locked')
       .eq('category_id', cat.id)
       .order('pinned', { ascending: false })
       .order('last_reply_at', { ascending: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
-    setThreads(threads || [])
+    const threadList = threads || []
+    // Fetch avatars for thread authors
+    const userIds = [...new Set(threadList.map(t => t.user_id).filter(Boolean))]
+    const avatarMap = {}
+    if (userIds.length) {
+      const { data: reps } = await supabase
+        .from('user_reputation')
+        .select('user_id,username,avatar_url')
+        .in('user_id', userIds)
+      for (const r of reps || []) avatarMap[r.user_id] = r
+    }
+    setThreads(threadList.map(t => ({ ...t, _author: avatarMap[t.user_id] })))
     setLoading(false)
   }
 
@@ -67,7 +78,8 @@ export default function ForumCategory() {
           </div>
 
           {/* Thread list header */}
-          <div className="fthread-list-head">
+          <div className="fthread-list-head fthread-list-head--pfp">
+            <span></span>
             <span>Thread</span>
             <span>Replies</span>
             <span>Views</span>
@@ -77,21 +89,31 @@ export default function ForumCategory() {
           {loading ? <div className="forum-loading">Loading...</div> : (
             <>
               {threads.length === 0 && <div className="forum-empty">No threads yet. Be the first to post!</div>}
-              {threads.map(t => (
-                <div key={t.id} className={`fthread-row ${t.pinned ? 'pinned' : ''}`} onClick={() => nav(`/forum/thread/${t.id}`)}>
-                  <div className="fthread-main">
-                    <div className="fthread-title">
-                      {t.pinned && <span className="fthread-pin">📌</span>}
-                      {t.locked && <span className="fthread-lock">🔒</span>}
-                      {t.title}
+              {threads.map(t => {
+                const author = t._author
+                const displayName = author?.username || t.author_email?.split('@')[0] || '?'
+                const initials = displayName.slice(0,2).toUpperCase()
+                return (
+                  <div key={t.id} className={`fthread-row ${t.pinned ? 'pinned' : ''}`} onClick={() => nav(`/forum/thread/${t.id}`)}>
+                    <div className="fthread-avatar">
+                      {author?.avatar_url
+                        ? <img src={author.avatar_url} alt="" />
+                        : <span>{initials}</span>}
                     </div>
-                    <div className="fthread-author">{t.author_email?.split('@')[0]} · {timeAgo(t.created_at)}</div>
+                    <div className="fthread-main">
+                      <div className="fthread-title">
+                        {t.pinned && <span className="fthread-pin">📌</span>}
+                        {t.locked && <span className="fthread-lock">🔒</span>}
+                        {t.title}
+                      </div>
+                      <div className="fthread-author">{displayName} · {timeAgo(t.created_at)}</div>
+                    </div>
+                    <div className="fthread-stat">{t.reply_count}</div>
+                    <div className="fthread-stat">{t.view_count}</div>
+                    <div className="fthread-last">{timeAgo(t.last_reply_at)}</div>
                   </div>
-                  <div className="fthread-stat">{t.reply_count}</div>
-                  <div className="fthread-stat">{t.view_count}</div>
-                  <div className="fthread-last">{timeAgo(t.last_reply_at)}</div>
-                </div>
-              ))}
+                )
+              })}
 
               {/* Pagination */}
               <div className="forum-pagination">

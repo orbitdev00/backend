@@ -139,7 +139,7 @@ export default function NavBar({ active, onLogoClick }) {
         <div className="nb-logo" onClick={handleLogo}>
           <img src={orbitPfp} className="nb-pfp" alt="" />
           <span className="nb-title">ORBIT</span>
-          <span className="nb-version">v0.5</span>
+          <span className="nb-version">v0.75</span>
         </div>
 
         <nav className="nb-links nb-desktop">
@@ -226,6 +226,26 @@ export default function NavBar({ active, onLogoClick }) {
             </button>
           ))}
           <div className="nb-mobile-divider" />
+          {user && tier === 'free' && (
+            <button className="nb-mobile-link nb-mobile-upgrade" onClick={() => { nav('/pricing'); setShowMobile(false) }}>
+              ⚡ Upgrade to Degen
+            </button>
+          )}
+          {user && tier === 'degen' && (
+            <button className="nb-mobile-link nb-mobile-upgrade" onClick={() => { nav('/pricing'); setShowMobile(false) }}>
+              ⚡ Upgrade to Omega
+            </button>
+          )}
+          {user && (
+            <button className="nb-mobile-link" onClick={() => { nav('/badges'); setShowMobile(false) }}>
+              🏅 My Badges
+            </button>
+          )}
+          {user && (
+            <button className="nb-mobile-link" onClick={() => { nav('/profile/' + (username || user?.id)); setShowMobile(false) }}>
+              👤 My Profile
+            </button>
+          )}
           <button className="nb-mobile-link" onClick={() => { setShowAccount(true); setShowMobile(false) }}>
             Account Settings
           </button>

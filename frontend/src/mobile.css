@@ -213,7 +213,8 @@ html { -webkit-text-size-adjust: 100%; }
 
 /* ── Home ─────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .home-body { padding: 20px 14px !important; }
+  .home-screen { height: auto !important; overflow-y: auto !important; min-height: 100vh !important; }
+  .home-body { padding: 20px 14px 60px !important; min-height: unset !important; overflow: visible !important; }
   .home-welcome h1 { font-size: 18px !important; }
   .home-welcome p { font-size: 11px !important; }
   .home-cards { gap: 10px !important; }
@@ -241,4 +242,61 @@ html { -webkit-text-size-adjust: 100%; }
     min-height: 40px !important;
   }
   button, [role="button"] { touch-action: manipulation !important; }
+}
+
+/* ── Black hole / landing animation mobile ───────────── */
+@media (max-width: 640px) {
+  .bh-canvas, .lp-bh-canvas {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 280px !important;
+    height: 280px !important;
+  }
+  .landing-pfp {
+    width: 56px !important;
+    height: 56px !important;
+  }
+}
+
+/* ── Fix 4: Mobile analyzer panel order ──────────────── */
+@media (max-width: 768px) {
+  .dash-grid {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .dash-col-center { order: 1 !important; }
+  .dash-col-1      { order: 2 !important; }
+  .dash-col-4      { order: 3 !important; }
+}
+
+/* ── Fix 7: History scroll ───────────────────────────── */
+@media (max-width: 640px) {
+  .history-screen { height: auto !important; overflow-y: auto !important; min-height: 100vh !important; }
+  .history-body { overflow: visible !important; padding: 14px 14px 60px !important; }
+}
+
+/* ── Fix 8: Pricing scroll ───────────────────────────── */
+@media (max-width: 768px) {
+  .pricing-page { min-height: 100vh !important; }
+  .pricing-body { height: auto !important; overflow: visible !important; padding-bottom: 60px !important; }
+}
+
+/* ── Fix 10: Mobile dropdown align right ─────────────── */
+@media (max-width: 640px) {
+  .nb-mobile-menu {
+    position: absolute !important;
+    right: 0 !important;
+    left: auto !important;
+    top: 56px !important;
+    width: 220px !important;
+    z-index: 200 !important;
+  }
+}
+
+/* ── NavBar mobile upgrade button ───────────────────── */
+.nb-mobile-upgrade {
+  color: #a78bfa !important;
+  font-weight: 600 !important;
 }

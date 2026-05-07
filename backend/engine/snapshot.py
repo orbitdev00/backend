@@ -8,6 +8,13 @@ from aggregator.goplus import fetch_goplus
 from aggregator.devhistory import fetch_dev_history
 
 
+def detect_chain(address: str) -> str:
+    """Detect chain from address format."""
+    if address.startswith("0x") and len(address) == 42:
+        return "ethereum"
+    return "solana"
+
+
 async def build_snapshot(mint: str, ws_broadcast=None) -> dict:
     """
     Build full token snapshot.
@@ -15,25 +22,42 @@ async def build_snapshot(mint: str, ws_broadcast=None) -> dict:
                   after main result is returned (background task).
     All aggregators run in parallel.
     """
-    # Stage 1: Fire all fast calls simultaneously
-    dex, pump = await asyncio.gather(
-        fetch_dexscreener(mint),
-        fetch_pumpfun(mint),
-    )
+    chain = detect_chain(mint)
+    print(f"[Snapshot] Detected chain: {chain} for {mint[:8]}...")
+
+    # Stage 1: DexScreener always runs; Pump.fun only for Solana
+    if chain == "solana":
+        dex, pump = await asyncio.gather(
+            fetch_dexscreener(mint),
+            fetch_pumpfun(mint),
+        )
+    else:
+        dex = await fetch_dexscreener(mint)
+        pump = {}  # ETH has no pump.fun
 
     dev_wallet   = pump.get("dev_wallet") or ""
     total_supply = pump.get("total_supply") or 1_000_000_000
     pair_address = dex.get("pair_address") or ""
 
-    # Stage 2: All remaining calls in parallel (no sequential dependencies)
+    # Stage 2: Solana-specific aggregators skipped for ETH
     import time as _t
     _ta = _t.time()
-    sol, hel, gop, devhist = await asyncio.gather(
-        fetch_solscan(mint, dev_wallet, total_supply, pair_address),
-        fetch_helius(mint, dev_wallet),
-        fetch_goplus(mint),
-        fetch_dev_history(dev_wallet) if dev_wallet else _noop_devhist(),
-    )
+    if chain == "solana":
+        sol, hel, gop, devhist = await asyncio.gather(
+            fetch_solscan(mint, dev_wallet, total_supply, pair_address),
+            fetch_helius(mint, dev_wallet),
+            fetch_goplus(mint),
+            fetch_dev_history(dev_wallet) if dev_wallet else _noop_devhist(),
+        )
+    else:
+        # ETH: only GoPlus for security, skip Solana RPC calls
+        try:
+            gop = await fetch_goplus(mint, chain="eth")
+        except TypeError:
+            gop = await fetch_goplus(mint)  # fallback if chain param not supported yet
+        sol = _empty_sol()
+        hel = _empty_hel()
+        devhist = _empty_devhist()
     print(f"[Timing] aggregators: {_t.time()-_ta:.2f}s")
 
     # solscan.py already filters out LP pools via DEX_OWNERS before returning.
@@ -101,6 +125,7 @@ async def build_snapshot(mint: str, ws_broadcast=None) -> dict:
         "mint":      mint,
         "timestamp": int(time.time()),
         "age_seconds": age_seconds,
+        "chain":       chain,
 
         # Identity
         "name":        name,
@@ -284,6 +309,24 @@ def _migration_countdown(dex: dict, pump: dict, age_seconds: int) -> dict:
         "migration_pct_complete": pct_complete,
         "migration_eta_minutes":  eta_minutes,
         "migration_eta_label":    label,
+    }
+
+
+def _empty_sol() -> dict:
+    return {
+        "top_holders": [], "total_holders": 0,
+        "dev_holding_pct": 0, "rug_risk_score": 0,
+    }
+
+
+def _empty_hel() -> dict:
+    return {
+        "bundle_detected": False, "bundle_confidence": 0, "bundled_wallet_count": 0,
+        "fresh_wallet_count": 0, "fresh_wallet_pct": 0,
+        "dev_tokens_bought": 0, "dev_tokens_sold": 0, "dev_sell_pct": 0, "dev_dumped": False,
+        "insider_count": 0, "insider_pct": 0, "sniper_count": 0,
+        "shared_funder_detected": False, "shared_funder_wallets": 0,
+        "shared_funder_pct": 0, "top_funder": None,
     }
 
 

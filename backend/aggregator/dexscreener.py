@@ -21,26 +21,41 @@ async def fetch_dexscreener(mint: str) -> dict:
             return _empty()
 
     pairs = data.get("pairs") or []
-    sol_pairs = [p for p in pairs if p.get("chainId") == "solana"]
-    if not sol_pairs:
+    if not pairs:
         return _empty()
 
-    # Prefer migrated pairs (raydium, orca, meteora, pumpswap) over bonding curve
-    # Sort by: migrated first, then liquidity descending
+    # Detect chain — prefer solana, then ethereum, then whatever has most liquidity
+    def detect_chain_from_pairs(pairs):
+        chain_liq = {}
+        for p in pairs:
+            ch = p.get("chainId", "unknown")
+            liq = (p.get("liquidity") or {}).get("usd") or 0
+            chain_liq[ch] = chain_liq.get(ch, 0) + liq
+        if "solana" in chain_liq:
+            return "solana"
+        if "ethereum" in chain_liq:
+            return "ethereum"
+        return max(chain_liq, key=chain_liq.get) if chain_liq else "solana"
+
+    detected_chain = detect_chain_from_pairs(pairs)
+    chain_pairs = [p for p in pairs if p.get("chainId") == detected_chain]
+    if not chain_pairs:
+        chain_pairs = pairs  # fallback to all pairs
+
+    # Prefer migrated pairs over bonding curve (Solana-specific but harmless for ETH)
     def pair_priority(p):
         dex = (p.get("dexId") or "").lower()
         liq = (p.get("liquidity") or {}).get("usd") or 0
-        # pumpfun bonding curve = lowest priority
         is_bonding = dex == "pump.fun" or (p.get("labels") and "v1" in str(p.get("labels")))
         return (0 if is_bonding else 1, liq)
 
-    sol_pairs.sort(key=pair_priority, reverse=True)
-    pair = sol_pairs[0]
+    chain_pairs.sort(key=pair_priority, reverse=True)
+    pair = chain_pairs[0]
 
-    # If selected pair has zero MC, try to get it from fdv or another pair
+    # If selected pair has zero MC, try to get it from another pair
     mc = float(pair.get("marketCap") or pair.get("fdv") or 0)
     if mc == 0:
-        for fallback in sol_pairs[1:]:
+        for fallback in chain_pairs[1:]:
             mc_fb = float(fallback.get("marketCap") or fallback.get("fdv") or 0)
             if mc_fb > 0:
                 pair = fallback
@@ -105,6 +120,7 @@ async def fetch_dexscreener(mint: str) -> dict:
         "_raw_websites": websites,
         "pair_created_at": pair.get("pairCreatedAt"),
         "pair_address":    pair.get("pairAddress"),
+        "chain":           detected_chain,
     }
     cache_set(f"dex:{mint}", result)
     return result
@@ -124,4 +140,5 @@ def _empty() -> dict:
         "social_count": 0,
         "_raw_socials": [], "_raw_websites": [],
         "pair_created_at": None, "pair_address": None,
+        "chain": "solana",
     }

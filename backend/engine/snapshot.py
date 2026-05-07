@@ -7,7 +7,6 @@ from aggregator.helius import fetch_helius, fetch_funding_sources, fetch_insider
 from aggregator.goplus import fetch_goplus
 from aggregator.devhistory import fetch_dev_history
 from aggregator.etherscan import fetch_etherscan_holders
-from aggregator.etherscan import fetch_etherscan_holders
 
 
 def detect_chain(address: str) -> str:

@@ -6,6 +6,8 @@ from aggregator.solscan import fetch_solscan
 from aggregator.helius import fetch_helius, fetch_funding_sources, fetch_insider_signals
 from aggregator.goplus import fetch_goplus
 from aggregator.devhistory import fetch_dev_history
+from aggregator.etherscan import fetch_etherscan_holders
+from aggregator.etherscan import fetch_etherscan_holders
 
 
 def detect_chain(address: str) -> str:
@@ -50,12 +52,31 @@ async def build_snapshot(mint: str, ws_broadcast=None) -> dict:
             fetch_dev_history(dev_wallet) if dev_wallet else _noop_devhist(),
         )
     else:
-        # ETH: only GoPlus for security, skip Solana RPC calls
+        # ETH: use Etherscan for holders + GoPlus for security
+        import asyncio as _asyncio2
         try:
-            gop = await fetch_goplus(mint, chain="eth")
-        except TypeError:
-            gop = await fetch_goplus(mint)  # fallback if chain param not supported yet
-        sol = _empty_sol()
+            eth_holders, gop = await _asyncio2.gather(
+                fetch_etherscan_holders(mint),
+                fetch_goplus(mint),
+            )
+        except Exception:
+            try:
+                eth_holders, gop = await _asyncio2.gather(
+                    fetch_etherscan_holders(mint),
+                    fetch_goplus(mint),
+                )
+            except Exception:
+                eth_holders = {}
+                gop = {}
+        # Map etherscan data into sol-shaped dict
+        sol = {
+            "top_holders": eth_holders.get("top_holders", []),
+            "total_holders": eth_holders.get("total_holders", 0),
+            "dev_holding_pct": eth_holders.get("dev_holding_pct", 0),
+            "rug_risk_score": 0,
+        }
+        if not dev_wallet:
+            dev_wallet = eth_holders.get("dev_wallet", "")
         hel = _empty_hel()
         devhist = _empty_devhist()
     print(f"[Timing] aggregators: {_t.time()-_ta:.2f}s")
@@ -64,8 +85,12 @@ async def build_snapshot(mint: str, ws_broadcast=None) -> dict:
     # top_holders here should be real trading wallets only. Do NOT skip again.
     top_holders = sol.get("top_holders", [])
 
-    top5_conc  = round(min(sum(h["pct"] for h in top_holders[:5]),  100), 2)
-    top10_conc = round(min(sum(h["pct"] for h in top_holders[:10]), 100), 2)
+    if chain == "ethereum" and 'eth_holders' in dir():
+        top5_conc  = eth_holders.get("top5_concentration_pct", 0)
+        top10_conc = eth_holders.get("top10_concentration_pct", 0)
+    else:
+        top5_conc  = round(min(sum(h["pct"] for h in top_holders[:5]),  100), 2)
+        top10_conc = round(min(sum(h["pct"] for h in top_holders[:10]), 100), 2)
 
     name   = pump.get("name")   or dex.get("name")   or mint[:8]
     symbol = pump.get("symbol") or dex.get("symbol") or "???"
@@ -310,6 +335,14 @@ def _migration_countdown(dex: dict, pump: dict, age_seconds: int) -> dict:
         "migration_eta_minutes":  eta_minutes,
         "migration_eta_label":    label,
     }
+
+
+async def _safe_goplus(mint: str) -> dict:
+    try:
+        return await fetch_goplus(mint)
+    except Exception as e:
+        print(f"[GoPlus] error: {e}")
+        return {}
 
 
 def _empty_sol() -> dict:

@@ -23,6 +23,8 @@ const fmtNum = (n) => {
 }
 
 export default function MetricsPanel({ snapshot: s }) {
+  const isEth = s?.chain === 'ethereum'
+
   return (
     <div className="panel">
       <div className="panel-title">Market Data</div>
@@ -42,8 +44,8 @@ export default function MetricsPanel({ snapshot: s }) {
         <Metric label="24h" value={fmtUSD(s.volume_24h)} />
       </div>
 
-      {/* Migration countdown — only for bonding curve coins */}
-      {s.migration_pct_complete !== undefined && s.migration_pct_complete < 100 && (
+      {/* Migration countdown — Solana only */}
+      {!isEth && s.migration_pct_complete !== undefined && s.migration_pct_complete < 100 && (
         <>
           <div className="divider" />
           <div className="section-label">Migration Progress</div>
@@ -66,8 +68,8 @@ export default function MetricsPanel({ snapshot: s }) {
         </>
       )}
 
-      {/* Dev wallet history */}
-      {s.dev_history_summary && s.dev_history_summary !== 'No history found' && (
+      {/* Dev wallet history — Solana only */}
+      {!isEth && s.dev_history_summary && s.dev_history_summary !== 'No history found' && (
         <>
           <div className="divider" />
           <div className="section-label">Dev History</div>
@@ -83,18 +85,18 @@ export default function MetricsPanel({ snapshot: s }) {
       <div className="metrics-grid2">
         <Metric label="Dev Holding"   value={`${s.dev_holding_pct?.toFixed(2)||0}%`}     className={s.dev_holding_pct > 10 ? 'c-red' : s.dev_holding_pct > 5 ? 'c-yellow' : 'c-green'} />
         <Metric label="Top 10"        value={`${s.top10_concentration_pct?.toFixed(1)||0}%`} className={s.top10_concentration_pct > 70 ? 'c-red' : s.top10_concentration_pct > 40 ? 'c-yellow' : 'c-green'} />
-        <Metric label="Bundle"        value={s.bundle_detected ? `Yes (${s.bundle_confidence}%)` : 'None'} className={s.bundle_detected ? 'c-red' : 'c-green'} />
-        <Metric label="Dev Sold"      value={`${s.dev_sell_pct?.toFixed(0)||0}%`} className={s.dev_sell_pct > 50 ? 'c-red' : s.dev_sell_pct > 20 ? 'c-yellow' : 'c-green'} />
-        <Metric label="Fresh Wallets" value={`${s.fresh_wallet_count} (${s.fresh_wallet_pct}%)`} className={s.fresh_wallet_pct > 60 ? 'c-red' : s.fresh_wallet_pct > 30 ? 'c-yellow' : 'c-green'} />
-        <Metric label="Snipers"       value={fmtNum(s.sniper_count)} className={s.sniper_count > 5 ? 'c-red' : s.sniper_count > 2 ? 'c-yellow' : 'c-green'} />
+        {!isEth && <Metric label="Bundle"        value={s.bundle_detected ? `Yes (${s.bundle_confidence}%)` : 'None'} className={s.bundle_detected ? 'c-red' : 'c-green'} />}
+        {!isEth && <Metric label="Dev Sold"      value={`${s.dev_sell_pct?.toFixed(0)||0}%`} className={s.dev_sell_pct > 50 ? 'c-red' : s.dev_sell_pct > 20 ? 'c-yellow' : 'c-green'} />}
+        {!isEth && <Metric label="Fresh Wallets" value={`${s.fresh_wallet_count} (${s.fresh_wallet_pct}%)`} className={s.fresh_wallet_pct > 60 ? 'c-red' : s.fresh_wallet_pct > 30 ? 'c-yellow' : 'c-green'} />}
+        {!isEth && <Metric label="Snipers"       value={fmtNum(s.sniper_count)} className={s.sniper_count > 5 ? 'c-red' : s.sniper_count > 2 ? 'c-yellow' : 'c-green'} />}
         <Metric label="Honeypot"      value={s.is_honeypot ? 'YES' : 'No'} className={s.is_honeypot ? 'c-red' : 'c-green'} />
         <Metric label="Mint Auth"     value={s.can_mint ? 'YES' : 'No'} className={s.can_mint ? 'c-red' : 'c-green'} />
         <Metric label="Freeze Auth"   value={s.can_freeze ? 'YES' : 'No'} className={s.can_freeze ? 'c-red' : 'c-green'} />
-        <Metric label="Wallet Farm" value={
+        {!isEth && <Metric label="Wallet Farm" value={
           s.uniform_holders_detected ? 'Uniform dist.' :
           s.shared_funder_detected && s.shared_funder_wallets > 0 ? `Yes (${s.shared_funder_wallets} wallets)` :
           s.shared_funder_detected ? 'Detected' : 'None'
-        } className={s.shared_funder_detected || s.uniform_holders_detected ? 'c-red' : 'c-green'} />
+        } className={s.shared_funder_detected || s.uniform_holders_detected ? 'c-red' : 'c-green'} />}
       </div>
 
       {/* GoPlus critical flags */}
@@ -129,8 +131,8 @@ export default function MetricsPanel({ snapshot: s }) {
         </>
       )}
 
-      {/* Uniform holder alert */}
-      {s.uniform_holders_detected && (
+      {/* Uniform holder alert — Solana only */}
+      {!isEth && s.uniform_holders_detected && (
         <>
           <div className="divider" />
           <div className="alert-box alert-red">
@@ -143,8 +145,8 @@ export default function MetricsPanel({ snapshot: s }) {
         </>
       )}
 
-      {/* Wallet farm alert */}
-      {s.shared_funder_detected && (
+      {/* Wallet farm alert — Solana only */}
+      {!isEth && s.shared_funder_detected && (
         <>
           <div className="divider" />
           <div className="alert-box alert-red">

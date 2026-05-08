@@ -47,11 +47,26 @@ export default function ForumCategory() {
     if (userIds.length) {
       const { data: reps } = await supabase
         .from('user_reputation')
-        .select('user_id,username,avatar_url')
+        .select('user_id,username,avatar_url,email')
         .in('user_id', userIds)
-      for (const r of reps || []) avatarMap[r.user_id] = r
+      for (const r of reps || []) {
+        avatarMap[r.user_id] = r
+      }
     }
-    setThreads(threadList.map(t => ({ ...t, _author: avatarMap[t.user_id] })))
+    // Also try by email for threads missing user_id
+    const emailsNeeded = threadList.filter(t => !t.user_id && t.author_email).map(t => t.author_email)
+    const emailMap = {}
+    if (emailsNeeded.length) {
+      const { data: emailReps } = await supabase
+        .from('user_reputation')
+        .select('user_id,username,avatar_url,email')
+        .in('email', emailsNeeded)
+      for (const r of emailReps || []) emailMap[r.email] = r
+    }
+    setThreads(threadList.map(t => ({
+      ...t,
+      _author: avatarMap[t.user_id] || emailMap[t.author_email] || null
+    })))
     setLoading(false)
   }
 

@@ -74,14 +74,19 @@ html { -webkit-text-size-adjust: 100%; }
 
   /* Thread rows */
   .fthread-list-head {
-    grid-template-columns: 1fr 44px 44px !important;
+    grid-template-columns: 28px 1fr 44px 44px !important;
     padding: 6px 10px !important;
   }
   .fthread-row {
-    grid-template-columns: 1fr 44px 44px !important;
-    padding: 10px !important;
+    grid-template-columns: 28px 1fr 44px 44px !important;
+    padding: 8px 10px !important;
   }
   .fthread-last { display: none !important; }
+  .fthread-avatar {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 9px !important;
+  }
   .fthread-title { font-size: 12px !important; }
 
   /* Posts: narrower author column */

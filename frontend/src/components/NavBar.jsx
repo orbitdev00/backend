@@ -190,9 +190,6 @@ export default function NavBar({ active, onLogoClick }) {
                       ⚡ Upgrade to Omega
                     </button>
                   )}
-                  <button className="nb-menu-btn" onClick={() => { nav('/badges'); setShowMenu(false) }}>
-                    🏅 My Badges
-                  </button>
                   <button className="nb-menu-btn" onClick={() => { nav('/profile/' + (username || user.id)); setShowMenu(false) }}>
                     My Profile
                   </button>
@@ -234,11 +231,6 @@ export default function NavBar({ active, onLogoClick }) {
           {user && tier === 'degen' && (
             <button className="nb-mobile-link nb-mobile-upgrade" onClick={() => { nav('/pricing'); setShowMobile(false) }}>
               ⚡ Upgrade to Omega
-            </button>
-          )}
-          {user && (
-            <button className="nb-mobile-link" onClick={() => { nav('/badges'); setShowMobile(false) }}>
-              🏅 My Badges
             </button>
           )}
           {user && (

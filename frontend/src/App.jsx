@@ -9,7 +9,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import NavBar from './components/NavBar'
 import StarField from './components/StarField'
 import CollapsiblePanel from './components/CollapsiblePanel'
-import kikoPfp from './orbitPfp.js'
+import kikoPfp from './kikoPfp.js'
 import { useAuth } from './context/AuthContext'
 import BadgePopup from './components/BadgePopup'
 import { supabase } from './lib/supabase'
@@ -618,7 +618,7 @@ export default function App() {
         {guestBlocked && (
         <div className="trial-modal-overlay">
           <div className="trial-modal">
-            <img src={orbitPfp} className="trial-modal-pfp" alt="" />
+            <img src={kikoPfp} className="trial-modal-pfp" alt="" />
             <h2 className="trial-modal-title">Create a free account</h2>
             <p className="trial-modal-sub">You've used your guest analysis. Sign up free to get 5 analyses per day, full forum access, and more.</p>
             <button className="btn-primary" style={{width:'100%',marginTop:8}} onClick={() => window.location.href='/signup'}>Create Free Account</button>
@@ -663,7 +663,7 @@ export default function App() {
       {trialBlocked && (
           <div className="trial-modal-overlay">
             <div className="trial-modal">
-              <img src={orbitPfp} alt="ORBIT" className="trial-modal-pfp" />
+              <img src={kikoPfp} alt="ORBIT" className="trial-modal-pfp" />
               <h2 className="trial-modal-title">Your free analysis is up.</h2>
               <p className="trial-modal-sub">Create a free account to keep analyzing coins with Orbit.</p>
               <button className="btn-primary" style={{width:'100%'}} onClick={() => { setTrialBlocked(false); setIsTrial(false); setAuthPage('signup') }}>

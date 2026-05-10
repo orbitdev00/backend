@@ -1,5 +1,8 @@
 import httpx
 from config import HELIUS_API_KEY, HELIUS_RPC_URL, QUICKNODE_URL
+from aggregator.cache import get as cache_get, set as cache_set, get_or_wait, mark_inflight, unmark_inflight
+
+SOLSCAN_TTL = 60  # 60 second cache
 
 PUBLIC_RPCS = [
     "https://quaint-distinguished-river.solana-mainnet.quiknode.pro/ade127a9ec8c5b4e18b10e86063121332ad61284/",
@@ -33,6 +36,34 @@ LP_NAME_FRAGMENTS = [
 
 
 async def fetch_solscan(
+    mint: str,
+    dev_wallet: str = "",
+    total_supply: int = 1_000_000_000,
+    pair_address: str = "",
+) -> dict:
+    cache_key = f"solscan:{mint}"
+
+    # Check cache first
+    cached = cache_get(cache_key, SOLSCAN_TTL)
+    if cached is not None:
+        return cached
+
+    # Wait if another coroutine is already fetching this
+    waited = await get_or_wait(cache_key, SOLSCAN_TTL)
+    if waited is not None:
+        return waited
+
+    # Mark as in-flight so concurrent callers wait
+    mark_inflight(cache_key)
+    try:
+        result = await _fetch_solscan_impl(mint, dev_wallet, total_supply, pair_address)
+        cache_set(cache_key, result)
+        return result
+    finally:
+        unmark_inflight(cache_key)
+
+
+async def _fetch_solscan_impl(
     mint: str,
     dev_wallet: str = "",
     total_supply: int = 1_000_000_000,

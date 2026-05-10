@@ -4,9 +4,9 @@ ORBIT Rate Limiter
 Limits analysis requests per user per day.
 Uses in-memory cache with Supabase fallback for persistence across restarts.
 
-Free accounts:  10 analyses per day
-Paid accounts:  unlimited (checked via user_reputation.tier)
-Trial users:    handled separately by trial_gate.py
+Free accounts:  5 analyses per day
+Degen/Omega:    unlimited
+Guest:          1 (handled via trial_gate.py / frontend localStorage)
 """
 
 import asyncio
@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 import httpx
 from config import SUPABASE_URL, SUPABASE_ANON_KEY
 
-FREE_DAILY_LIMIT = 10
+FREE_DAILY_LIMIT = 5
 
 HEADERS = {
     "apikey": SUPABASE_ANON_KEY,
@@ -54,7 +54,8 @@ async def _is_paid(user_id: str) -> bool:
             )
             rows = r.json()
             tier = rows[0].get("tier", "free") if rows else "free"
-            is_paid = tier in ("pro", "owner")
+            # degen and omega are paid tiers — unlimited analyses
+            is_paid = tier in ("degen", "omega", "pro", "owner")
             _paid_cache[user_id] = is_paid
             _paid_cache_ts[user_id] = now
             return is_paid
@@ -70,7 +71,6 @@ async def check_rate_limit(user_id: str) -> dict:
         { "allowed": False, "remaining": 0, "limit": int, "error": "rate_limit_exceeded" }
     """
     if not user_id:
-        # No user_id = unauthenticated, trial gate handles this separately
         return {"allowed": True, "remaining": FREE_DAILY_LIMIT, "limit": FREE_DAILY_LIMIT}
 
     # Paid users are unlimited

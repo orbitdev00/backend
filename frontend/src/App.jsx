@@ -192,11 +192,14 @@ export default function App() {
 
   // Set guestBlocked after auth resolves
   useEffect(() => {
+    if (user) {
+      // Logged in — never block, clear any guest flags
+      setGuestBlocked(false)
+      localStorage.removeItem('orbit_guest_analyzed')
+      return
+    }
     if (!authLoading && !user && localStorage.getItem('orbit_guest_analyzed') === '1') {
       setGuestBlocked(true)
-    }
-    if (user) {
-      setGuestBlocked(false)
     }
   }, [authLoading, user])
 
@@ -217,17 +220,18 @@ export default function App() {
 
   const togglePanel = (panel) => setCollapsed(prev => ({...prev, [panel]: !prev[panel]}))
 
+  const analyze = useCallback(async (mintAddress) => {
+    if (!mintAddress?.trim()) return
 
-  // ── Gate function — call before ANY analysis ─────────────────────────
-  const checkCanAnalyze = useCallback(() => {
-    // Both regular guests and trial guests share the same 1-analysis limit
+    // ── Block BEFORE any API call ────────────────────────────────────────
+    // Guest: already used their 1 free analysis
     if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') {
       setGuestBlocked(true)
-      return false
+      return  // never touches backend
     }
+    // Free user: check client-side usage count (backend enforces too, but this avoids the call)
     if (user && tier === 'free') {
-      const today = new Date().toISOString().slice(0,10)
-      const used = parseInt(localStorage.getItem(`orbit_usage_${user.id}_${today}`) || '0')
+      const used = parseInt(localStorage.getItem(`orbit_usage_${user.id}_${new Date().toISOString().slice(0,10)}`) || '0')
       if (used >= 5) {
         setUpgradePrompt({
           title: 'Daily limit reached',
@@ -235,28 +239,19 @@ export default function App() {
           cta: 'Upgrade to Degen',
           ctaPath: '/pricing',
         })
-        return false
+        return  // never touches backend
       }
     }
-    return true
-  }, [user, tier])
-
-  const analyze = useCallback(async (mintAddress) => {
-    if (!mintAddress?.trim()) return
-    if (!checkCanAnalyze()) return  // blocks before any animation or API call
     // All checks passed — now start the animation and API call
     setActiveMint(mintAddress.trim())
     setPhase('animating')
     streamAnalyze(mintAddress).then(result => {
       if (result?.trialUsed) { setPhase('idle'); setTrialBlocked(true) }
       if (result?.trialConsumed) setIsTrial(true)
-      // Guest: mark as used after first analysis — clear results and show modal only
+      // Guest: mark as used after first analysis
       if (!user) {
         localStorage.setItem('orbit_guest_analyzed', '1')
         setGuestBlocked(true)
-        // Reset phase so dashboard doesn't show behind the modal
-        setPhase('idle')
-        disconnect()
       }
       // Free user: increment local daily counter
       if (user && tier === 'free') {
@@ -278,7 +273,7 @@ export default function App() {
   }, [streamAnalyze])
 
   const handleRefresh = useCallback(async () => {
-    if (!checkCanAnalyze()) return
+    if (!user && isTrial) { setTrialBlocked(true); return }
     if (!activeMint) return
     // Brief fade out then back in
     setPhase('idle')
@@ -641,7 +636,7 @@ export default function App() {
           <div className="landing" id="landing-screen">
             <img src={kikoPfp} alt="ORBIT" className="landing-pfp" />
             <div className="landing-input-wrap">
-              <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!checkCanAnalyze()) return; analyze(mint) }}
+              <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } analyze(mint) }}
                 onRefresh={handleRefresh} loading={false} hasData={false} />
             </div>
             <CyclingQuote quotes={IDLE_QUOTES} interval={6000} />
@@ -653,7 +648,7 @@ export default function App() {
           <div className="landing">
             <img src={kikoPfp} alt="ORBIT" className="landing-pfp loading-pfp" />
             <div className="landing-input-wrap">
-              <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!checkCanAnalyze()) return; analyze(mint) }}
+              <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } analyze(mint) }}
                 onRefresh={handleRefresh} loading={true} hasData={false} />
             </div>
             <CyclingQuote quotes={ANALYZING_QUOTES} interval={5000} />
@@ -665,7 +660,7 @@ export default function App() {
           <div className="landing" id="landing-screen">
             <img src={kikoPfp} alt="ORBIT" className="landing-pfp" />
             <div className="landing-input-wrap">
-              <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!checkCanAnalyze()) return; analyze(mint) }}
+              <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } analyze(mint) }}
                 onRefresh={handleRefresh} loading={false} hasData={false} />
             </div>
             <div className="error-inline">⚠ {statusMsg}</div>
@@ -790,7 +785,7 @@ export default function App() {
               <div className="dash-col dash-col-4">
                 <StreamReveal show={phase === "revealing"} delay={600}>
                 <div className="panel center-input-panel">
-                  <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!checkCanAnalyze()) return; analyze(mint) }}
+                  <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } analyze(mint) }}
                     onRefresh={null} loading={status === 'loading'} hasData={false} />
                 </div>
                 </StreamReveal>

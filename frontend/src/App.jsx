@@ -195,7 +195,7 @@ export default function App() {
     if (!user || tier !== 'free') return
     const today = new Date().toISOString().slice(0,10)
     const key = `orbit_usage_${user.id}_${today}`
-    fetch(`${RAILWAY_URL}/usage?user_id=${user.id}`)
+    fetch(`https://backend-production-a427a.up.railway.app/usage?user_id=${user.id}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data?.count !== undefined) {

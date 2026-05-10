@@ -132,7 +132,8 @@ const fmtUSD = (n) => {
 }
 
 export default function App() {
-  const { user, loading: authLoading, signOut } = useAuth()
+  const { user, profile, loading: authLoading, signOut } = useAuth()
+  const tier = profile?.tier || 'free'
 
   // Auto-reanalyze from History — skip black hole, go straight to results
   const [searchParams, setSearchParams] = useSearchParams()
@@ -192,9 +193,25 @@ export default function App() {
 
   const analyze = useCallback(async (mintAddress) => {
     if (!mintAddress?.trim()) return
+
+    // ── Block BEFORE any API call ────────────────────────────────────────
+    // Guest: already used their 1 free analysis
     if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') {
       setGuestBlocked(true)
-      return
+      return  // never touches backend
+    }
+    // Free user: check client-side usage count (backend enforces too, but this avoids the call)
+    if (user && tier === 'free') {
+      const used = parseInt(localStorage.getItem(`orbit_usage_${user.id}_${new Date().toISOString().slice(0,10)}`) || '0')
+      if (used >= 5) {
+        setUpgradePrompt({
+          title: 'Daily limit reached',
+          message: 'You have used all 5 free analyses for today. Upgrade to Degen for unlimited analyses.',
+          cta: 'Upgrade to Degen',
+          ctaPath: '/pricing',
+        })
+        return  // never touches backend
+      }
     }
     setActiveMint(mintAddress.trim())
     setPhase('animating')
@@ -205,6 +222,12 @@ export default function App() {
       if (!user) {
         localStorage.setItem('orbit_guest_analyzed', '1')
         setGuestBlocked(true)
+      }
+      // Free user: increment local daily counter
+      if (user && tier === 'free') {
+        const key = `orbit_usage_${user.id}_${new Date().toISOString().slice(0,10)}`
+        const used = parseInt(localStorage.getItem(key) || '0')
+        localStorage.setItem(key, String(used + 1))
       }
       // Rate limit exceeded for free users
       if (result?.rateLimitExceeded) {

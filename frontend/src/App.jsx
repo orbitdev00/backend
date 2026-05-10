@@ -220,6 +220,7 @@ export default function App() {
 
   // ── Gate function — call before ANY analysis ─────────────────────────
   const checkCanAnalyze = useCallback(() => {
+    // Both regular guests and trial guests share the same 1-analysis limit
     if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') {
       setGuestBlocked(true)
       return false
@@ -249,10 +250,13 @@ export default function App() {
     streamAnalyze(mintAddress).then(result => {
       if (result?.trialUsed) { setPhase('idle'); setTrialBlocked(true) }
       if (result?.trialConsumed) setIsTrial(true)
-      // Guest: mark as used after first analysis
+      // Guest: mark as used after first analysis — clear results and show modal only
       if (!user) {
         localStorage.setItem('orbit_guest_analyzed', '1')
         setGuestBlocked(true)
+        // Reset phase so dashboard doesn't show behind the modal
+        setPhase('idle')
+        disconnect()
       }
       // Free user: increment local daily counter
       if (user && tier === 'free') {

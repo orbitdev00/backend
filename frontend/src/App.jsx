@@ -210,7 +210,7 @@ export default function App() {
       if (result?.rateLimitExceeded) {
         setUpgradePrompt({
           title: 'Daily limit reached',
-          message: "You've used all 5 free analyses for today. Upgrade to Degen for unlimited analyses.",
+          message: result?.message || "You've used all 5 free analyses for today. Upgrade to Degen for unlimited analyses.",
           cta: 'Upgrade to Degen',
           ctaPath: '/pricing',
         })

@@ -92,9 +92,15 @@ export function useStreamAnalysis() {
             if (!baselineRef.current) baselineRef.current = pred
             if (msg.type === 'complete') settle({})
           } else if (msg.type === 'error') {
-            setStatus('error')
-            setStatusMsg(msg.data?.message || 'Analysis failed')
-            settle({ error: msg.data?.message })
+            if (msg.source === 'rate_limit' || msg.data?.error === 'rate_limit_exceeded') {
+              setStatus('idle')
+              setStatusMsg('Ready')
+              settle({ rateLimitExceeded: true, message: msg.data?.message })
+            } else {
+              setStatus('error')
+              setStatusMsg(msg.data?.message || 'Analysis failed')
+              settle({ error: msg.data?.message })
+            }
           }
         } catch (err) {
           console.warn('[ORBIT] ws parse error:', err)

@@ -375,7 +375,7 @@ async def preview(mint: str):
 
 
 @app.websocket("/ws/stream/{mint}")
-async def stream_analysis(websocket: WebSocket, mint: str):
+async def stream_analysis(websocket: WebSocket, mint: str, user_id: str = ""):
     """
     Streaming analysis WebSocket.
     Pushes partial results as each aggregator completes.
@@ -390,6 +390,19 @@ async def stream_analysis(websocket: WebSocket, mint: str):
             pass
 
     try:
+        # ── Rate limit check BEFORE any API calls ────────────────────────────
+        if user_id:
+            rl = await check_rate_limit(user_id)
+            if not rl["allowed"]:
+                await send("error", "rate_limit", {
+                    "message": rl.get("message", "Daily limit reached. Upgrade for unlimited analyses."),
+                    "error": "rate_limit_exceeded",
+                    "remaining": 0,
+                    "limit": rl["limit"],
+                })
+                await websocket.close()
+                return
+
         await send("status", "init", {"message": "Fetching market data..."})
 
         # Stage 1: DexScreener + Pump.fun in parallel (fastest)
@@ -455,6 +468,12 @@ async def stream_analysis(websocket: WebSocket, mint: str):
         snapshot     = await build_snapshot(mint)
         enriched_txs = snapshot.pop("_enriched_txs", [])
         prediction   = await analyze(snapshot)
+
+        # Consume rate limit slot after successful analysis
+        if user_id:
+            consume_rate_limit(user_id)
+            usage = get_usage(user_id)
+            prediction["_rate_limit"] = usage
 
         await send("complete", "analysis", {"snapshot": snapshot, "prediction": prediction})
         last_analysis[mint] = {"snapshot": snapshot, "prediction": prediction}

@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 import json
 import time
 import traceback
@@ -502,16 +502,6 @@ async def stream_analysis(websocket: WebSocket, mint: str, user_id: str = ""):
 
         # Log to Supabase
         uid = websocket.query_params.get("user_id") or None
-        # Rate limit check for WS stream
-        if uid:
-            rl = await check_rate_limit(uid)
-            if not rl["allowed"]:
-                await websocket.send_json({
-                    "type": "error",
-                    "data": {"message": rl.get("message", "Daily limit reached.")}
-                })
-                await websocket.close()
-                return
 
         async def _log():
             try:

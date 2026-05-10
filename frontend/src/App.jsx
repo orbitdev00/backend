@@ -153,6 +153,7 @@ export default function App() {
   const [trialBlocked, setTrialBlocked] = useState(false)
   const [guestBlocked, setGuestBlocked]   = useState(false)
   const [upgradePrompt, setUpgradePrompt] = useState(null) // { title, message }
+  const [rateLimitMsg, setRateLimitMsg]     = useState('')    // inline rate limit notice
   const [collapsed, setCollapsed]       = useState({})
   const [mint, setMint]                 = useState('')
   const [activeMint, setActiveMint]     = useState('')
@@ -261,12 +262,7 @@ export default function App() {
       }
       // Rate limit exceeded for free users
       if (result?.rateLimitExceeded) {
-        setUpgradePrompt({
-          title: 'Daily limit reached',
-          message: result?.message || "You've used all 5 free analyses for today. Upgrade to Degen for unlimited analyses.",
-          cta: 'Upgrade to Degen',
-          ctaPath: '/pricing',
-        })
+        setRateLimitMsg(result?.message || 'Daily limit of 5 analyses reached. Resets at midnight UTC.')
       }
       setTimeout(() => checkNewBadges(), 3000)
     })
@@ -791,6 +787,12 @@ export default function App() {
                 <div className="panel center-input-panel">
                   <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } analyze(mint) }}
                     onRefresh={null} loading={status === 'loading'} hasData={false} />
+                  {rateLimitMsg && (
+                    <div style={{marginTop:8,padding:'6px 10px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.3)',borderRadius:4,fontSize:11,color:'#ef4444',fontFamily:'var(--mono)',display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
+                      <span>⚠ {rateLimitMsg}</span>
+                      <button onClick={() => window.location.href='/pricing'} style={{background:'none',border:'1px solid #ef4444',borderRadius:3,color:'#ef4444',fontFamily:'var(--mono)',fontSize:10,padding:'2px 8px',cursor:'pointer',whiteSpace:'nowrap'}}>Upgrade →</button>
+                    </div>
+                  )}
                 </div>
                 </StreamReveal>
 

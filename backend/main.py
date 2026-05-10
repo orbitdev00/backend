@@ -19,6 +19,7 @@ except Exception as e:
     async def consume_trial(fp, mint, ip=""): return True
 from engine.claude import analyze          # Claude Haiku — primary
 from badge_routes import badge_router
+from stripe_routes import router as stripe_router
 from pnl_sync import sync_all_wallets
 from badge_engine import (
     check_analysis_badges,
@@ -34,6 +35,7 @@ from config import REFRESH_INTERVAL, MAX_AUTO_REFRESHES
 
 app = FastAPI(title="Pump Analyzer API")
 app.include_router(badge_router)
+app.include_router(stripe_router)
 
 # ── Nightly PnL sync ─────────────────────────────────────────────────────────
 import asyncio as _asyncio

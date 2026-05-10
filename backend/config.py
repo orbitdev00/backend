@@ -22,3 +22,9 @@ PUMPFUN_API = "https://frontend-api.pump.fun"
 # How often (seconds) to re-pull data and re-analyze while watching a coin
 REFRESH_INTERVAL = 180      # Re-analyze every 3 minutes
 MAX_AUTO_REFRESHES = 20     # Stop auto-refreshing after 20 cycles (~1 hour)
+
+# Stripe
+STRIPE_SECRET_KEY      = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET  = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_DEGEN_PRICE_ID  = os.getenv("STRIPE_DEGEN_PRICE_ID", "")
+STRIPE_OMEGA_PRICE_ID  = os.getenv("STRIPE_OMEGA_PRICE_ID", "")

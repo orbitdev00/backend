@@ -403,13 +403,24 @@ async def stream_analysis(websocket: WebSocket, mint: str, user_id: str = ""):
                 await websocket.close()
                 return
         elif not user_id:
-            # No user_id = not logged in = block entirely, require signup
-            await send("error", "auth_required", {
-                "message": "Sign in to analyze tokens.",
-                "error": "auth_required",
-            })
-            await websocket.close()
-            return
+            # Guest — check trial gate (1 free analysis per fingerprint)
+            fingerprint = websocket.query_params.get("fingerprint", "")
+            if TRIAL_GATE_ENABLED and fingerprint:
+                available = await check_trial(fingerprint)
+                if not available:
+                    await send("error", "rate_limit", {
+                        "message": "You've used your free analysis. Sign up free for 5 per day.",
+                        "error": "trial_used",
+                    })
+                    await websocket.close()
+                    return
+            elif TRIAL_GATE_ENABLED and not fingerprint:
+                await send("error", "auth_required", {
+                    "message": "Sign in to analyze tokens.",
+                    "error": "auth_required",
+                })
+                await websocket.close()
+                return
 
         await send("status", "init", {"message": "Fetching market data..."})
 
@@ -477,9 +488,14 @@ async def stream_analysis(websocket: WebSocket, mint: str, user_id: str = ""):
         enriched_txs = snapshot.pop("_enriched_txs", [])
         prediction   = await analyze(snapshot)
 
-        # Consume rate limit slot after successful analysis
+        # Consume rate limit / trial slot after successful analysis
         if user_id:
             consume_rate_limit(user_id)
+        elif TRIAL_GATE_ENABLED:
+            fingerprint = websocket.query_params.get("fingerprint", "")
+            if fingerprint:
+                ip = websocket.client.host if websocket.client else ""
+                await consume_trial(fingerprint, mint, ip)
 
         await send("complete", "analysis", {"snapshot": snapshot, "prediction": prediction})
         last_analysis[mint] = {"snapshot": snapshot, "prediction": prediction}

@@ -47,10 +47,19 @@ export function useStreamAnalysis() {
     const loggedIn = !!(session?.user?.id)
 
     const RAILWAY_HOST = RAILWAY_URL.replace('https://', '')
-    const userId = session?.user?.id ? `?user_id=${encodeURIComponent(session.user.id)}` : ''
+    let wsParams = ''
+    if (session?.user?.id) {
+      wsParams = `?user_id=${encodeURIComponent(session.user.id)}`
+    } else {
+      // Guest — pass fingerprint for trial gate
+      try {
+        const fp = await getFingerprint()
+        wsParams = `?fingerprint=${encodeURIComponent(fp)}`
+      } catch {}
+    }
     const wsUrl = IS_PROD
-      ? `wss://${RAILWAY_HOST}/ws/stream/${mint.trim()}${userId}`
-      : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/stream/${mint.trim()}${userId}`
+      ? `wss://${RAILWAY_HOST}/ws/stream/${mint.trim()}${wsParams}`
+      : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/stream/${mint.trim()}${wsParams}`
 
     console.log('[ORBIT] Connecting WebSocket:', wsUrl)
 
@@ -92,10 +101,10 @@ export function useStreamAnalysis() {
             if (!baselineRef.current) baselineRef.current = pred
             if (msg.type === 'complete') settle({})
           } else if (msg.type === 'error') {
-            if (msg.source === 'rate_limit' || msg.data?.error === 'rate_limit_exceeded') {
+            if (msg.source === 'rate_limit' || msg.data?.error === 'rate_limit_exceeded' || msg.data?.error === 'trial_used') {
               setStatus('idle')
               setStatusMsg('Ready')
-              settle({ rateLimitExceeded: true, message: msg.data?.message })
+              settle({ rateLimitExceeded: true, trialUsed: msg.data?.error === 'trial_used', message: msg.data?.message })
             } else {
               setStatus('error')
               setStatusMsg(msg.data?.message || 'Analysis failed')

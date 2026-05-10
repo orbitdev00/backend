@@ -108,24 +108,24 @@ export function useStreamAnalysis() {
       }
 
       ws.onerror = (err) => {
-        console.warn('[ORBIT] WebSocket error — falling back to HTTP', err)
+        console.warn('[ORBIT] WebSocket error', err)
         ws.close()
-        httpFallback(mint, loggedIn, settle)
+        if (!settled) { setStatus('error'); setStatusMsg('Connection failed'); settle({ error: 'connection_failed' }) }
       }
 
       ws.onclose = (e) => {
         console.log('[ORBIT] WebSocket closed', e.code)
         wsRef.current = null
-        if (!settled) httpFallback(mint, loggedIn, settle)
+        if (!settled) { setStatus('error'); setStatusMsg('Connection closed'); settle({ error: 'connection_closed' }) }
       }
 
       setTimeout(() => {
         if (!settled) {
-          console.warn('[ORBIT] WebSocket timeout — falling back to HTTP')
+          console.warn('[ORBIT] WebSocket timeout')
           ws.close()
-          httpFallback(mint, loggedIn, settle)
+          if (!settled) { setStatus('error'); setStatusMsg('Request timed out'); settle({ error: 'timeout' }) }
         }
-      }, 15000)
+      }, 30000)
     })
 
     async function httpFallback(mint, loggedIn, settle) {

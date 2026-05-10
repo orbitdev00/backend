@@ -17,7 +17,7 @@ except Exception as e:
     TRIAL_GATE_ENABLED = False
     async def check_trial(fp): return True
     async def consume_trial(fp, mint, ip=""): return True
-from engine.claude import analyze          # Claude Haiku — primary
+from engine.claude import analyze          # Claude Haiku â€” primary
 from badge_routes import badge_router
 from stripe_routes import router as stripe_router
 from pnl_sync import sync_all_wallets
@@ -30,14 +30,14 @@ from badge_engine import (
 from rate_limiter import check_rate_limit, consume_rate_limit, get_usage
 from stripe_handler import create_checkout_session, create_billing_portal, handle_webhook
 from tier_check import get_tier, invalidate as invalidate_tier_cache
-from ml.predictor import predict_xgboost  # XGBoost — background signals
+from ml.predictor import predict_xgboost  # XGBoost â€” background signals
 from config import REFRESH_INTERVAL, MAX_AUTO_REFRESHES
 
 app = FastAPI(title="Pump Analyzer API")
 app.include_router(badge_router)
 app.include_router(stripe_router)
 
-# ── Nightly PnL sync ─────────────────────────────────────────────────────────
+# â”€â”€ Nightly PnL sync â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import asyncio as _asyncio
 from datetime import datetime as _dt, timezone as _tz
 
@@ -60,7 +60,7 @@ async def start_pnl_cron():
 
 @app.post("/admin/pnl-sync")
 async def manual_pnl_sync(request: Request):
-    """Manual trigger — call from Railway or curl."""
+    """Manual trigger â€” call from Railway or curl."""
     secret = request.headers.get("x-admin-secret", "")
     if secret != (os.getenv("ADMIN_SECRET") or ""):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
@@ -145,7 +145,7 @@ async def health():
 
 @app.get("/snapshot/{mint}")
 async def snapshot_only(mint: str, request: Request):
-    """Lightweight endpoint for auto-analyzer — builds snapshot, logs to Supabase, skips Claude."""
+    """Lightweight endpoint for auto-analyzer â€” builds snapshot, logs to Supabase, skips Claude."""
     try:
         snapshot = await build_snapshot(mint)
         mc = snapshot.get("market_cap_usd", 0) or 0
@@ -204,7 +204,7 @@ async def analyze_once(
     user_id: str = "",
 ):
     trial = is_trial.lower() == "true" 
-    # Trial mode — check fingerprint before running
+    # Trial mode â€” check fingerprint before running
     if trial:
         if not fingerprint:
             return JSONResponse({"error": "trial_no_fingerprint"}, status_code=403)
@@ -269,7 +269,7 @@ async def analyze_once(
 
 @app.get("/debug/{mint}")
 async def debug_snapshot(mint: str):
-    """Debug endpoint — returns raw snapshot without AI analysis."""
+    """Debug endpoint â€” returns raw snapshot without AI analysis."""
     try:
         snapshot = await build_snapshot(mint)
         return JSONResponse({"snapshot": snapshot})
@@ -282,7 +282,7 @@ async def debug_snapshot(mint: str):
 def _calculate_pnl(snapshot: dict, prediction: dict) -> dict:
     """
     Calculate PnL scenarios mathematically from snapshot data.
-    Never trusts Claude for numbers — pure math.
+    Never trusts Claude for numbers â€” pure math.
     """
     current_mc   = snapshot.get("market_cap_usd") or 0
     peak_mc      = prediction.get("estimated_peak_mc") or 0
@@ -295,8 +295,8 @@ def _calculate_pnl(snapshot: dict, prediction: dict) -> dict:
     if current_mc <= 0 or peak_mc <= 0:
         return {**prediction, "pnl_scenarios": {"conservative": 0, "moderate": 0, "aggressive": 0}}
 
-    # Dead/rugged coin — requires BOTH high risk AND dead price action
-    # A coin with 91% rug prob but $500K volume is NOT dead — it's risky but active
+    # Dead/rugged coin â€” requires BOTH high risk AND dead price action
+    # A coin with 91% rug prob but $500K volume is NOT dead â€” it's risky but active
     is_dead = (
         (rug_prob >= 85 and vol_1h < 1000 and change_1h < -10) or
         (pct_from_pk >= 70 and vol_1h < 500) or
@@ -390,7 +390,7 @@ async def stream_analysis(websocket: WebSocket, mint: str, user_id: str = ""):
             pass
 
     try:
-        # ── Rate limit check BEFORE any API calls ────────────────────────
+        # â”€â”€ Rate limit check BEFORE any API calls â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if user_id:
             rl = await check_rate_limit(user_id)
             if not rl["allowed"]:
@@ -630,7 +630,7 @@ async def submit_outcome(mint: str, actual_peak_mc: float, notes: str = ""):
     """Record the actual outcome for a previously analyzed coin."""
     success = await record_outcome(mint, actual_peak_mc, notes)
     if success:
-        # Fire badge checks — find user_id from predictions table
+        # Fire badge checks â€” find user_id from predictions table
         try:
             import httpx
             from config import SUPABASE_URL, SUPABASE_SERVICE_KEY
@@ -766,3 +766,4 @@ async def debug_dex(mint: str):
         "imageUrl": info.get("imageUrl"),
         "raw_info": info,
     }
+

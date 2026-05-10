@@ -138,6 +138,15 @@ async def refresh_pnl(request: Request):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
+@app.get("/usage")
+async def get_usage_endpoint(user_id: str = ""):
+    """Return current daily usage for a user — used by frontend to sync rate limit counter."""
+    if not user_id:
+        return JSONResponse({"count": 0, "limit": 5, "remaining": 5})
+    usage = get_usage(user_id)
+    return JSONResponse(usage)
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "timestamp": int(time.time())}

@@ -189,6 +189,22 @@ export default function App() {
 
 
 
+
+  // Sync rate limit usage from backend on mount
+  useEffect(() => {
+    if (!user || tier !== 'free') return
+    const today = new Date().toISOString().slice(0,10)
+    const key = `orbit_usage_${user.id}_${today}`
+    fetch(`${RAILWAY_URL}/usage?user_id=${user.id}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.count !== undefined) {
+          localStorage.setItem(key, String(data.count))
+        }
+      })
+      .catch(() => {})
+  }, [user, tier])
+
   const togglePanel = (panel) => setCollapsed(prev => ({...prev, [panel]: !prev[panel]}))
 
   const analyze = useCallback(async (mintAddress) => {

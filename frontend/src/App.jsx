@@ -150,6 +150,8 @@ export default function App() {
   const [showAccountMenu, setShowAccountMenu] = useState(false)
   const [isTrial, setIsTrial]           = useState(() => new URLSearchParams(window.location.search).get('trial') === '1')
   const [trialBlocked, setTrialBlocked] = useState(false)
+  const [guestBlocked, setGuestBlocked]   = useState(() => !localStorage.getItem('sb-auth-token') && localStorage.getItem('orbit_guest_analyzed') === '1')
+  const [upgradePrompt, setUpgradePrompt] = useState(null) // { title, message }
   const [collapsed, setCollapsed]       = useState({})
   const [mint, setMint]                 = useState('')
   const [activeMint, setActiveMint]     = useState('')
@@ -181,7 +183,7 @@ export default function App() {
 
   // Reset trial when user logs in
   useEffect(() => {
-    if (user) { setIsTrial(false); setTrialBlocked(false) }
+    if (user) { setIsTrial(false); setTrialBlocked(false); setGuestBlocked(false); localStorage.removeItem('orbit_guest_analyzed') }
   }, [user])
 
 
@@ -190,12 +192,29 @@ export default function App() {
 
   const analyze = useCallback(async (mintAddress) => {
     if (!mintAddress?.trim()) return
+    if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') {
+      setGuestBlocked(true)
+      return
+    }
     setActiveMint(mintAddress.trim())
     setPhase('animating')
     streamAnalyze(mintAddress).then(result => {
       if (result?.trialUsed) { setPhase('idle'); setTrialBlocked(true) }
       if (result?.trialConsumed) setIsTrial(true)
-      // Check for newly awarded badges ~3s after analysis (give backend time to write)
+      // Guest: mark as used after first analysis
+      if (!user) {
+        localStorage.setItem('orbit_guest_analyzed', '1')
+        setGuestBlocked(true)
+      }
+      // Rate limit exceeded for free users
+      if (result?.rateLimitExceeded) {
+        setUpgradePrompt({
+          title: 'Daily limit reached',
+          message: 'You've used all 5 free analyses for today. Upgrade to Degen for unlimited analyses.',
+          cta: 'Upgrade to Degen',
+          ctaPath: '/pricing',
+        })
+      }
       setTimeout(() => checkNewBadges(), 3000)
     })
   }, [streamAnalyze])
@@ -607,6 +626,40 @@ export default function App() {
           </div>
         </div>
       )}
+      {/* Guest blocked modal */}
+      {guestBlocked && !user && (
+        <div className="trial-modal-overlay" style={{backdropFilter:'blur(8px)'}}>
+          <div className="trial-modal" style={{maxWidth:380}}>
+            <img src={kikoPfp} className="trial-modal-pfp" alt="" />
+            <h2 className="trial-modal-title">Create a free account</h2>
+            <p className="trial-modal-sub">You've used your guest analysis. Sign up free to get 5 analyses per day, full forum access, tracker, and more.</p>
+            <button className="btn-primary" style={{width:'100%',marginTop:8,background:'#a78bfa',border:'none',borderRadius:6,color:'#000',fontFamily:'var(--mono)',fontSize:12,fontWeight:700,padding:'12px',cursor:'pointer',letterSpacing:1}} onClick={() => window.location.href='/signup'}>
+              Create Free Account →
+            </button>
+            <button style={{background:'none',border:'none',color:'#64748b',fontSize:12,cursor:'pointer',marginTop:8,fontFamily:'var(--mono)'}} onClick={() => window.location.href='/login'}>
+              Already have an account? Sign in
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Upgrade prompt modal */}
+      {upgradePrompt && (
+        <div className="trial-modal-overlay" style={{backdropFilter:'blur(8px)'}}>
+          <div className="trial-modal" style={{maxWidth:380}}>
+            <img src={kikoPfp} className="trial-modal-pfp" alt="" />
+            <h2 className="trial-modal-title">{upgradePrompt.title}</h2>
+            <p className="trial-modal-sub">{upgradePrompt.message}</p>
+            <button className="btn-primary" style={{width:'100%',marginTop:8,background:'#a78bfa',border:'none',borderRadius:6,color:'#000',fontFamily:'var(--mono)',fontSize:12,fontWeight:700,padding:'12px',cursor:'pointer',letterSpacing:1}} onClick={() => window.location.href=upgradePrompt.ctaPath}>
+              {upgradePrompt.cta} →
+            </button>
+            <button style={{background:'none',border:'none',color:'#64748b',fontSize:12,cursor:'pointer',marginTop:8,fontFamily:'var(--mono)'}} onClick={() => setUpgradePrompt(null)}>
+              Maybe later
+            </button>
+          </div>
+        </div>
+      )}
+
       {trialBlocked && (
           <div className="trial-modal-overlay">
             <div className="trial-modal">

@@ -241,6 +241,13 @@ export default function App() {
     }
   }, [user])
 
+  // Check guest analysis limit on mount
+  useEffect(() => {
+    if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') {
+      setGuestBlocked(true)
+    }
+  }, [user])
+
   // Auto-run from onboarding
   useEffect(() => {
     const params = new URLSearchParams(location.search)
@@ -250,6 +257,10 @@ export default function App() {
       setMintAddress(mintParam)
       setTimeout(() => {
         streamAnalyze(mintParam).then(result => {
+          if (!user) {
+            localStorage.setItem('orbit_guest_analyzed', '1')
+            setGuestBlocked(true)
+          }
           if (result?.trialUsed) { setPhase('idle'); setTrialBlocked(true) }
           if (result?.trialConsumed) setIsTrial(true)
           setTimeout(() => checkNewBadges(), 3000)
@@ -585,7 +596,18 @@ export default function App() {
         )}
 
         {/* Trial blocked modal */}
-        {trialBlocked && (
+        {guestBlocked && (
+        <div className="trial-modal-overlay">
+          <div className="trial-modal">
+            <img src={orbitPfp} className="trial-modal-pfp" alt="" />
+            <h2 className="trial-modal-title">Create a free account</h2>
+            <p className="trial-modal-sub">You've used your guest analysis. Sign up free to get 5 analyses per day, full forum access, and more.</p>
+            <button className="btn-primary" style={{width:'100%',marginTop:8}} onClick={() => window.location.href='/signup'}>Create Free Account</button>
+            <button style={{background:'none',border:'none',color:'#64748b',fontSize:12,cursor:'pointer',marginTop:8}} onClick={() => window.location.href='/login'}>Already have an account? Sign in</button>
+          </div>
+        </div>
+      )}
+      {trialBlocked && (
           <div className="trial-modal-overlay">
             <div className="trial-modal">
               <img src={orbitPfp} alt="ORBIT" className="trial-modal-pfp" />

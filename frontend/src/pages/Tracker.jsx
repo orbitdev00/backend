@@ -16,7 +16,9 @@ function fmtMC(n) {
 }
 
 export default function Tracker() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
+  const tier = profile?.tier || 'free'
+  const ALERT_LIMIT = !user ? 0 : (tier === 'degen' || tier === 'omega') ? Infinity : 1
   const [tracked, setTracked]   = useState([])
   const [mint, setMint]         = useState('')
   const [targetMC, setTargetMC] = useState('')
@@ -139,6 +141,10 @@ export default function Tracker() {
 
   const addTracker = async () => {
     if (!mint.trim() || !targetMC) return
+    if (tracked.length >= ALERT_LIMIT) {
+      alert(tier === 'free' ? 'Free accounts can track 1 coin. Upgrade to Degen for unlimited alerts.' : 'Upgrade required.')
+      return
+    }
     setAdding(true)
     const name = await fetchName(mint.trim())
     saveTracked([...tracked, {
@@ -171,6 +177,22 @@ export default function Tracker() {
     setWatchlist(prev => prev.filter(w => w.id !== id))
   }
 
+  const nav = useNavigate ? useNavigate() : null
+
+  if (!user) return (
+    <div className="tracker-screen">
+      <StarField />
+      <NavBar active="tracker" />
+      <div className="tracker-body" style={{display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:16,minHeight:'60vh'}}>
+        <div style={{fontSize:32}}>🔒</div>
+        <div style={{fontSize:16,fontWeight:700,color:'#f1f5f9'}}>Sign in to use Tracker</div>
+        <div style={{fontSize:12,color:'#64748b',textAlign:'center',maxWidth:300}}>Track coins and get alerted when your MC targets hit. Requires a free account.</div>
+        <button onClick={() => window.location.href='/login'} style={{background:'var(--green)',border:'none',borderRadius:6,color:'#000',fontFamily:'var(--mono)',fontSize:11,fontWeight:700,padding:'10px 24px',cursor:'pointer',letterSpacing:1,textTransform:'uppercase'}}>Sign In</button>
+        <button onClick={() => window.location.href='/signup'} style={{background:'none',border:'1px solid #2a2a2a',borderRadius:6,color:'#64748b',fontFamily:'var(--mono)',fontSize:11,padding:'8px 24px',cursor:'pointer'}}>Create Free Account</button>
+      </div>
+    </div>
+  )
+
   return (
     <div className="tracker-screen">
       <StarField />
@@ -191,6 +213,12 @@ export default function Tracker() {
         {/* ALERTS TAB */}
         {tab === 'alerts' && (
           <>
+            {tier === 'free' && (
+              <div style={{background:'rgba(167,139,250,0.06)',border:'1px solid rgba(167,139,250,0.2)',borderRadius:6,padding:'8px 14px',marginBottom:8,fontSize:11,color:'#a78bfa',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span>Free plan · {tracked.length}/1 alert used</span>
+                <span style={{cursor:'pointer',textDecoration:'underline'}} onClick={() => window.location.href='/pricing'}>Upgrade for unlimited →</span>
+              </div>
+            )}
             <div className="tracker-add panel">
               <div className="add-row">
                 <input className="add-input" placeholder="Token CA" value={mint} onChange={e => setMint(e.target.value)} />

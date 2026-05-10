@@ -64,8 +64,8 @@ function AppRoutes() {
       <Route path="/forgot"         element={<><StarField /><ForgotPassword onSwitch={(p) => navigate(p === 'login' ? '/login' : p === 'signup' ? '/signup' : p === 'forgot' ? '/forgot' : '/')} /></>} />
       <Route path="/auth/callback"  element={<AuthCallback />} />
       <Route path="/" element={<RootRoute />} />
-      <Route path="/analyze" element={<ProtectedRoute><App /></ProtectedRoute>} />
-      <Route path="/tracker" element={<ProtectedRoute><Tracker /></ProtectedRoute>} />
+      <Route path="/analyze" element={<App />} />
+      <Route path="/tracker" element={<Tracker />} />
       <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
       <Route path="/forum" element={<Forum />} />
       <Route path="/forum/category/:slug" element={<ForumCategory />} />
@@ -76,7 +76,7 @@ function AppRoutes() {
       <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
       <Route path="/edit-profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
       <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
-      <Route path="/badges" element={<ProtectedRoute><Badges /></ProtectedRoute>} />
+      <Route path="/badges" element={<Badges />} />
       <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
       <Route path="/share/:id" element={<ShareAnalysis />} />
       <Route path="*" element={<Navigate to="/" replace />} />

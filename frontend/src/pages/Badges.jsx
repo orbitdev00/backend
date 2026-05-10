@@ -56,6 +56,7 @@ export default function Badges() {
   }, [user, tier])
 
   async function handleEquipToggle(badge) {
+    if (!user) { window.location.href = '/login'; return }
     const owned = userBadges[badge.id]
     if (!owned) return
 
@@ -103,6 +104,12 @@ export default function Badges() {
   return (
     <div className="badges-screen">
       <NavBar active="badges" />
+      {!user && (
+        <div style={{background:'rgba(167,139,250,0.06)',border:'1px solid rgba(167,139,250,0.2)',borderRadius:6,padding:'10px 16px',marginBottom:16,fontSize:12,color:'#a78bfa',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <span>👀 Viewing as guest — sign in to earn and equip badges</span>
+          <button onClick={() => window.location.href='/login'} style={{background:'#a78bfa',border:'none',borderRadius:4,color:'#000',fontFamily:'var(--mono)',fontSize:10,fontWeight:700,padding:'5px 12px',cursor:'pointer'}}>Sign In</button>
+        </div>
+      )}
       {loading ? (
         <div className="badges-loading">Loading badges...</div>
       ) : (

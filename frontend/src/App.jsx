@@ -151,7 +151,7 @@ export default function App() {
   const [showAccountMenu, setShowAccountMenu] = useState(false)
   const [isTrial, setIsTrial]           = useState(() => new URLSearchParams(window.location.search).get('trial') === '1')
   const [trialBlocked, setTrialBlocked] = useState(false)
-  const [guestBlocked, setGuestBlocked]   = useState(() => !localStorage.getItem('sb-auth-token') && localStorage.getItem('orbit_guest_analyzed') === '1')
+  const [guestBlocked, setGuestBlocked]   = useState(false)
   const [upgradePrompt, setUpgradePrompt] = useState(null) // { title, message }
   const [collapsed, setCollapsed]       = useState({})
   const [mint, setMint]                 = useState('')
@@ -189,6 +189,16 @@ export default function App() {
 
 
 
+
+  // Set guestBlocked after auth resolves
+  useEffect(() => {
+    if (!authLoading && !user && localStorage.getItem('orbit_guest_analyzed') === '1') {
+      setGuestBlocked(true)
+    }
+    if (user) {
+      setGuestBlocked(false)
+    }
+  }, [authLoading, user])
 
   // Sync rate limit usage from backend on mount
   useEffect(() => {
@@ -229,6 +239,7 @@ export default function App() {
         return  // never touches backend
       }
     }
+    // All checks passed — now start the animation and API call
     setActiveMint(mintAddress.trim())
     setPhase('animating')
     streamAnalyze(mintAddress).then(result => {
@@ -622,7 +633,7 @@ export default function App() {
           <div className="landing" id="landing-screen">
             <img src={kikoPfp} alt="ORBIT" className="landing-pfp" />
             <div className="landing-input-wrap">
-              <CoinInput value={mint} onChange={setMint} onSubmit={() => analyze(mint)}
+              <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } analyze(mint) }}
                 onRefresh={handleRefresh} loading={false} hasData={false} />
             </div>
             <CyclingQuote quotes={IDLE_QUOTES} interval={6000} />
@@ -634,7 +645,7 @@ export default function App() {
           <div className="landing">
             <img src={kikoPfp} alt="ORBIT" className="landing-pfp loading-pfp" />
             <div className="landing-input-wrap">
-              <CoinInput value={mint} onChange={setMint} onSubmit={() => analyze(mint)}
+              <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } analyze(mint) }}
                 onRefresh={handleRefresh} loading={true} hasData={false} />
             </div>
             <CyclingQuote quotes={ANALYZING_QUOTES} interval={5000} />
@@ -646,7 +657,7 @@ export default function App() {
           <div className="landing" id="landing-screen">
             <img src={kikoPfp} alt="ORBIT" className="landing-pfp" />
             <div className="landing-input-wrap">
-              <CoinInput value={mint} onChange={setMint} onSubmit={() => analyze(mint)}
+              <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } analyze(mint) }}
                 onRefresh={handleRefresh} loading={false} hasData={false} />
             </div>
             <div className="error-inline">⚠ {statusMsg}</div>
@@ -771,7 +782,7 @@ export default function App() {
               <div className="dash-col dash-col-4">
                 <StreamReveal show={phase === "revealing"} delay={600}>
                 <div className="panel center-input-panel">
-                  <CoinInput value={mint} onChange={setMint} onSubmit={() => analyze(mint)}
+                  <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } analyze(mint) }}
                     onRefresh={null} loading={status === 'loading'} hasData={false} />
                 </div>
                 </StreamReveal>

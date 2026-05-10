@@ -138,15 +138,6 @@ async def refresh_pnl(request: Request):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
-@app.get("/usage")
-async def get_usage_endpoint(user_id: str = ""):
-    """Return current daily usage for a user — used by frontend to sync rate limit counter."""
-    if not user_id:
-        return JSONResponse({"count": 0, "limit": 5, "remaining": 5})
-    usage = get_usage(user_id)
-    return JSONResponse(usage)
-
-
 @app.get("/health")
 async def health():
     return {"status": "ok", "timestamp": int(time.time())}
@@ -399,7 +390,7 @@ async def stream_analysis(websocket: WebSocket, mint: str, user_id: str = ""):
             pass
 
     try:
-        # ── Rate limit check BEFORE any API calls ────────────────────────────
+        # ── Rate limit check BEFORE any API calls ────────────────────────
         if user_id:
             rl = await check_rate_limit(user_id)
             if not rl["allowed"]:
@@ -411,6 +402,14 @@ async def stream_analysis(websocket: WebSocket, mint: str, user_id: str = ""):
                 })
                 await websocket.close()
                 return
+        elif not user_id:
+            # No user_id = not logged in = block entirely, require signup
+            await send("error", "auth_required", {
+                "message": "Sign in to analyze tokens.",
+                "error": "auth_required",
+            })
+            await websocket.close()
+            return
 
         await send("status", "init", {"message": "Fetching market data..."})
 
@@ -481,8 +480,6 @@ async def stream_analysis(websocket: WebSocket, mint: str, user_id: str = ""):
         # Consume rate limit slot after successful analysis
         if user_id:
             consume_rate_limit(user_id)
-            usage = get_usage(user_id)
-            prediction["_rate_limit"] = usage
 
         await send("complete", "analysis", {"snapshot": snapshot, "prediction": prediction})
         last_analysis[mint] = {"snapshot": snapshot, "prediction": prediction}

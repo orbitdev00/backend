@@ -210,7 +210,7 @@ export default function App() {
       if (result?.rateLimitExceeded) {
         setUpgradePrompt({
           title: 'Daily limit reached',
-          message: 'You've used all 5 free analyses for today. Upgrade to Degen for unlimited analyses.',
+          message: "You've used all 5 free analyses for today. Upgrade to Degen for unlimited analyses.",
           cta: 'Upgrade to Degen',
           ctaPath: '/pricing',
         })
@@ -764,5 +764,3 @@ export default function App() {
     </div>
   )
 }
-/ /   t r i g g e r   r e b u i l d  
- 

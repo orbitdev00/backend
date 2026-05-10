@@ -151,7 +151,7 @@ export default function App() {
   const [showAccountMenu, setShowAccountMenu] = useState(false)
   const [isTrial, setIsTrial]           = useState(() => new URLSearchParams(window.location.search).get('trial') === '1')
   const [trialBlocked, setTrialBlocked] = useState(false)
-  const [guestBlocked, setGuestBlocked]   = useState(false)  // only ever true for non-logged-in users
+  const [guestBlocked, setGuestBlocked]   = useState(false)
   const [upgradePrompt, setUpgradePrompt] = useState(null) // { title, message }
   const [collapsed, setCollapsed]       = useState({})
   const [mint, setMint]                 = useState('')
@@ -667,8 +667,8 @@ export default function App() {
           </div>
         )}
 
-        {/* Trial blocked modal — only for actual guests */}
-        {guestBlocked && !user && (
+        {/* Trial blocked modal */}
+        {guestBlocked && (
         <div className="trial-modal-overlay">
           <div className="trial-modal">
             <img src={kikoPfp} className="trial-modal-pfp" alt="" />
@@ -679,7 +679,22 @@ export default function App() {
           </div>
         </div>
       )}
-
+      {/* Guest blocked modal */}
+      {guestBlocked && !user && (
+        <div className="trial-modal-overlay" style={{backdropFilter:'blur(8px)'}}>
+          <div className="trial-modal" style={{maxWidth:380}}>
+            <img src={kikoPfp} className="trial-modal-pfp" alt="" />
+            <h2 className="trial-modal-title">Create a free account</h2>
+            <p className="trial-modal-sub">You've used your guest analysis. Sign up free to get 5 analyses per day, full forum access, tracker, and more.</p>
+            <button className="btn-primary" style={{width:'100%',marginTop:8,background:'#a78bfa',border:'none',borderRadius:6,color:'#000',fontFamily:'var(--mono)',fontSize:12,fontWeight:700,padding:'12px',cursor:'pointer',letterSpacing:1}} onClick={() => window.location.href='/signup'}>
+              Create Free Account →
+            </button>
+            <button style={{background:'none',border:'none',color:'#64748b',fontSize:12,cursor:'pointer',marginTop:8,fontFamily:'var(--mono)'}} onClick={() => window.location.href='/login'}>
+              Already have an account? Sign in
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Upgrade prompt modal */}
       {upgradePrompt && (
@@ -691,7 +706,11 @@ export default function App() {
             <button className="btn-primary" style={{width:'100%',marginTop:8,background:'#a78bfa',border:'none',borderRadius:6,color:'#000',fontFamily:'var(--mono)',fontSize:12,fontWeight:700,padding:'12px',cursor:'pointer',letterSpacing:1}} onClick={() => window.location.href=upgradePrompt.ctaPath}>
               {upgradePrompt.cta} →
             </button>
-            <button style={{background:'none',border:'none',color:'#64748b',fontSize:12,cursor:'pointer',marginTop:8,fontFamily:'var(--mono)'}} onClick={() => setUpgradePrompt(null)}>
+            <button style={{background:'none',border:'none',color:'#64748b',fontSize:12,cursor:'pointer',marginTop:8,fontFamily:'var(--mono)'}} onClick={() => {
+              setUpgradePrompt(null)
+              // If we have existing results, go back to revealing state
+              if (snapshot) setPhase('revealing')
+            }}>
               Maybe later
             </button>
           </div>

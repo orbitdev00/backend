@@ -1,91 +1,87 @@
 """
-ORBIT Rate Limiter
-==================
-Limits analysis requests per user per day.
-Uses in-memory cache with Supabase fallback for persistence across restarts.
-
-Free accounts:  5 analyses per day
-Degen/Omega:    unlimited
-Guest:          1 (handled via trial_gate.py / frontend localStorage)
+ORBIT Rate Limiter — Supabase-backed
+Persists daily usage to user_reputation so Railway restarts don't reset counts.
+Free: 5/day | Degen/Omega: unlimited
 """
-
-import asyncio
 import time
-from collections import defaultdict
-from datetime import datetime, timezone
 import httpx
-from config import SUPABASE_URL, SUPABASE_ANON_KEY
+from datetime import datetime, timezone
+from config import SUPABASE_URL, SUPABASE_SERVICE_KEY
 
 FREE_DAILY_LIMIT = 5
 
 HEADERS = {
-    "apikey": SUPABASE_ANON_KEY,
-    "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
+    "apikey": SUPABASE_SERVICE_KEY,
+    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
     "Content-Type": "application/json",
-    "Prefer": "return=minimal",
+    "Prefer": "return=representation",
 }
 
-# In-memory cache: { user_id: { "date": "YYYY-MM-DD", "count": int } }
-_cache: dict = defaultdict(lambda: {"date": "", "count": 0})
-_paid_cache: dict = {}  # user_id -> bool, cached for 5 min
-_paid_cache_ts: dict = {}
+# Local tier cache — avoids Supabase hit on every WS connection
+_tier_cache: dict = {}
+_tier_cache_ts: dict = {}
+TIER_TTL = 300  # 5 min
 
 
 def _today() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
-async def _is_paid(user_id: str) -> bool:
-    """Check if user has paid tier — cached for 5 minutes."""
-    now = time.time()
-    if user_id in _paid_cache and now - _paid_cache_ts.get(user_id, 0) < 300:
-        return _paid_cache[user_id]
+async def _get_user_row(user_id: str) -> dict:
+    """Fetch tier, daily_analysis_count, daily_reset_date from Supabase."""
+    async with httpx.AsyncClient(timeout=5) as client:
+        r = await client.get(
+            f"{SUPABASE_URL}/rest/v1/user_reputation",
+            params={
+                "select": "tier,daily_analysis_count,daily_reset_date",
+                "user_id": f"eq.{user_id}",
+                "limit": "1",
+            },
+            headers=HEADERS,
+        )
+        rows = r.json()
+        return rows[0] if rows else {}
 
-    try:
-        async with httpx.AsyncClient(timeout=5) as client:
-            r = await client.get(
-                f"{SUPABASE_URL}/rest/v1/user_reputation",
-                params={
-                    "select": "tier",
-                    "user_id": f"eq.{user_id}",
-                    "limit": "1",
-                },
-                headers=HEADERS,
-            )
-            rows = r.json()
-            tier = rows[0].get("tier", "free") if rows else "free"
-            # degen and omega are paid tiers — unlimited analyses
-            is_paid = tier in ("degen", "omega", "pro", "owner")
-            _paid_cache[user_id] = is_paid
-            _paid_cache_ts[user_id] = now
-            return is_paid
-    except Exception as e:
-        print(f"[RateLimit] Tier check failed for {user_id}: {e}")
-        return False  # default to free limits on error
+
+async def _update_count(user_id: str, count: int, date: str):
+    """Write updated count to Supabase."""
+    async with httpx.AsyncClient(timeout=5) as client:
+        await client.patch(
+            f"{SUPABASE_URL}/rest/v1/user_reputation",
+            params={"user_id": f"eq.{user_id}"},
+            json={
+                "daily_analysis_count": count,
+                "daily_reset_date": date,
+            },
+            headers={**HEADERS, "Prefer": "return=minimal"},
+        )
 
 
 async def check_rate_limit(user_id: str) -> dict:
-    """
-    Returns:
-        { "allowed": True, "remaining": int, "limit": int }
-        { "allowed": False, "remaining": 0, "limit": int, "error": "rate_limit_exceeded" }
-    """
     if not user_id:
         return {"allowed": True, "remaining": FREE_DAILY_LIMIT, "limit": FREE_DAILY_LIMIT}
 
-    # Paid users are unlimited
-    if await _is_paid(user_id):
-        return {"allowed": True, "remaining": 9999, "limit": 9999, "tier": "paid"}
+    try:
+        row = await _get_user_row(user_id)
+    except Exception as e:
+        print(f"[RateLimit] Supabase error: {e} — allowing")
+        return {"allowed": True, "remaining": FREE_DAILY_LIMIT, "limit": FREE_DAILY_LIMIT}
+
+    tier = row.get("tier", "free")
+
+    # Paid tiers — unlimited
+    if tier in ("degen", "omega", "pro", "owner"):
+        return {"allowed": True, "remaining": 9999, "limit": 9999, "tier": tier}
 
     today = _today()
-    entry = _cache[user_id]
+    stored_date = row.get("daily_reset_date", "")
+    count = row.get("daily_analysis_count", 0) or 0
 
-    # Reset count if it's a new day
-    if entry["date"] != today:
-        entry["date"] = today
-        entry["count"] = 0
+    # Reset if new day
+    if str(stored_date) != today:
+        count = 0
 
-    remaining = FREE_DAILY_LIMIT - entry["count"]
+    remaining = FREE_DAILY_LIMIT - count
 
     if remaining <= 0:
         return {
@@ -105,29 +101,48 @@ async def check_rate_limit(user_id: str) -> dict:
 
 
 def consume_rate_limit(user_id: str):
-    """Increment counter after a successful analysis."""
-    if not user_id:
-        return
-    today = _today()
-    entry = _cache[user_id]
-    if entry["date"] != today:
-        entry["date"] = today
-        entry["count"] = 0
-    entry["count"] += 1
-    print(f"[RateLimit] {user_id[:8]}... used {entry['count']}/{FREE_DAILY_LIMIT} today")
+    """Fire-and-forget increment — runs as background task."""
+    import asyncio
+    asyncio.create_task(_do_consume(user_id))
+
+
+async def _do_consume(user_id: str):
+    try:
+        row = await _get_user_row(user_id)
+        tier = row.get("tier", "free")
+        if tier in ("degen", "omega", "pro", "owner"):
+            return  # unlimited — don't write
+
+        today = _today()
+        stored_date = row.get("daily_reset_date", "")
+        count = row.get("daily_analysis_count", 0) or 0
+
+        if str(stored_date) != today:
+            count = 0  # reset for new day
+
+        new_count = count + 1
+        await _update_count(user_id, new_count, today)
+        print(f"[RateLimit] {user_id[:8]}... used {new_count}/{FREE_DAILY_LIMIT} today (persisted)")
+    except Exception as e:
+        print(f"[RateLimit] consume error: {e}")
 
 
 def get_usage(user_id: str) -> dict:
-    """Return current usage for a user."""
-    if not user_id:
+    """Sync wrapper — returns cached or default. Real data fetched async."""
+    return {"count": 0, "limit": FREE_DAILY_LIMIT, "remaining": FREE_DAILY_LIMIT}
+
+
+async def get_usage_async(user_id: str) -> dict:
+    try:
+        row = await _get_user_row(user_id)
+        today = _today()
+        count = row.get("daily_analysis_count", 0) or 0
+        if str(row.get("daily_reset_date", "")) != today:
+            count = 0
+        return {
+            "count": count,
+            "limit": FREE_DAILY_LIMIT,
+            "remaining": max(0, FREE_DAILY_LIMIT - count),
+        }
+    except Exception:
         return {"count": 0, "limit": FREE_DAILY_LIMIT, "remaining": FREE_DAILY_LIMIT}
-    today = _today()
-    entry = _cache[user_id]
-    if entry["date"] != today:
-        return {"count": 0, "limit": FREE_DAILY_LIMIT, "remaining": FREE_DAILY_LIMIT}
-    count = entry["count"]
-    return {
-        "count": count,
-        "limit": FREE_DAILY_LIMIT,
-        "remaining": max(0, FREE_DAILY_LIMIT - count),
-    }

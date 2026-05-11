@@ -627,8 +627,9 @@ async def get_user_tier(user_id: str = ""):
 @app.get("/usage")
 async def get_rate_limit_usage(user_id: str = ""):
     if not user_id:
-        return JSONResponse({"error": "user_id required"}, status_code=400)
-    return JSONResponse(get_usage(user_id))
+        return JSONResponse({"count": 0, "limit": 5, "remaining": 5})
+    usage = await get_usage_async(user_id)
+    return JSONResponse(usage)
 
 
 @app.post("/outcome/{mint}")

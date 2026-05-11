@@ -582,6 +582,7 @@ export default function App() {
     if (authPage === 'signup') return <><StarField /><SignUp onSwitch={setAuthPage} /></>
     if (authPage === 'forgot') return <><StarField /><ForgotPassword onSwitch={setAuthPage} /></>
     if (authPage === 'login')  return <><StarField /><Login onSwitch={setAuthPage} onTrial={() => setIsTrial(true)} /></>
+    if (authPage === 'trial')  { setIsTrial(true); return null }
     return <Landing onSwitch={setAuthPage} />
   }
 

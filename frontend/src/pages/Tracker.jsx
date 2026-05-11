@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import NavBar from '../components/NavBar'
@@ -177,7 +178,7 @@ export default function Tracker() {
     setWatchlist(prev => prev.filter(w => w.id !== id))
   }
 
-  const nav = useNavigate ? useNavigate() : null
+  const nav = useNavigate()
 
   if (!user) return (
     <div className="tracker-screen">

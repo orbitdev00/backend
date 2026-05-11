@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import NavBar from '../components/NavBar'
 import StarField from '../components/StarField'
 import { startCheckout, openBillingPortal } from '../lib/stripe'
@@ -14,13 +15,13 @@ const TIERS = [
     color: '#888',
     desc: 'Get started with no commitment.',
     features: [
-      '3 analyses per day',
-      'Full analyzer results',
+      '5 analyses per day',
+      'Full analyzer results — SOL + ETH',
       'Full forum access · post, reply, vote, DM',
       'Share analysis · public shareable links',
-      'Price tracker · up to 3 coins',
+      'Price tracker · 1 coin alert',
       'Leaderboard · connect wallet and compete',
-      'Badge system · earn and equip badges',
+      'Badge system · earn and equip 1 badge',
     ],
   },
   {
@@ -34,10 +35,11 @@ const TIERS = [
     features: [
       'Unlimited analyses',
       'Unlimited analysis history',
-      'Unlimited price tracker with alerts',
+      'Unlimited price tracker alerts',
       'Post images in forum',
       'Priority analysis queue',
       'Degen badge on profile and leaderboard',
+      'Equip up to 3 badges',
     ],
   },
   {
@@ -52,17 +54,18 @@ const TIERS = [
     features: [
       'Everything in Degen',
       'Maximum Orbit analysis depth',
-      'Omega-only Forum Chat',
       'Omega badge · exclusive profile border',
-      'More Profile Wallets · add up to 5 wallets',
       'Early beta access to new features',
       'Direct channel to Orbit Devs',
+      'Equip up to 5 badges',
     ],
   },
 ]
 
-export default function Pricing({ currentTier = 'free' }) {
+export default function Pricing() {
   const nav = useNavigate()
+  const { profile } = useAuth()
+  const currentTier = profile?.tier || 'free'
   const [loading, setLoading] = useState(null)
   const [visible, setVisible] = useState(false)
 

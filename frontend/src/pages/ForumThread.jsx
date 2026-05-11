@@ -89,8 +89,8 @@ export default function ForumThread() {
     for (const uid of userIds) {
       const { data: ub } = await supabase.from('user_badges').select('forum_badges(slug,name,icon,color)').eq('user_id', uid)
       badgeMap[uid] = ub?.map(x => x.forum_badges) || []
-      const { data: repData } = await supabase.from('user_reputation').select('username,avatar_url').eq('user_id', uid).single()
-      nameMap[uid] = { username: repData?.username, avatar_url: repData?.avatar_url }
+      const { data: repData } = await supabase.from('user_reputation').select('username,avatar_url,tier').eq('user_id', uid).single()
+      nameMap[uid] = { username: repData?.username, avatar_url: repData?.avatar_url, tier: repData?.tier }
     }
     setUserBadges(badgeMap)
     setUserNames(nameMap)
@@ -166,7 +166,15 @@ export default function ForumThread() {
               : displayName?.slice(0,2).toUpperCase()
             }
           </div>
-          <div className="fpost-author-name" style={{cursor:'pointer'}} onClick={() => nav(`/profile/${userNames[post.user_id]?.username || post.user_id}`)}>{displayName}</div>
+          <div
+            className={`fpost-author-name ${userNames[post.user_id]?.tier === 'omega' ? 'fpost-name-omega' : userNames[post.user_id]?.tier === 'degen' ? 'fpost-name-degen' : ''}`}
+            style={{cursor:'pointer'}}
+            onClick={() => nav(`/profile/${userNames[post.user_id]?.username || post.user_id}`)}
+          >
+            {displayName}
+            {userNames[post.user_id]?.tier === 'degen' && <span className="fpost-tier-badge fpost-tier-degen">DEGEN</span>}
+            {userNames[post.user_id]?.tier === 'omega' && <span className="fpost-tier-badge fpost-tier-omega">OMEGA</span>}
+          </div>
           {isOP && <span className="fpost-op-tag">OP</span>}
           <div className="fpost-badges">
             {(userBadges[post.user_id] || []).map(b => (

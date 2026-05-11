@@ -18,6 +18,67 @@ from config import (
 stripe.api_key = STRIPE_SECRET_KEY
 
 router = APIRouter()
+import os
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+ORBIT_FROM_EMAIL = "Orbit <noreply@orbit-app.xyz>"
+
+async def _get_user_email(user_id: str) -> str | None:
+    """Fetch user email from Supabase."""
+    async with httpx.AsyncClient(timeout=5) as client:
+        r = await client.get(
+            f"{SUPABASE_URL}/rest/v1/user_reputation",
+            params={"select": "email", "user_id": f"eq.{user_id}", "limit": "1"},
+            headers=SUPA_HEADERS,
+        )
+        rows = r.json()
+        return rows[0].get("email") if rows else None
+
+
+async def _send_upgrade_email(email: str, tier: str):
+    """Send welcome email via Resend when user upgrades."""
+    if not RESEND_API_KEY or not email:
+        return
+    tier_name = tier.upper()
+    color = "#a78bfa" if tier == "degen" else "#f59e0b"
+    perks = (
+        "unlimited analyses, full analysis history, unlimited tracker alerts, "
+        "Degen badge, and priority queue"
+        if tier == "degen"
+        else "everything in Degen plus maximum analysis depth, Omega badge, "
+             "exclusive profile border, and direct access to Orbit devs"
+    )
+    html = f"""
+    <div style="background:#000;color:#f1f5f9;font-family:monospace;padding:40px;max-width:480px;margin:0 auto;border:1px solid #1a1a1a;">
+      <div style="font-size:24px;font-weight:700;color:{color};letter-spacing:4px;margin-bottom:8px;">ORBIT</div>
+      <div style="font-size:18px;font-weight:600;margin-bottom:16px;">Welcome to {tier_name}.</div>
+      <p style="color:#94a3b8;line-height:1.7;margin-bottom:24px;">
+        Your subscription is active. You now have access to {perks}.
+      </p>
+      <a href="https://orbit-app.xyz/analyze" style="background:{color};color:#000;padding:12px 24px;text-decoration:none;font-weight:700;letter-spacing:1px;display:inline-block;border-radius:4px;">
+        START ANALYZING →
+      </a>
+      <p style="color:#475569;font-size:11px;margin-top:32px;">
+        Manage your subscription at orbit-app.xyz/pricing · Cancel anytime.
+      </p>
+    </div>
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            await client.post(
+                "https://api.resend.com/emails",
+                headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+                json={
+                    "from": ORBIT_FROM_EMAIL,
+                    "to": [email],
+                    "subject": f"Welcome to Orbit {tier_name} 🚀",
+                    "html": html,
+                },
+            )
+            print(f"[Email] Sent upgrade email to {email[:20]}...")
+    except Exception as e:
+        print(f"[Email] Failed to send: {e}")
+
+
 
 PRICE_TO_TIER = {}  # populated on first use
 
@@ -139,6 +200,10 @@ async def stripe_webhook(request: Request):
 
         if user_id and tier:
             await _set_tier(user_id, tier, customer_id)
+            # Send welcome email
+            recipient = email or await _get_user_email(user_id)
+            if recipient:
+                await _send_upgrade_email(recipient, tier)
         else:
             print(f"[Stripe] checkout.session.completed — missing user_id or tier. meta={session.get('metadata')}")
 
@@ -209,4 +274,26 @@ async def billing_portal(request: Request):
         return JSONResponse({"url": session.url})
     except Exception as e:
         print(f"[Stripe] Portal error: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@router.post("/admin/assign-tier")
+async def assign_tier(request: Request):
+    """Owner endpoint — manually assign tier to a user and send welcome email."""
+    import os
+    secret = request.headers.get("x-admin-secret", "")
+    if secret != (os.getenv("ADMIN_SECRET") or ""):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    try:
+        body = await request.json()
+        user_id = body.get("user_id")
+        tier = body.get("tier")
+        if not user_id or not tier:
+            return JSONResponse({"error": "user_id and tier required"}, status_code=400)
+        await _set_tier(user_id, tier)
+        # Send welcome email
+        email = await _get_user_email(user_id)
+        if email and tier in ("degen", "omega"):
+            await _send_upgrade_email(email, tier)
+        return JSONResponse({"ok": True, "user_id": user_id, "tier": tier, "email_sent": bool(email)})
+    except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)

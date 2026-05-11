@@ -634,3 +634,33 @@
 .forum-pagination button:hover:not(:disabled) { border-color: #333; color: #aaa; }
 .forum-pagination button:disabled { opacity: 0.3; cursor: default; }
 .forum-pagination span { font-size: 11px; color: #555; font-family: var(--mono); }
+
+/* ── Tier badges in forum posts ──────────────────────── */
+.fpost-name-degen {
+  color: #a78bfa;
+  text-shadow: 0 0 8px rgba(167,139,250,0.6), 0 0 16px rgba(167,139,250,0.3);
+}
+.fpost-name-omega {
+  color: #f59e0b;
+  text-shadow: 0 0 8px rgba(245,158,11,0.6), 0 0 16px rgba(245,158,11,0.3);
+}
+.fpost-tier-badge {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  margin-left: 6px;
+  vertical-align: middle;
+  font-family: var(--mono);
+}
+.fpost-tier-degen {
+  background: rgba(167,139,250,0.15);
+  border: 1px solid rgba(167,139,250,0.4);
+  color: #a78bfa;
+}
+.fpost-tier-omega {
+  background: rgba(245,158,11,0.15);
+  border: 1px solid rgba(245,158,11,0.4);
+  color: #f59e0b;
+}

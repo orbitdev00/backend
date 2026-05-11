@@ -64,6 +64,21 @@ function OwnerPanel({ profile, setProfile, currentUserId }) {
         if (error) throw error
         setProfile(p => ({ ...p, tier }))
         setMsg(`✓ Tier set to ${tier}`)
+        // Refresh auth context if owner changed their own tier
+        if (typeof refreshProfile === 'function') refreshProfile()
+        // Send welcome email via backend if upgrading to paid tier
+        if (tier === 'degen' || tier === 'omega') {
+          try {
+            await fetch('https://backend-production-a427a.up.railway.app/admin/assign-tier', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || '',
+              },
+              body: JSON.stringify({ user_id: profile.user_id, tier }),
+            })
+          } catch (e) { console.warn('Email send failed:', e) }
+        }
       } else if (action === 'add_mod') {
         const { error } = await supabase.from('user_reputation')
           .update({ role: 'mod' })
@@ -186,7 +201,7 @@ function OwnerPanel({ profile, setProfile, currentUserId }) {
 export default function Profile() {
   const { username } = useParams()
   const nav = useNavigate()
-  const { user } = useAuth()
+  const { user, refreshProfile } = useAuth()
   const [profile, setProfile]     = useState(null)
   const [badges, setBadges]       = useState([])
   const [threads, setThreads]     = useState([])

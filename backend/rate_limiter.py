@@ -135,6 +135,9 @@ def get_usage(user_id: str) -> dict:
 async def get_usage_async(user_id: str) -> dict:
     try:
         row = await _get_user_row(user_id)
+        tier = row.get("tier", "free")
+        if tier in ("degen", "omega", "pro", "owner"):
+            return {"count": 0, "limit": 999, "remaining": 999, "tier": tier, "unlimited": True}
         today = _today()
         count = row.get("daily_analysis_count", 0) or 0
         if str(row.get("daily_reset_date", "")) != today:
@@ -143,6 +146,8 @@ async def get_usage_async(user_id: str) -> dict:
             "count": count,
             "limit": FREE_DAILY_LIMIT,
             "remaining": max(0, FREE_DAILY_LIMIT - count),
+            "tier": "free",
+            "unlimited": False,
         }
     except Exception:
         return {"count": 0, "limit": FREE_DAILY_LIMIT, "remaining": FREE_DAILY_LIMIT}

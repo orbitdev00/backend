@@ -27,7 +27,7 @@ from badge_engine import (
     check_pnl_badges,
     check_subscription_badges,
 )
-from rate_limiter import check_rate_limit, consume_rate_limit, get_usage
+from rate_limiter import check_rate_limit, consume_rate_limit, get_usage, get_usage_async
 from stripe_handler import create_checkout_session, create_billing_portal, handle_webhook
 from tier_check import get_tier, invalidate as invalidate_tier_cache
 from ml.predictor import predict_xgboost  # XGBoost â€” background signals

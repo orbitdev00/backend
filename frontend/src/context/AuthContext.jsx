@@ -1,10 +1,9 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+﻿import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext({})
 
 export function AuthProvider({ children }) {
-  // Refresh session when tab becomes visible again (fixes mobile timeout)
   useEffect(() => {
     const handleVisibility = async () => {
       if (document.visibilityState === 'visible') {
@@ -20,26 +19,6 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      fetchProfile(session?.user?.id ?? null)
-      setLoading(false)
-    })
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      fetchProfile(session?.user?.id ?? null)
-      setLoading(false)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
   const fetchProfile = async (userId) => {
     if (!userId) { setProfile(null); return }
     const { data } = await supabase
@@ -50,14 +29,24 @@ export function AuthProvider({ children }) {
     setProfile(data || null)
   }
 
-  const signUp = async (email, password) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      }
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      setUser(session?.user ?? null)
+      fetchProfile(session?.user?.id ?? null)
+      setLoading(false)
     })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+      setUser(session?.user ?? null)
+      fetchProfile(session?.user?.id ?? null)
+      setLoading(false)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const signUp = async (email, password) => {
+    const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/auth/callback` } })
     return { data, error }
   }
 
@@ -71,12 +60,7 @@ export function AuthProvider({ children }) {
   }
 
   const signInWithGoogle = async () => {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      }
-    })
+    const { data, error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/auth/callback` } })
     return { data, error }
   }
 
@@ -86,9 +70,7 @@ export function AuthProvider({ children }) {
   }
 
   const resetPassword = async (email) => {
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
-    })
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth/reset-password` })
     return { data, error }
   }
 

@@ -90,6 +90,10 @@ export default function ForumCategory() {
               {threads.length === 0 && <div className="forum-empty">No threads yet. Be the first to post!</div>}
               {threads.map(t => (
                 <div key={t.id} className={`fthread-row ${t.pinned ? 'pinned' : ''}`} onClick={() => nav(`/forum/thread/${t.id}`)}>
+                  {t.rep?.avatar_url
+                    ? <img src={t.rep.avatar_url} className="fthread-pfp" alt="" />
+                    : <div className="fthread-pfp fthread-pfp-fallback">{(t.rep?.username || t.author_email || '?')[0].toUpperCase()}</div>
+                  }
                   <div className="fthread-main">
                     <div className="fthread-title-row">
                       {t.pinned && <span className="fthread-pin">📌</span>}
@@ -97,10 +101,6 @@ export default function ForumCategory() {
                       <span className="fthread-title">{t.title}</span>
                     </div>
                     <div className="fthread-author-row">
-                      {t.rep?.avatar_url
-                        ? <img src={t.rep.avatar_url} className="fthread-pfp" alt="" />
-                        : <div className="fthread-pfp fthread-pfp-fallback">{(t.rep?.username || t.author_email || '?')[0].toUpperCase()}</div>
-                      }
                       <span className={`fthread-author-name fpost-name-${t.rep?.tier || 'free'}`}>
                         {t.rep?.username || t.author_email?.split('@')[0]}
                       </span>

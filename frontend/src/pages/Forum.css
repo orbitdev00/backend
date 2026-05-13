@@ -673,11 +673,14 @@
 .fnew-select:focus { border-color: #2a2a2a; }
 
 /* Thread row author + pfp */
-.fthread-title-row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
-.fthread-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 480px; display: block; }
-.fthread-author-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
-.fthread-pfp { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-.fthread-pfp-fallback { background: #1e1e1e; color: #555; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; font-family: var(--mono); }
+.fthread-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-bottom: 1px solid #111; cursor: pointer; }
+.fthread-row:hover { background: #0a0a0a; }
+.fthread-pfp { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.fthread-pfp-fallback { background: #1e1e1e; color: #555; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; font-family: var(--mono); }
+.fthread-main { flex: 1; min-width: 0; }
+.fthread-title-row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; min-width: 0; }
+.fthread-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; font-weight: 600; color: #e2e8f0; min-width: 0; flex: 1; }
+.fthread-author-row { display: flex; align-items: center; gap: 5px; margin-top: 3px; }
 .fthread-author-name { font-size: 11px; font-family: var(--mono); }
 .fthread-author-dot { font-size: 11px; color: #333; }
 .fthread-author-time { font-size: 11px; color: #444; }

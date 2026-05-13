@@ -32,15 +32,26 @@ export default function ForumCategory() {
     if (!cat) { nav('/forum'); return }
     setCategory(cat)
 
-    const { data: threads } = await supabase
+    const { data: threadData } = await supabase
       .from('forum_threads')
-      .select('id,title,author_email,reply_count,view_count,vote_score,created_at,last_reply_at,pinned,locked')
+      .select('id,title,author_email,user_id,reply_count,view_count,vote_score,created_at,last_reply_at,pinned,locked')
       .eq('category_id', cat.id)
       .order('pinned', { ascending: false })
       .order('last_reply_at', { ascending: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
-    setThreads(threads || [])
+    // Fetch reputation for all thread authors
+    const authorIds = [...new Set((threadData || []).map(t => t.user_id).filter(Boolean))]
+    let repMap = {}
+    if (authorIds.length > 0) {
+      const { data: reps } = await supabase
+        .from('user_reputation')
+        .select('user_id,username,avatar_url,tier')
+        .in('user_id', authorIds)
+      ;(reps || []).forEach(r => { repMap[r.user_id] = r })
+    }
+
+    setThreads((threadData || []).map(t => ({ ...t, rep: repMap[t.user_id] || null })))
     setLoading(false)
   }
 
@@ -80,12 +91,22 @@ export default function ForumCategory() {
               {threads.map(t => (
                 <div key={t.id} className={`fthread-row ${t.pinned ? 'pinned' : ''}`} onClick={() => nav(`/forum/thread/${t.id}`)}>
                   <div className="fthread-main">
-                    <div className="fthread-title">
+                    <div className="fthread-title-row">
                       {t.pinned && <span className="fthread-pin">📌</span>}
                       {t.locked && <span className="fthread-lock">🔒</span>}
-                      {t.title}
+                      <span className="fthread-title">{t.title}</span>
                     </div>
-                    <div className="fthread-author">{t.author_email?.split('@')[0]} · {timeAgo(t.created_at)}</div>
+                    <div className="fthread-author-row">
+                      {t.rep?.avatar_url
+                        ? <img src={t.rep.avatar_url} className="fthread-pfp" alt="" />
+                        : <div className="fthread-pfp fthread-pfp-fallback">{(t.rep?.username || t.author_email || '?')[0].toUpperCase()}</div>
+                      }
+                      <span className={`fthread-author-name fpost-name-${t.rep?.tier || 'free'}`}>
+                        {t.rep?.username || t.author_email?.split('@')[0]}
+                      </span>
+                      <span className="fthread-author-dot">·</span>
+                      <span className="fthread-author-time">{timeAgo(t.created_at)}</span>
+                    </div>
                   </div>
                   <div className="fthread-stat">{t.reply_count}</div>
                   <div className="fthread-stat">{t.view_count}</div>

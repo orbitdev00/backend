@@ -251,14 +251,6 @@ html { -webkit-text-size-adjust: 100%; }
 
 /* ── Black hole / landing animation mobile ───────────── */
 @media (max-width: 640px) {
-  .bh-canvas, .lp-bh-canvas {
-    position: fixed !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    width: 280px !important;
-    height: 280px !important;
-  }
   .landing-pfp {
     width: 56px !important;
     height: 56px !important;

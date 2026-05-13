@@ -39,8 +39,8 @@ export default function BlackHole({ active, onBlack }) {
       return
     }
 
-    const W = canvas.width  = window.innerWidth
-    const H = canvas.height = window.innerHeight
+    const W = canvas.width  = canvas.offsetWidth  || window.innerWidth
+    const H = canvas.height = canvas.offsetHeight || window.innerHeight
     canvas.style.display = 'block'
     const ctx    = canvas.getContext('2d')
     // Center on pfp position

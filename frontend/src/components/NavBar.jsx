@@ -28,6 +28,7 @@ export default function NavBar({ active, onLogoClick }) {
   const [showPricing, setShowPricing]     = useState(false)
   const [userBadges, setUserBadges]       = useState({ owned: [], all: [], ownedIds: new Set() })
   const [portalLoading, setPortalLoading] = useState(false)
+  const [portalError, setPortalError]     = useState('')
   const [selfGrantId, setSelfGrantId]     = useState('')
   const [selfGrantMsg, setSelfGrantMsg]   = useState('')
   const [selfGranting, setSelfGranting]   = useState(false)
@@ -343,10 +344,19 @@ export default function NavBar({ active, onLogoClick }) {
                 </button>
               )}
               {tier !== 'free' && (
-                <button className="nb-sub-portal-btn" style={{marginTop:10}} disabled={portalLoading}
-                  onClick={async () => { setPortalLoading(true); await openBillingPortal(); setPortalLoading(false) }}>
-                  {portalLoading ? 'Redirecting...' : 'Manage · Cancel · Invoices →'}
-                </button>
+                <>
+                  <button className="nb-sub-portal-btn" style={{marginTop:10}} disabled={portalLoading}
+                    onClick={async () => {
+                      setPortalLoading(true)
+                      setPortalError('')
+                      const result = await openBillingPortal()
+                      if (result?.error) setPortalError(result.error)
+                      setPortalLoading(false)
+                    }}>
+                    {portalLoading ? 'Redirecting...' : 'Manage · Cancel · Invoices →'}
+                  </button>
+                  {portalError && <div style={{fontSize:11, color:'#f87171', marginTop:4, fontFamily:'var(--mono)'}}>{portalError}</div>}
+                </>
               )}
             </div>
 

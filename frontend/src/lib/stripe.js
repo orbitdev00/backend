@@ -32,16 +32,26 @@ export async function startCheckout(tier) {
 
 export async function openBillingPortal() {
   const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) return null
-  const r = await fetch(`${API}/stripe/billing-portal`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      user_id:    session.user.id,
-      return_url: window.location.origin,
-    }),
-  })
-  const data = await r.json()
-  if (data.url) window.location.href = data.url
-  return data
+  if (!session?.user) return { error: 'Not logged in' }
+  try {
+    const r = await fetch(`${API}/stripe/billing-portal`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id:    session.user.id,
+        return_url: window.location.origin,
+      }),
+    })
+    const data = await r.json()
+    if (data.url) {
+      window.location.href = data.url
+    } else {
+      console.error('[Stripe] billing portal error:', data)
+      return { error: data.error || 'Failed to open billing portal' }
+    }
+    return data
+  } catch (e) {
+    console.error('[Stripe] billing portal fetch failed:', e)
+    return { error: e.message }
+  }
 }

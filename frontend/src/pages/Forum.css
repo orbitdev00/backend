@@ -619,7 +619,8 @@
 .fnew-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #555; margin-bottom: 8px; font-family: var(--mono); }
 .fnew-input { width: 100%; background: #060606; border: 1px solid #1e1e1e; border-radius: 5px; color: #ccc; font-family: inherit; font-size: 13px; font-weight: 300; padding: 9px 12px; outline: none; box-sizing: border-box; }
 .fnew-input:focus { border-color: #2a2a2a; }
-.fnew-textarea { resize: vertical; line-height: 1.6; }
+.fnew-textarea { width: 100%; background: #060606; border: 1px solid #1e1e1e; border-radius: 5px; color: #ccc; font-family: inherit; font-size: 13px; font-weight: 300; padding: 9px 12px; outline: none; box-sizing: border-box; resize: vertical; line-height: 1.6; }
+.fnew-textarea:focus { border-color: #2a2a2a; }
 .fnew-select { appearance: none; cursor: pointer; }
 .fnew-actions { display: flex; gap: 10px; justify-content: flex-end; padding: 16px 20px; border-top: 1px solid #111; }
 .fnew-cancel { background: none; border: 1px solid #1e1e1e; border-radius: 4px; color: #555; font-family: var(--mono); font-size: 10px; padding: 8px 16px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; }
@@ -664,3 +665,9 @@
   border: 1px solid rgba(245,158,11,0.4);
   color: #f59e0b;
 }
+
+.fnew-form { display: flex; flex-direction: column; gap: 16px; }
+.fnew-field { display: flex; flex-direction: column; gap: 6px; }
+.fnew-field label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #555; font-family: var(--mono); }
+.fnew-select { width: 100%; background: #060606; border: 1px solid #1e1e1e; border-radius: 5px; color: #ccc; font-family: inherit; font-size: 13px; padding: 9px 12px; outline: none; box-sizing: border-box; appearance: none; cursor: pointer; }
+.fnew-select:focus { border-color: #2a2a2a; }

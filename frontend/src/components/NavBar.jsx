@@ -27,8 +27,9 @@ export default function NavBar({ active, onLogoClick }) {
   const [tier, setTier]                   = useState('free')
   const [showPricing, setShowPricing]     = useState(false)
   const [userBadges, setUserBadges]       = useState({ owned: [], all: [], ownedIds: new Set() })
-  const [portalLoading, setPortalLoading] = useState(false)
-  const [portalError, setPortalError]     = useState('')
+  const [portalLoading, setPortalLoading]   = useState(false)
+  const [portalError, setPortalError]       = useState('')
+  const [hasStripeAccount, setHasStripeAccount] = useState(false)
   const [selfGrantId, setSelfGrantId]     = useState('')
   const [selfGrantMsg, setSelfGrantMsg]   = useState('')
   const [selfGranting, setSelfGranting]   = useState(false)
@@ -65,13 +66,14 @@ export default function NavBar({ active, onLogoClick }) {
 
   useEffect(() => {
     if (!user) return
-    supabase.from('user_reputation').select('username,bio,avatar_url,role').eq('user_id', user.id).single()
+    supabase.from('user_reputation').select('username,bio,avatar_url,role,stripe_customer_id').eq('user_id', user.id).single()
       .then(({ data }) => {
         if (data?.username) setUsername(data.username)
         if (data?.bio) setBio(data.bio)
         if (data?.avatar_url) setPfpUrl(data.avatar_url)
         if (data?.wallet_address) setWallet(data.wallet_address)
         if (data?.role) setUserRole(data.role)
+        setHasStripeAccount(!!data?.stripe_customer_id)
       })
   }, [user])
 
@@ -345,17 +347,23 @@ export default function NavBar({ active, onLogoClick }) {
               )}
               {tier !== 'free' && (
                 <>
-                  <button className="nb-sub-portal-btn" style={{marginTop:10}} disabled={portalLoading}
-                    onClick={async () => {
-                      setPortalLoading(true)
-                      setPortalError('')
-                      const result = await openBillingPortal()
-                      if (result?.error) setPortalError(result.error)
-                      setPortalLoading(false)
-                    }}>
-                    {portalLoading ? 'Redirecting...' : 'Manage · Cancel · Invoices →'}
-                  </button>
-                  {portalError && <div style={{fontSize:11, color:'#f87171', marginTop:4, fontFamily:'var(--mono)'}}>{portalError}</div>}
+                  {hasStripeAccount ? (
+                    <>
+                      <button className="nb-sub-portal-btn" style={{marginTop:10}} disabled={portalLoading}
+                        onClick={async () => {
+                          setPortalLoading(true)
+                          setPortalError('')
+                          const result = await openBillingPortal()
+                          if (result?.error) setPortalError(result.error)
+                          setPortalLoading(false)
+                        }}>
+                        {portalLoading ? 'Redirecting...' : 'Manage · Cancel · Invoices →'}
+                      </button>
+                      {portalError && <div style={{fontSize:11, color:'#f87171', marginTop:4, fontFamily:'var(--mono)'}}>{portalError}</div>}
+                    </>
+                  ) : (
+                    <div style={{fontSize:11, color:'#888', marginTop:8, fontFamily:'var(--mono)'}}>Owner-granted plan · expires in 30 days</div>
+                  )}
                 </>
               )}
             </div>

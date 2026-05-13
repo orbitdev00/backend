@@ -58,12 +58,15 @@ function OwnerPanel({ profile, setProfile, currentUserId }) {
     setMsg('')
     try {
       if (action === 'set_tier') {
+        const expiresAt = (tier === 'degen' || tier === 'omega')
+          ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          : null
         const { error } = await supabase.from('user_reputation')
-          .update({ tier })
+          .update({ tier, subscription_expires_at: expiresAt })
           .eq('user_id', profile.user_id)
         if (error) throw error
         setProfile(p => ({ ...p, tier }))
-        setMsg(`✓ Tier set to ${tier}`)
+        setMsg(`✓ Tier set to ${tier}${expiresAt ? ' (expires in 30 days)' : ''}`)
         // Refresh auth context if owner changed their own tier
         if (typeof refreshProfile === 'function') refreshProfile()
         // Send welcome email via backend if upgrading to paid tier

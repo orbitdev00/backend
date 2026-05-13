@@ -664,20 +664,8 @@ export default function App() {
           </div>
         )}
 
-        {/* Trial blocked modal */}
-        {guestBlocked && (
-        <div className="trial-modal-overlay">
-          <div className="trial-modal">
-            <img src={kikoPfp} className="trial-modal-pfp" alt="" />
-            <h2 className="trial-modal-title">Create a free account</h2>
-            <p className="trial-modal-sub">You've used your guest analysis. Sign up free to get 5 analyses per day, full forum access, and more.</p>
-            <button className="btn-primary" style={{width:'100%',marginTop:8}} onClick={() => window.location.href='/signup'}>Create Free Account</button>
-            <button style={{background:'none',border:'none',color:'#64748b',fontSize:12,cursor:'pointer',marginTop:8}} onClick={() => window.location.href='/login'}>Already have an account? Sign in</button>
-          </div>
-        </div>
-      )}
-      {/* Guest blocked modal */}
-      {guestBlocked && !user && (
+        {/* Guest blocked modal — only for unauthenticated users */}
+        {guestBlocked && !user && (
         <div className="trial-modal-overlay" style={{backdropFilter:'blur(8px)'}}>
           <div className="trial-modal" style={{maxWidth:380}}>
             <img src={kikoPfp} className="trial-modal-pfp" alt="" />

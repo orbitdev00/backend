@@ -786,7 +786,7 @@ export default function App() {
               <div className="dash-col dash-col-4">
                 <StreamReveal show={phase === "revealing"} delay={600}>
                 <div className="panel center-input-panel">
-                  <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } analyze(mint) }}
+                  <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } mint.trim() === activeMint ? handleRefresh() : analyze(mint) }}
                     onRefresh={null} loading={status === 'loading'} hasData={false} />
                   {rateLimitMsg && (
                     <div style={{marginTop:8,padding:'6px 10px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.3)',borderRadius:4,fontSize:11,color:'#ef4444',fontFamily:'var(--mono)',display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>

@@ -21,6 +21,8 @@ router = APIRouter()
 import os
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
 ORBIT_FROM_EMAIL = "Orbit <noreply@orbit-app.xyz>"
+ORBIT_BOT_ID = "orbit-system-bot-0000-000000000000"
+
 
 async def _get_user_email(user_id: str) -> str | None:
     """Fetch user email from Supabase."""
@@ -70,7 +72,7 @@ async def _send_upgrade_email(email: str, tier: str):
                 json={
                     "from": ORBIT_FROM_EMAIL,
                     "to": [email],
-                    "subject": f"Welcome to Orbit {tier_name} 🚀",
+                    "subject": f"Welcome to Orbit {tier_name}",
                     "html": html,
                 },
             )
@@ -78,6 +80,21 @@ async def _send_upgrade_email(email: str, tier: str):
     except Exception as e:
         print(f"[Email] Failed to send: {e}")
 
+
+async def _send_system_dm(receiver_id: str, body: str):
+    """Insert a DM from the Orbit system bot to a user."""
+    async with httpx.AsyncClient(timeout=10) as client:
+        r = await client.post(
+            f"{SUPABASE_URL}/rest/v1/direct_messages",
+            headers=SUPA_HEADERS,
+            json={
+                "sender_id": ORBIT_BOT_ID,
+                "receiver_id": receiver_id,
+                "body": body,
+                "read": False,
+            },
+        )
+        print(f"[DM] System DM sent to {receiver_id[:8]}... status={r.status_code}")
 
 
 PRICE_TO_TIER = {}  # populated on first use
@@ -200,10 +217,14 @@ async def stripe_webhook(request: Request):
 
         if user_id and tier:
             await _set_tier(user_id, tier, customer_id)
-            # Send welcome email
             recipient = email or await _get_user_email(user_id)
             if recipient:
                 await _send_upgrade_email(recipient, tier)
+            await _send_system_dm(
+                user_id,
+                f"Welcome to Orbit {tier.upper()}. Your subscription is now active. "
+                f"Head to /analyze to get started."
+            )
         else:
             print(f"[Stripe] checkout.session.completed — missing user_id or tier. meta={session.get('metadata')}")
 
@@ -214,7 +235,6 @@ async def stripe_webhook(request: Request):
         user_id = sub.get("metadata", {}).get("user_id") or await _get_user_by_customer(customer_id)
 
         if user_id:
-            # Get the price ID from the subscription items
             items = sub.get("items", {}).get("data", [])
             price_id = items[0]["price"]["id"] if items else None
             tier = _price_map().get(price_id)
@@ -232,6 +252,11 @@ async def stripe_webhook(request: Request):
         user_id = sub.get("metadata", {}).get("user_id") or await _get_user_by_customer(customer_id)
         if user_id:
             await _set_tier(user_id, "free")
+            await _send_system_dm(
+                user_id,
+                "Your Orbit subscription has been cancelled. You've been moved to the Free tier. "
+                "Resubscribe anytime at orbit-app.xyz/pricing."
+            )
             print(f"[Stripe] Downgraded {user_id[:8]}... to free (subscription deleted)")
 
     # ── Invoice payment failed ─────────────────────────────────
@@ -254,7 +279,6 @@ async def billing_portal(request: Request):
         user_id = body.get("user_id")
         origin = request.headers.get("origin", "https://orbit-app.xyz")
 
-        # Get stripe_customer_id from Supabase
         async with httpx.AsyncClient(timeout=10) as client:
             r = await client.get(
                 f"{SUPABASE_URL}/rest/v1/user_reputation",
@@ -276,6 +300,7 @@ async def billing_portal(request: Request):
         print(f"[Stripe] Portal error: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
 
+
 @router.post("/admin/assign-tier")
 async def assign_tier(request: Request):
     """Owner endpoint — manually assign tier to a user and send welcome email."""
@@ -290,10 +315,15 @@ async def assign_tier(request: Request):
         if not user_id or not tier:
             return JSONResponse({"error": "user_id and tier required"}, status_code=400)
         await _set_tier(user_id, tier)
-        # Send welcome email
         email = await _get_user_email(user_id)
         if email and tier in ("degen", "omega"):
             await _send_upgrade_email(email, tier)
+        if tier in ("degen", "omega"):
+            await _send_system_dm(
+                user_id,
+                f"Welcome to Orbit {tier.upper()}. Your subscription is now active. "
+                f"Head to /analyze to get started."
+            )
         return JSONResponse({"ok": True, "user_id": user_id, "tier": tier, "email_sent": bool(email)})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)

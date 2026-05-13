@@ -33,7 +33,7 @@ export async function startCheckout(tier) {
 export async function openBillingPortal() {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.user) return null
-  const r = await fetch(`${API}/stripe/portal`, {
+  const r = await fetch(`${API}/stripe/billing-portal`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

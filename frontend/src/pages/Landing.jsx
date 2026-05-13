@@ -185,15 +185,18 @@ export default function Landing({ onSwitch }) {
       if (canvas.height !== newH) resize()
     }, 1000)
     raf = requestAnimationFrame(draw)
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); clearInterval(heightInterval) }
+    resizeCleanupRef.current = () => { window.removeEventListener('resize', resize); clearInterval(heightInterval) }
+    return () => { cancelAnimationFrame(raf); resizeCleanupRef.current && resizeCleanupRef.current() }
   }, [])
 
   // Black hole drawn directly on the star canvas (already behind everything)
   const bhRef = useRef({ active: false, raf: null })
+  const resizeCleanupRef = useRef(null)
 
   const flyTo = (e, dest) => {
     if (bhRef.current.active) return
     // Lock scroll without moving page
+    if (resizeCleanupRef.current) resizeCleanupRef.current()
     const scrollY = window.scrollY
     document.body.style.overflow = 'hidden'
     document.body.style.top = `-${scrollY}px`

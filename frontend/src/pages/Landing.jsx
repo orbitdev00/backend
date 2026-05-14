@@ -127,9 +127,6 @@ function Reveal({ children, delay = 0, className = '' }) {
 }
 
 export default function Landing({ onSwitch }) {
-  const canvasRef = useRef(null)
-  const scrollRef = useRef(0)
-  const starRafRef = useRef(null)
   const [visible, setVisible] = useState(false)
   const [mockVisible, setMockVisible] = useState(false)
   const [bhActive, setBhActive] = useState(false)
@@ -139,81 +136,6 @@ export default function Landing({ onSwitch }) {
   const mockInView = useRef(false)
 
   useEffect(() => { setTimeout(() => setVisible(true), 80) }, [])
-
-  useEffect(() => {
-    const onScroll = () => { scrollRef.current = window.scrollY }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  // Starfield — portaled to document.body to escape .lp stacking context entirely
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    let stars = []
-
-    // 3 distinct parallax layers: far (static), mid (slow drift), near (fast drift)
-    const LAYERS = [
-      { n: 180, spd: 0,    rMin: 0.15, rMax: 0.5,  oMin: 0.04, oMax: 0.18, twk: 0    },
-      { n: 80,  spd: 0.18, rMin: 0.35, rMax: 0.85, oMin: 0.14, oMax: 0.38, twk: 0.15 },
-      { n: 30,  spd: 0.45, rMin: 0.85, rMax: 2.0,  oMin: 0.35, oMax: 0.72, twk: 0.3  },
-    ]
-
-    const init = () => {
-      canvas.width  = window.innerWidth
-      canvas.height = window.innerHeight
-      const W = canvas.width, H = canvas.height
-      stars = LAYERS.flatMap(({ n, spd, rMin, rMax, oMin, oMax, twk }) =>
-        Array.from({ length: n }, () => ({
-          x:     Math.random() * W,
-          y:     Math.random() * H,
-          r:     rMin + Math.random() * (rMax - rMin),
-          o:     oMin + Math.random() * (oMax - oMin),
-          spd, twk,
-          phase: Math.random() * Math.PI * 2,
-          rate:  0.5 + Math.random() * 0.7,
-        }))
-      )
-    }
-
-    const draw = (ts) => {
-      const W = canvas.width, H = canvas.height
-      ctx.fillStyle = '#08080f'
-      ctx.fillRect(0, 0, W, H)
-      const scroll = scrollRef.current
-
-      for (const s of stars) {
-        const tw  = s.twk > 0 ? Math.sin(ts * 0.0008 * s.rate + s.phase) * s.twk : 0
-        const o   = Math.max(0.02, Math.min(0.95, s.o + tw))
-        const rawY = s.y - scroll * s.spd
-        const dy1  = ((rawY % H) + H) % H
-        const dy2  = dy1 - H   // ghost copy above to prevent pop on wrap
-
-        const paint = (dy) => {
-          if (dy < -s.r * 6 || dy > H + s.r * 6) return
-          if (s.r > 1.0 && s.spd >= 0.45) {
-            const g = ctx.createRadialGradient(s.x, dy, 0, s.x, dy, s.r * 4)
-            g.addColorStop(0, `rgba(200,180,255,${o * 0.3})`)
-            g.addColorStop(1, 'rgba(0,0,0,0)')
-            ctx.beginPath(); ctx.arc(s.x, dy, s.r * 4, 0, Math.PI * 2)
-            ctx.fillStyle = g; ctx.fill()
-          }
-          ctx.beginPath(); ctx.arc(s.x, dy, s.r, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(255,255,255,${o})`; ctx.fill()
-        }
-
-        paint(dy1)
-        paint(dy2)
-      }
-      starRafRef.current = requestAnimationFrame(draw)
-    }
-
-    init()
-    window.addEventListener('resize', init)
-    starRafRef.current = requestAnimationFrame(draw)
-    return () => { cancelAnimationFrame(starRafRef.current); window.removeEventListener('resize', init) }
-  }, [])
 
   const flyTo = (e, dest) => {
     if (bhActive) return
@@ -237,12 +159,7 @@ export default function Landing({ onSwitch }) {
   }, [])
 
   return (
-    <>
-      <canvas ref={canvasRef} className="lp-canvas" style={{
-        position:'fixed', top:0, left:0, width:'100vw', height:'100vh',
-        pointerEvents:'none', zIndex:0, display:'block',
-      }} />
-      <div className={`lp ${visible ? 'lp-in' : ''}`}>
+    <div className={`lp ${visible ? 'lp-in' : ''}`}>
       <LandingBlackHole
         active={bhActive}
         origin={bhOrigin}
@@ -686,6 +603,5 @@ export default function Landing({ onSwitch }) {
         </div>
       </footer>
     </div>
-    </>
   )
 }

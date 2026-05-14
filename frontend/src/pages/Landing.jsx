@@ -137,6 +137,33 @@ export default function Landing({ onSwitch }) {
 
   useEffect(() => { setTimeout(() => setVisible(true), 80) }, [])
 
+  // Smooth scroll — lerp native scroll position in RAF so content moves like the stars
+  useEffect(() => {
+    if (window.matchMedia('(pointer: coarse)').matches) return  // skip on touch
+    let target  = window.scrollY
+    let current = target
+    let raf     = null
+
+    const tick = () => {
+      current += (target - current) * 0.1
+      window.scrollTo(0, current)
+      raf = Math.abs(target - current) > 0.1 ? requestAnimationFrame(tick) : null
+    }
+
+    const onWheel = e => {
+      e.preventDefault()
+      const max = document.documentElement.scrollHeight - window.innerHeight
+      target = Math.max(0, Math.min(target + e.deltaY, max))
+      if (!raf) raf = requestAnimationFrame(tick)
+    }
+
+    window.addEventListener('wheel', onWheel, { passive: false })
+    return () => {
+      window.removeEventListener('wheel', onWheel)
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [])
+
   const flyTo = (e, dest) => {
     if (bhActive) return
     const rect = e.currentTarget.getBoundingClientRect()

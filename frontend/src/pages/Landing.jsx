@@ -156,7 +156,7 @@ export default function Landing({ onSwitch }) {
     const resize = () => {
       canvas.width  = window.innerWidth
       canvas.height = window.innerHeight
-      stars = Array.from({ length: 900 }, () => {
+      stars = Array.from({ length: 380 }, () => {
         const depth = Math.random() * 0.75 + 0.05
         const t = (depth - 0.05) / 0.75
         return {
@@ -182,17 +182,25 @@ export default function Landing({ onSwitch }) {
         const w2 = Math.sin(ts * 0.0017 * s.speed * 45 + s.phase2) * 0.5
         const o  = Math.max(0.02, Math.min(0.95, s.o + (w1 + w2) * 0.32))
         const r  = Math.max(0.1, s.r + w1 * 0.3)
-        // Parallax: foreground (high depth) drifts upward faster as you scroll; wraps
-        const drawY = ((s.y - scroll * s.depth * 0.2) % H + H) % H
-        if (r > 1.5 && s.depth > 0.52) {
-          const grd = ctx.createRadialGradient(s.x, drawY, 0, s.x, drawY, r * 4.5)
-          grd.addColorStop(0, `rgba(210,190,255,${o * 0.28})`)
-          grd.addColorStop(1, 'rgba(0,0,0,0)')
-          ctx.beginPath(); ctx.arc(s.x, drawY, r * 4.5, 0, Math.PI * 2)
-          ctx.fillStyle = grd; ctx.fill()
+        // Parallax: foreground stars (high depth) drift upward noticeably as you scroll
+        const rawY = s.y - scroll * s.depth * 0.5
+        const drawY = ((rawY % H) + H) % H
+        // Draw a second copy shifted by H so stars don't pop when wrapping
+        const drawYB = drawY - H
+        const drawStar = (dy) => {
+          if (dy < -r * 5 || dy > H + r * 5) return
+          if (r > 1.5 && s.depth > 0.52) {
+            const grd = ctx.createRadialGradient(s.x, dy, 0, s.x, dy, r * 4.5)
+            grd.addColorStop(0, `rgba(210,190,255,${o * 0.28})`)
+            grd.addColorStop(1, 'rgba(0,0,0,0)')
+            ctx.beginPath(); ctx.arc(s.x, dy, r * 4.5, 0, Math.PI * 2)
+            ctx.fillStyle = grd; ctx.fill()
+          }
+          ctx.beginPath(); ctx.arc(s.x, dy, r, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(255,255,255,${o})`; ctx.fill()
         }
-        ctx.beginPath(); ctx.arc(s.x, drawY, r, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(255,255,255,${o})`; ctx.fill()
+        drawStar(drawY)
+        drawStar(drawYB)
       }
       starRafRef.current = requestAnimationFrame(draw)
     }

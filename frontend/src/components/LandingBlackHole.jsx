@@ -24,13 +24,10 @@ export default function LandingBlackHole({ active, origin, onDone }) {
     const cy = origin.y
     const maxR = Math.sqrt(W * W + H * H) * 0.5
 
-    // Hide the real star canvas immediately — we draw our own stars for absorption
     const lpCanvas = document.querySelector('.lp-canvas')
-    if (lpCanvas) { lpCanvas.style.opacity = '0'; lpCanvas.style.display = 'none' }
     const sfCanvas = document.querySelector('.starfield-canvas')
-    if (sfCanvas) { sfCanvas.style.opacity = '0'; sfCanvas.style.display = 'none' }
 
-    // Always generate absorption stars regardless of lpCanvas
+    // Generate absorption stars — always, regardless of lpCanvas
     const starData = Array.from({ length: 280 }, () => ({
       x: Math.random() * W,
       y: Math.random() * H,
@@ -164,12 +161,22 @@ export default function LandingBlackHole({ active, origin, onDone }) {
         if (t >= 1) { state.phase = 'grow'; state.t0 = ts }
 
       } else if (state.phase === 'grow') {
-        // Grows to 120px radius
+        // Grows to 120px radius — cross-fade real starfield out over second half
         const et    = easeIO(t)
         const holeR = 40 + et * 80
         drawDisk(holeR, 1)
 
+        // Fade real starfield out during second half of grow so fake stars
+        // take over at exactly the same opacity — no pop at suck start
+        if (t > 0.5) {
+          const fade = 1 - (t - 0.5) / 0.5
+          if (lpCanvas) lpCanvas.style.opacity = `${fade}`
+          if (sfCanvas) sfCanvas.style.opacity = `${fade}`
+        }
+
         if (t >= 1) {
+          if (lpCanvas) { lpCanvas.style.opacity = '0'; lpCanvas.style.display = 'none' }
+          if (sfCanvas) { sfCanvas.style.opacity = '0'; sfCanvas.style.display = 'none' }
           lpHidden = true
           canvas.style.zIndex = '9999'
           document.body.classList.add('lp-bh-sucking')
@@ -181,7 +188,10 @@ export default function LandingBlackHole({ active, origin, onDone }) {
         const et    = easeIO(t)
         const holeR = 120 + et * 30
 
-        // Draw remaining stars being pulled in
+        // Fade fake stars in over first 8% of suck so they don't pop
+        const starFadeIn = Math.min(1, et / 0.08)
+
+        // Draw stars being pulled toward the black hole
         for (const s of starData) {
           const dist = Math.sqrt((s.x - cx) ** 2 + (s.y - cy) ** 2)
           const normD = dist / maxR
@@ -193,7 +203,7 @@ export default function LandingBlackHole({ active, origin, onDone }) {
           const scale = Math.max(0, 1 - eased)
           if (scale < 0.01) continue
           ctx.beginPath(); ctx.arc(sx, sy, s.r * scale, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(255,255,255,${s.o * scale})`
+          ctx.fillStyle = `rgba(255,255,255,${s.o * scale * starFadeIn})`
           ctx.fill()
         }
 

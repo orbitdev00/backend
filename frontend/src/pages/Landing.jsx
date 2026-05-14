@@ -159,7 +159,8 @@ export default function Landing({ onSwitch }) {
         o: Math.random() * 0.5 + 0.1,
         speed: Math.random() * 0.015 + 0.003,
         phase: Math.random() * Math.PI * 2,
-        depth: Math.random() * 0.35 + 0.05,
+        phase2: Math.random() * Math.PI * 2,
+        depth: Math.random() * 0.65 + 0.05,
       }))
     }
 
@@ -167,10 +168,15 @@ export default function Landing({ onSwitch }) {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       const scroll = scrollRef.current
       stars.forEach(s => {
-        const o = Math.max(0.02, Math.min(0.9, s.o + Math.sin(t * 0.001 * s.speed * 60 + s.phase) * 0.25))
-        const r = Math.max(0.1, s.r + Math.sin(t * 0.0008 * s.speed * 60 + s.phase) * 0.2)
+        // Two-frequency twinkle so stars shimmer independently, not in unison
+        const w1 = Math.sin(t * 0.001 * s.speed * 60 + s.phase)
+        const w2 = Math.sin(t * 0.0017 * s.speed * 45 + s.phase2) * 0.5
+        const o = Math.max(0.02, Math.min(0.95, s.o + (w1 + w2) * 0.32))
+        const r = Math.max(0.1, s.r + w1 * 0.3)
+        // Parallax: stars with higher depth lag further behind as page scrolls
+        const drawY = s.y + scroll * s.depth
         ctx.beginPath()
-        ctx.arc(s.x, s.y, r, 0, Math.PI * 2)
+        ctx.arc(s.x, drawY, r, 0, Math.PI * 2)
         ctx.fillStyle = `rgba(255,255,255,${o})`
         ctx.fill()
       })

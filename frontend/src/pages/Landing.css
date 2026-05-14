@@ -43,13 +43,42 @@
 /* ── Reveal animation ──────────────────────────────────── */
 .lp-reveal {
   opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.7s ease, transform 0.7s ease;
+  transform: translateY(36px) scale(0.97);
+  filter: blur(5px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+              filter 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .lp-revealed {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
+  filter: blur(0px);
 }
+
+/* ── Extra ticker strips ─────────────────────────────── */
+.lp-strip {
+  overflow: hidden; padding: 11px 0;
+  position: relative; z-index: 1;
+}
+.lp-strip-inner {
+  display: flex; white-space: nowrap;
+}
+.lp-strip-fwd { animation: ticker 28s linear infinite; }
+.lp-strip-rev { animation: ticker 32s linear infinite reverse; }
+.lp-strip-green {
+  border-top: 1px solid rgba(74,222,128,0.1);
+  border-bottom: 1px solid rgba(74,222,128,0.1);
+  background: #020804;
+}
+.lp-strip-green .lp-tick  { color: rgba(74,222,128,0.45); }
+.lp-strip-green .lp-tick-sep { color: rgba(74,222,128,0.6); }
+.lp-strip-amber {
+  border-top: 1px solid rgba(245,158,11,0.1);
+  border-bottom: 1px solid rgba(245,158,11,0.1);
+  background: #070500;
+}
+.lp-strip-amber .lp-tick  { color: rgba(245,158,11,0.45); }
+.lp-strip-amber .lp-tick-sep { color: rgba(245,158,11,0.6); }
 
 /* ── NAV ───────────────────────────────────────────────── */
 .lp-nav {

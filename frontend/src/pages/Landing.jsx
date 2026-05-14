@@ -275,6 +275,15 @@ export default function Landing({ onSwitch }) {
       {/* ── FEATURES ── */}
       <FeaturesSection />
 
+      {/* ── GREEN STRIP ── */}
+      <div className="lp-strip lp-strip-green">
+        <div className="lp-strip-inner lp-strip-fwd">
+          {['PURITY SCORE','SNIPER DETECTION','DEV HISTORY','SMART MONEY','HOLDER VELOCITY','SUPPLY CONCENTRATION','DEX SCAN','TOKEN AGE','LIQUIDITY DEPTH','MIGRATION STATUS',
+            'PURITY SCORE','SNIPER DETECTION','DEV HISTORY','SMART MONEY','HOLDER VELOCITY','SUPPLY CONCENTRATION','DEX SCAN','TOKEN AGE','LIQUIDITY DEPTH','MIGRATION STATUS',
+          ].map((t, i) => <span key={i} className="lp-tick">{t}<span className="lp-tick-sep">◆</span></span>)}
+        </div>
+      </div>
+
       {/* ── MOCK ANALYZER ── */}
       <section className="lp-section lp-mock-section" id="section-analyzer">
         <Reveal>
@@ -421,6 +430,15 @@ export default function Landing({ onSwitch }) {
           </Reveal>
         </div>
       </section>
+
+      {/* ── AMBER STRIP ── */}
+      <div className="lp-strip lp-strip-amber">
+        <div className="lp-strip-inner lp-strip-rev">
+          {['PRICE TARGET','MC ALERT','VOLUME SPIKE','DIP ALERT','WATCHLIST','PUMP SIGNAL','TARGET HIT','AUDIO ALERT','TRAILING STOP','REAL-TIME PRICE',
+            'PRICE TARGET','MC ALERT','VOLUME SPIKE','DIP ALERT','WATCHLIST','PUMP SIGNAL','TARGET HIT','AUDIO ALERT','TRAILING STOP','REAL-TIME PRICE',
+          ].map((t, i) => <span key={i} className="lp-tick">{t}<span className="lp-tick-sep">◆</span></span>)}
+        </div>
+      </div>
 
       {/* ── ALERTS DEMO ── */}
       <section className="lp-section lp-alerts-section" id="section-alerts">

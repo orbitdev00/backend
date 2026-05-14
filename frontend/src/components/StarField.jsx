@@ -14,7 +14,7 @@ export default function StarField() {
     const resize = () => {
       canvas.width  = window.innerWidth
       canvas.height = window.innerHeight
-      stars = Array.from({ length: 700 }, () => {
+      stars = Array.from({ length: 490 }, () => {
         const depth = Math.random() * 0.75 + 0.05   // 0.05 (far) → 0.80 (near)
         const t = (depth - 0.05) / 0.75             // 0–1 closeness
         return {

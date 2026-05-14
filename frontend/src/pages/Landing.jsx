@@ -5,7 +5,7 @@ import './Landing.css'
 
 const SOCIALS = [
   { label: 'X', url: 'https://x.com/OrbitDevs00' },
-  { label: 'Discord', url: 'https://discord.gg/792YWsb4sA' },
+  { label: 'Discord', url: 'https://discord.gg/uGGCJD2gF' },
   { label: 'GitHub', url: 'https://github.com/orbitdev00' },
 ]
 

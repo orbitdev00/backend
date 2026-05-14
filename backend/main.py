@@ -6,7 +6,6 @@ import os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
 from security import is_valid_mint, is_valid_uuid, ip_rate_ok, admin_ok, verify_ws_token
 from engine.snapshot import build_snapshot
 from aggregator.pnl import fetch_monthly_pnl
@@ -41,13 +40,6 @@ app.include_router(badge_router)
 app.include_router(stripe_router)
 app.include_router(forum_router)
 
-class _BodySizeLimit(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        cl = request.headers.get("content-length")
-        if cl and int(cl) > 65_536:
-            return JSONResponse({"error": "Request body too large"}, status_code=413)
-        return await call_next(request)
-
 # â”€â”€ Nightly PnL sync â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import asyncio as _asyncio
 from datetime import datetime as _dt, timezone as _tz
@@ -78,18 +70,17 @@ async def manual_pnl_sync(request: Request):
     _asyncio.create_task(sync_all_wallets())
     return JSONResponse({"status": "sync started"})
 
-_prod_origins = ["https://orbit-app.xyz", "https://www.orbit-app.xyz"]
-_dev_origins  = ["http://localhost:5173", "http://localhost:3000"]
-_cors_origins = _prod_origins if os.getenv("ENVIRONMENT") == "production" else _prod_origins + _dev_origins
+_cors_origins = ["https://orbit-app.xyz", "https://www.orbit-app.xyz"]
+if os.getenv("ENVIRONMENT") != "production":
+    _cors_origins += ["http://localhost:5173", "http://localhost:3000"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "x-admin-secret"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-app.add_middleware(_BodySizeLimit)
 
 active_watchers: dict[str, list[WebSocket]] = {}
 watcher_tasks: dict[str, asyncio.Task] = {}

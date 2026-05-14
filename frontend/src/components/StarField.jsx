@@ -67,6 +67,7 @@ export default function StarField() {
   return (
     <canvas
       ref={canvasRef}
+      className="starfield-canvas"
       style={{
         position: 'fixed', top: 0, left: 0,
         width: '100%', height: '100%',

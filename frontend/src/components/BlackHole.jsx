@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react'
 import './BlackHole.css'
-import { starRegistry } from './StarField'
 
 const PHASES = { pfp: 800, hold: 1000, absorb: 1400, implode: 700 }
 const ease3  = t => 1 - Math.pow(1 - t, 3)
@@ -188,19 +187,16 @@ export default function BlackHole({ active, onBlack }) {
         const sfCanvas = document.querySelector('.starfield-canvas')
         if (sfCanvas) sfCanvas.style.display = 'none'
 
-        // Initialize from real star positions in StarField registry
+        // Snapshot viewport stars for the absorption animation
         if (!s.stars) {
-          const sc = starRegistry.scale || 1
-          const hw = W / 2, hh = H / 2
-          s.stars = starRegistry.stars.map(star => {
-            // Convert from StarField coordinate space (centered, scaled) to screen space
-            const sx   = hw + star.x * sc
-            const sy   = hh + star.y * sc
-            const dist = Math.sqrt((sx - cx)**2 + (sy - cy)**2)
+          s.stars = Array.from({ length: 320 }, () => {
+            const x    = Math.random() * W
+            const y    = Math.random() * H
+            const dist = Math.sqrt((x - cx)**2 + (y - cy)**2)
             return {
-              x: sx, y: sy,
-              size:     star.size,
-              opacity:  star.opacity,
+              x, y,
+              size:     Math.random() * 1.2 + 0.2,
+              opacity:  Math.random() * 0.5 + 0.15,
               dist,
               normDist: dist / (Math.sqrt(W*W + H*H) / 2),
             }

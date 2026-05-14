@@ -129,6 +129,7 @@ function Reveal({ children, delay = 0, className = '' }) {
 export default function Landing({ onSwitch }) {
   const canvasRef = useRef(null)
   const scrollRef = useRef(0)
+  const starRafRef = useRef(null)
   const [visible, setVisible] = useState(false)
   const [mockVisible, setMockVisible] = useState(false)
   const mockRef = useRef(null)
@@ -142,26 +143,25 @@ export default function Landing({ onSwitch }) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Starfield
+  // Starfield — fixed canvas (covers global StarField), viewport-sized with wrap parallax
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
-    let raf, stars = []
+    let stars = []
 
     const resize = () => {
-      canvas.width = window.innerWidth
-      canvas.height = document.documentElement.scrollHeight
+      canvas.width  = window.innerWidth
+      canvas.height = window.innerHeight
       stars = Array.from({ length: 900 }, () => {
-        const depth = Math.random() * 0.75 + 0.05   // 0.05 (far) → 0.80 (near)
-        const t = (depth - 0.05) / 0.75             // 0–1 normalized closeness
+        const depth = Math.random() * 0.75 + 0.05
+        const t = (depth - 0.05) / 0.75
         return {
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
-          // Foreground stars are larger and brighter — makes depth layers visible
           r: 0.15 + Math.random() * 0.45 + t * 1.7,
           o: 0.06 + Math.random() * 0.18 + t * 0.58,
-          speed: Math.random() * 0.015 + 0.003,
+          speed:  Math.random() * 0.015 + 0.003,
           phase:  Math.random() * Math.PI * 2,
           phase2: Math.random() * Math.PI * 2,
           depth,
@@ -169,55 +169,41 @@ export default function Landing({ onSwitch }) {
       })
     }
 
-    const draw = (t) => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
+    const draw = (ts) => {
+      const W = canvas.width, H = canvas.height
+      ctx.clearRect(0, 0, W, H)
       const scroll = scrollRef.current
-      stars.forEach(s => {
-        // Two-frequency twinkle — each star shimmers independently
-        const w1 = Math.sin(t * 0.001  * s.speed * 60 + s.phase)
-        const w2 = Math.sin(t * 0.0017 * s.speed * 45 + s.phase2) * 0.5
-        const o = Math.max(0.02, Math.min(0.95, s.o + (w1 + w2) * 0.32))
-        const r = Math.max(0.1, s.r + w1 * 0.3)
-        // Parallax: higher depth = closer = lags more behind page scroll
-        const drawY = s.y + scroll * s.depth
-        // Soft glow on the largest foreground stars so the depth layer is unmistakable
+      for (const s of stars) {
+        const w1 = Math.sin(ts * 0.001  * s.speed * 60 + s.phase)
+        const w2 = Math.sin(ts * 0.0017 * s.speed * 45 + s.phase2) * 0.5
+        const o  = Math.max(0.02, Math.min(0.95, s.o + (w1 + w2) * 0.32))
+        const r  = Math.max(0.1, s.r + w1 * 0.3)
+        // Parallax: foreground stars drift upward as you scroll, wrap around
+        const drawY = ((s.y - scroll * s.depth * 0.2) % H + H) % H
         if (r > 1.5 && s.depth > 0.52) {
           const grd = ctx.createRadialGradient(s.x, drawY, 0, s.x, drawY, r * 4.5)
           grd.addColorStop(0, `rgba(210,190,255,${o * 0.28})`)
           grd.addColorStop(1, 'rgba(0,0,0,0)')
-          ctx.beginPath()
-          ctx.arc(s.x, drawY, r * 4.5, 0, Math.PI * 2)
-          ctx.fillStyle = grd
-          ctx.fill()
+          ctx.beginPath(); ctx.arc(s.x, drawY, r * 4.5, 0, Math.PI * 2)
+          ctx.fillStyle = grd; ctx.fill()
         }
-        ctx.beginPath()
-        ctx.arc(s.x, drawY, r, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(255,255,255,${o})`
-        ctx.fill()
-      })
-      raf = requestAnimationFrame(draw)
+        ctx.beginPath(); ctx.arc(s.x, drawY, r, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(255,255,255,${o})`; ctx.fill()
+      }
+      starRafRef.current = requestAnimationFrame(draw)
     }
 
     resize()
     window.addEventListener('resize', resize)
-    // Recheck page height periodically as content loads
-    const heightInterval = setInterval(() => {
-      const newH = document.documentElement.scrollHeight
-      if (canvas.height !== newH) resize()
-    }, 1000)
-    raf = requestAnimationFrame(draw)
-    resizeCleanupRef.current = () => { window.removeEventListener('resize', resize); clearInterval(heightInterval) }
-    return () => { cancelAnimationFrame(raf); resizeCleanupRef.current && resizeCleanupRef.current() }
+    starRafRef.current = requestAnimationFrame(draw)
+    return () => { cancelAnimationFrame(starRafRef.current); window.removeEventListener('resize', resize) }
   }, [])
 
-  // Black hole drawn directly on the star canvas (already behind everything)
   const bhRef = useRef({ active: false, raf: null })
-  const resizeCleanupRef = useRef(null)
 
   const flyTo = (e, dest) => {
     if (bhRef.current.active) return
-    // Lock scroll without moving page
-    if (resizeCleanupRef.current) resizeCleanupRef.current()
+    cancelAnimationFrame(starRafRef.current)
     const scrollY = window.scrollY
     document.body.style.overflow = 'hidden'
     document.body.style.top = `-${scrollY}px`
@@ -245,10 +231,10 @@ export default function Landing({ onSwitch }) {
     const easeIO = t => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2
     const easeIn = t => t * t
 
-    // Generate stars matching the visible starfield
+    // Snapshot viewport stars for the absorption animation
     const starSnap = Array.from({ length: 320 }, () => ({
       x: Math.random() * W,
-      y: Math.random() * H + (window.scrollY || 0),
+      y: Math.random() * H,
       r: Math.random() * 1.2 + 0.2,
       o: Math.random() * 0.5 + 0.15,
     }))
@@ -341,9 +327,9 @@ export default function Landing({ onSwitch }) {
 
       if (state.phase === 'spawn') {
         drawDisk(ease3(t)*65, ease3(t))
-        // Draw stars normally during spawn
+        // Draw stars during spawn
         for (const s of starSnap) {
-          ctx.beginPath(); ctx.arc(s.x, s.y - (window.scrollY||0)*0.2, s.r, 0, Math.PI*2)
+          ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2)
           ctx.fillStyle = `rgba(255,255,255,${s.o})`; ctx.fill()
         }
         if (t>=1) { state.phase='absorb'; state.t0=ts }
@@ -353,11 +339,10 @@ export default function Landing({ onSwitch }) {
         drawDisk(65, 1)
         // Stars pulled toward black hole
         for (const s of starSnap) {
-          const sy = s.y - (window.scrollY||0)*0.2
-          const dist = Math.sqrt((s.x-cx)**2+(sy-cy)**2)
+          const dist = Math.sqrt((s.x-cx)**2+(s.y-cy)**2)
           const lT = Math.min(1, et*(0.3+(1-dist/maxR)*0.8))
           const ease = easeIO(lT)
-          const sx2=cx+(s.x-cx)*(1-ease), sy2=cy+(sy-cy)*(1-ease)
+          const sx2=cx+(s.x-cx)*(1-ease), sy2=cy+(s.y-cy)*(1-ease)
           const sc=Math.max(0,1-ease)
           if(sc<0.01) continue
           ctx.beginPath(); ctx.arc(sx2,sy2,s.r*sc,0,Math.PI*2)

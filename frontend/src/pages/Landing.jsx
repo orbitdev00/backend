@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import orbitPfp from '../orbitPfp.js'
 import LandingBlackHole from '../components/LandingBlackHole'
 import './Landing.css'
@@ -238,14 +237,12 @@ export default function Landing({ onSwitch }) {
   }, [])
 
   return (
-    <div className={`lp ${visible ? 'lp-in' : ''}`}>
-      {createPortal(
-        <canvas ref={canvasRef} style={{
-          position:'fixed', top:0, left:0, width:'100vw', height:'100vh',
-          pointerEvents:'none', zIndex:0, display:'block',
-        }} />,
-        document.body
-      )}
+    <>
+      <canvas ref={canvasRef} className="lp-canvas" style={{
+        position:'fixed', top:0, left:0, width:'100vw', height:'100vh',
+        pointerEvents:'none', zIndex:0, display:'block',
+      }} />
+      <div className={`lp ${visible ? 'lp-in' : ''}`}>
       <LandingBlackHole
         active={bhActive}
         origin={bhOrigin}
@@ -689,5 +686,6 @@ export default function Landing({ onSwitch }) {
         </div>
       </footer>
     </div>
+    </>
   )
 }

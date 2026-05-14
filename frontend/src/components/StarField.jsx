@@ -32,7 +32,7 @@ export default function StarField() {
           freq:     0.0006 + Math.random() * 0.002,  // radians/ms → periods 3–10s
           phase:    Math.random() * Math.PI * 2,
           phase2:   Math.random() * Math.PI * 2,
-          parallax: depth * 0.9,                     // far≈0, near≈0.72
+          parallax: depth * 0.65,                    // far≈0, near≈0.52
           depth,
         }
       })
@@ -72,7 +72,8 @@ export default function StarField() {
         }
 
         paint(dy1)
-        paint(dy2)
+        paint(dy2)        // ghost above — seamless wrap when scrolling up
+        paint(dy1 + H)    // ghost below — seamless wrap when scrolling down
       }
       animId = requestAnimationFrame(draw)
     }

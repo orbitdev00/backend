@@ -24,19 +24,19 @@ export default function LandingBlackHole({ active, origin, onDone }) {
     const cy = origin.y
     const maxR = Math.sqrt(W * W + H * H) * 0.5
 
-    // Grab landing canvas stars before hiding it
+    // Hide the real star canvas immediately — we draw our own stars for absorption
     const lpCanvas = document.querySelector('.lp-canvas')
-    let starData = []
-    if (lpCanvas) {
-      // Sample star positions from the canvas pixel data won't work well,
-      // so we generate matching stars based on the same seed approach
-      starData = Array.from({ length: 280 }, () => ({
-        x: Math.random() * W,
-        y: Math.random() * H,
-        r: Math.random() * 1.2 + 0.2,
-        o: Math.random() * 0.5 + 0.2,
-      }))
-    }
+    if (lpCanvas) { lpCanvas.style.opacity = '0'; lpCanvas.style.display = 'none' }
+    const sfCanvas = document.querySelector('.starfield-canvas')
+    if (sfCanvas) { sfCanvas.style.opacity = '0'; sfCanvas.style.display = 'none' }
+
+    // Always generate absorption stars regardless of lpCanvas
+    const starData = Array.from({ length: 280 }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: Math.random() * 1.2 + 0.2,
+      o: Math.random() * 0.5 + 0.2,
+    }))
 
     // Accretion disk particles
     const NPARTS = 300
@@ -169,18 +169,7 @@ export default function LandingBlackHole({ active, origin, onDone }) {
         const holeR = 40 + et * 80
         drawDisk(holeR, 1)
 
-        // Fade out star canvas(es) as BH grows
-        if (!lpHidden && t > 0.3) {
-          const fade = `${1 - (t - 0.3) / 0.7}`
-          if (lpCanvas) lpCanvas.style.opacity = fade
-          const sfCanvas = document.querySelector('.starfield-canvas')
-          if (sfCanvas) sfCanvas.style.opacity = fade
-        }
-
         if (t >= 1) {
-          if (lpCanvas) lpCanvas.style.display = 'none'
-          const sfCanvas = document.querySelector('.starfield-canvas')
-          if (sfCanvas) sfCanvas.style.display = 'none'
           lpHidden = true
           canvas.style.zIndex = '9999'
           document.body.classList.add('lp-bh-sucking')

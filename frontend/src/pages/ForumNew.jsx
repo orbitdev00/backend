@@ -6,6 +6,8 @@ import { filterContent } from '../lib/contentFilter'
 import NavBar from '../components/NavBar'
 import './Forum.css'
 
+const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+
 const THREAD_COOLDOWN = 5 * 60 * 1000 // 5 minutes
 
 async function updateReputation(userId, email, delta) {
@@ -82,15 +84,19 @@ export default function ForumNew() {
     if (bodyCheck.blocked)  { setError(bodyCheck.reason);  return }
 
     setSubmitting(true); setError('')
-    const { data, error: err } = await supabase.from('forum_threads').insert({
-      category_id: parseInt(catId),
-      user_id: user.id,
-      author_email: user.email,
-      title: title.trim(),
-      body: body.trim(),
-    }).select().single()
 
-    if (err) { setError(err.message); setSubmitting(false); return }
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (!token) { setError('Session expired. Please log in again.'); setSubmitting(false); return }
+
+    const res = await fetch(`${BACKEND}/forum/threads`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ category_id: parseInt(catId), title: title.trim(), body: body.trim() }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setError(data.error || 'Failed to post thread.'); setSubmitting(false); return }
+
     localStorage.setItem(`orbit_thread_cd_${user.id}`, String(Date.now()))
     await updateReputation(user.id, user.email, 5)
     nav(`/forum/thread/${data.id}`)

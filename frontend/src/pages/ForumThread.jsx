@@ -7,6 +7,8 @@ import NavBar from '../components/NavBar'
 import { grantBadge } from '../hooks/useBadges'
 import './Forum.css'
 
+const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+
 const REPLY_COOLDOWN = 15 * 1000
 
 function timeAgo(ts) {
@@ -132,22 +134,25 @@ export default function ForumThread() {
     const check = filterContent(reply)
     if (check.blocked) { setError(check.reason); return }
     setSubmitting(true); setError('')
-    const { error: err } = await supabase.from('forum_posts').insert({
-      thread_id: parseInt(id), user_id: user.id,
-      author_email: user.email, body: reply.trim(),
+
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (!token) { setError('Session expired. Please log in again.'); setSubmitting(false); return }
+
+    const res = await fetch(`${BACKEND}/forum/posts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ thread_id: parseInt(id), body: reply.trim() }),
     })
-    if (!err) {
-      await supabase.from('forum_threads').update({
-        reply_count: (thread.reply_count || 0) + 1,
-        last_reply_at: new Date().toISOString(),
-      }).eq('id', id)
+    const data = await res.json()
+    if (res.ok) {
       await updateReputation(user.id, user.email, 2)
       localStorage.setItem(`orbit_reply_cd_${user.id}`, String(Date.now()))
       setCooldown(15)
       setReply('')
       loadThread()
     } else {
-      setError(err.message)
+      setError(data.error || 'Failed to post reply.')
     }
     setSubmitting(false)
   }

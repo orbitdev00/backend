@@ -1,0 +1,157 @@
+"""
+forum_routes.py — Proxied forum endpoints with server-side sanitization.
+
+All forum_threads and forum_posts writes go through here instead of hitting
+Supabase directly from the frontend. sanitize_text() strips all HTML tags and
+decodes entities before content is stored.
+"""
+
+import httpx
+from datetime import datetime, timezone
+from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse
+from security import sanitize_text, is_valid_uuid
+from config import SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_ANON_KEY
+
+forum_router = APIRouter(prefix="/forum", tags=["forum"])
+
+_KEY = SUPABASE_SERVICE_KEY or SUPABASE_ANON_KEY
+_HEADERS = {
+    "apikey": _KEY,
+    "Authorization": f"Bearer {_KEY}",
+    "Content-Type": "application/json",
+    "Prefer": "return=representation",
+}
+
+
+async def _auth_user(request: Request) -> dict | None:
+    """Verify the Supabase JWT in the Authorization header.
+    Returns {"id": "...", "email": "..."} or None if invalid."""
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return None
+    token = auth[7:]
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            resp = await client.get(
+                f"{SUPABASE_URL}/auth/v1/user",
+                headers={
+                    "apikey": SUPABASE_ANON_KEY,
+                    "Authorization": f"Bearer {token}",
+                },
+            )
+            if resp.status_code != 200:
+                return None
+            data = resp.json()
+            uid = data.get("id")
+            if not uid or not is_valid_uuid(uid):
+                return None
+            return {"id": uid, "email": data.get("email", "")}
+    except Exception:
+        return None
+
+
+@forum_router.post("/threads")
+async def create_thread(request: Request):
+    """Create a forum thread. Sanitizes title and body before writing."""
+    user = await _auth_user(request)
+    if not user:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+    try:
+        raw = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    category_id = raw.get("category_id")
+    title = sanitize_text(str(raw.get("title", "")), max_len=200)
+    body  = sanitize_text(str(raw.get("body",  "")), max_len=10_000)
+
+    if not title:
+        return JSONResponse({"error": "title is required"}, status_code=400)
+    if not body:
+        return JSONResponse({"error": "body is required"}, status_code=400)
+    if not isinstance(category_id, int):
+        return JSONResponse({"error": "invalid category_id"}, status_code=400)
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.post(
+            f"{SUPABASE_URL}/rest/v1/forum_threads",
+            json={
+                "category_id": category_id,
+                "user_id":     user["id"],
+                "author_email": user["email"],
+                "title":       title,
+                "body":        body,
+            },
+            headers=_HEADERS,
+        )
+
+    if resp.status_code not in (200, 201):
+        return JSONResponse({"error": "Failed to create thread"}, status_code=500)
+
+    data = resp.json()
+    if isinstance(data, list):
+        data = data[0] if data else {}
+    return JSONResponse(data)
+
+
+@forum_router.post("/posts")
+async def create_post(request: Request):
+    """Create a forum reply. Sanitizes body before writing and updates thread metadata."""
+    user = await _auth_user(request)
+    if not user:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+    try:
+        raw = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    thread_id = raw.get("thread_id")
+    body      = sanitize_text(str(raw.get("body", "")), max_len=10_000)
+
+    if not body:
+        return JSONResponse({"error": "body is required"}, status_code=400)
+    if not isinstance(thread_id, int):
+        return JSONResponse({"error": "invalid thread_id"}, status_code=400)
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        # Insert the post
+        post_resp = await client.post(
+            f"{SUPABASE_URL}/rest/v1/forum_posts",
+            json={
+                "thread_id":   thread_id,
+                "user_id":     user["id"],
+                "author_email": user["email"],
+                "body":        body,
+            },
+            headers=_HEADERS,
+        )
+
+        if post_resp.status_code not in (200, 201):
+            return JSONResponse({"error": "Failed to create post"}, status_code=500)
+
+        # Fetch current reply_count then increment — avoids race on concurrent replies
+        thread_resp = await client.get(
+            f"{SUPABASE_URL}/rest/v1/forum_threads",
+            params={"id": f"eq.{thread_id}", "select": "reply_count"},
+            headers=_HEADERS,
+        )
+        current_count = 0
+        if thread_resp.status_code == 200:
+            rows = thread_resp.json()
+            if rows:
+                current_count = rows[0].get("reply_count") or 0
+
+        await client.patch(
+            f"{SUPABASE_URL}/rest/v1/forum_threads",
+            params={"id": f"eq.{thread_id}"},
+            json={
+                "reply_count":  current_count + 1,
+                "last_reply_at": datetime.now(timezone.utc).isoformat(),
+            },
+            headers={**_HEADERS, "Prefer": "return=minimal"},
+        )
+
+    return JSONResponse({"ok": True})

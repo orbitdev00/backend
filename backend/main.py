@@ -22,6 +22,7 @@ except Exception as e:
 from engine.claude import analyze          # Claude Haiku â€” primary
 from badge_routes import badge_router
 from stripe_routes import router as stripe_router
+from forum_routes import forum_router
 from pnl_sync import sync_all_wallets
 from badge_engine import (
     check_analysis_badges,
@@ -38,6 +39,7 @@ from config import REFRESH_INTERVAL, MAX_AUTO_REFRESHES
 app = FastAPI(title="Pump Analyzer API")
 app.include_router(badge_router)
 app.include_router(stripe_router)
+app.include_router(forum_router)
 
 class _BodySizeLimit(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):

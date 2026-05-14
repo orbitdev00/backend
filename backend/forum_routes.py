@@ -8,6 +8,7 @@ decodes entities before content is stored.
 
 import httpx
 from datetime import datetime, timezone
+from typing import Optional
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from security import sanitize_text, is_valid_uuid
@@ -24,7 +25,7 @@ _HEADERS = {
 }
 
 
-async def _auth_user(request: Request) -> dict | None:
+async def _auth_user(request: Request) -> Optional[dict]:
     """Verify the Supabase JWT in the Authorization header.
     Returns {"id": "...", "email": "..."} or None if invalid."""
     auth = request.headers.get("Authorization", "")

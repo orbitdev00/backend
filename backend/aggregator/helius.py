@@ -2,7 +2,7 @@ import httpx
 import asyncio
 import time
 from collections import Counter
-from config import HELIUS_API_KEY, HELIUS_API_URL, QUICKNODE_URL
+from config import HELIUS_API_KEY, HELIUS_API_URL, HELIUS_RPC_URL
 
 
 async def fetch_helius(mint: str, dev_wallet: str = "") -> dict:
@@ -196,7 +196,7 @@ async def _check_wallet_freshness(client: httpx.AsyncClient, wallet: str) -> boo
         "params": [wallet, {"limit": 15}]
     }
     try:
-        resp = await client.post(QUICKNODE_URL, json=payload, timeout=6)
+        resp = await client.post(HELIUS_RPC_URL, json=payload, timeout=6)
         sigs = resp.json().get("result") or []
 
         if not sigs:
@@ -309,7 +309,7 @@ async def _get_funding_source(client: httpx.AsyncClient, wallet: str) -> str | N
         "params": [wallet, {"limit": 10}]
     }
     try:
-        resp = await client.post(QUICKNODE_URL, json=payload, timeout=6)
+        resp = await client.post(HELIUS_RPC_URL, json=payload, timeout=6)
         sigs = resp.json().get("result") or []
         if not sigs:
             return None
@@ -325,7 +325,7 @@ async def _get_funding_source(client: httpx.AsyncClient, wallet: str) -> str | N
             "method": "getTransaction",
             "params": [oldest_sig, {"encoding": "jsonParsed", "maxSupportedTransactionVersion": 0}]
         }
-        tx_resp = await client.post(QUICKNODE_URL, json=tx_payload, timeout=6)
+        tx_resp = await client.post(HELIUS_RPC_URL, json=tx_payload, timeout=6)
         tx_data = tx_resp.json().get("result") or {}
 
         # Extract the fee payer of the oldest tx = likely the funder

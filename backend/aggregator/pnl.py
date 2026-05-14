@@ -5,9 +5,9 @@ net = received - spent. No cost basis, no percentages, deterministic.
 """
 import httpx, asyncio
 from datetime import datetime, timezone
-from config import QUICKNODE_URL, HELIUS_RPC_URL
+from config import HELIUS_RPC_URL
 
-RPC_URLS = [QUICKNODE_URL, HELIUS_RPC_URL]
+RPC_URLS = [HELIUS_RPC_URL]
 WSOL = "So11111111111111111111111111111111111111112"
 
 DEX_PROGRAMS = {

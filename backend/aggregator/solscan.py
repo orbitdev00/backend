@@ -1,5 +1,5 @@
 import httpx
-from config import HELIUS_API_KEY, HELIUS_RPC_URL, QUICKNODE_URL
+from config import HELIUS_API_KEY, HELIUS_RPC_URL
 from aggregator.cache import get as cache_get, set as cache_set, get_or_wait, mark_inflight, unmark_inflight
 
 SOLSCAN_TTL = 60  # 60 second cache
@@ -110,11 +110,10 @@ async def _get_top_holders_resolved(
     }
     # Try Helius first, fall back to public RPC if rate limited
     PUBLIC_RPCS = [
-    "https://quaint-distinguished-river.solana-mainnet.quiknode.pro/ade127a9ec8c5b4e18b10e86063121332ad61284/",
     "https://api.mainnet-beta.solana.com",
     "https://rpc.ankr.com/solana",
 ]
-    rpc_urls = [QUICKNODE_URL, HELIUS_RPC_URL] + PUBLIC_RPCS
+    rpc_urls = [HELIUS_RPC_URL] + PUBLIC_RPCS
     accounts = []
     async with httpx.AsyncClient(timeout=12) as client:
         for rpc_url in rpc_urls:
@@ -254,7 +253,7 @@ async def _batch_get_owners(token_accounts: list) -> dict:
     owners = {}
     results = []
     async with httpx.AsyncClient(timeout=12) as client:
-        for url in [QUICKNODE_URL, HELIUS_RPC_URL] + PUBLIC_RPCS:
+        for url in [HELIUS_RPC_URL] + PUBLIC_RPCS:
             try:
                 resp  = await client.post(url, json=payload)
                 rjson = resp.json()
@@ -303,7 +302,7 @@ async def _get_token_decimals(mint: str) -> int:
 async def _get_token_supply(mint: str) -> int:
     payload = {"jsonrpc": "2.0", "id": 1, "method": "getTokenSupply", "params": [mint]}
     async with httpx.AsyncClient(timeout=8) as client:
-        for url in [QUICKNODE_URL, HELIUS_RPC_URL] + PUBLIC_RPCS:
+        for url in [HELIUS_RPC_URL] + PUBLIC_RPCS:
             try:
                 resp   = await client.post(url, json=payload)
                 rjson  = resp.json()

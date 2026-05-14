@@ -10,9 +10,8 @@ SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", os.getenv("SUPABASE_ANO
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 PORT = int(os.getenv("PORT", 8000))
 
-HELIUS_RPC_URL  = f"https://mainnet.helius-rpc.com/?api-key={HELIUS_API_KEY}"  # kept as fallback
-QUICKNODE_URL   = "https://quaint-distinguished-river.solana-mainnet.quiknode.pro/ade127a9ec8c5b4e18b10e86063121332ad61284/"
-PRIMARY_RPC_URL = QUICKNODE_URL  # QuickNode is primary
+HELIUS_RPC_URL  = f"https://mainnet.helius-rpc.com/?api-key={HELIUS_API_KEY}"
+PRIMARY_RPC_URL = HELIUS_RPC_URL
 HELIUS_API_URL = f"https://api.helius.xyz/v0"
 
 DEXSCREENER_API = "https://api.dexscreener.com/latest/dex"

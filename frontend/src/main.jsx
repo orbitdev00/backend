@@ -57,31 +57,34 @@ function AppRoutes() {
   const navigate = useNavigate()
   const location = useLocation()
   return (
-    <PageTransition key={location.pathname}>
-    <Routes location={location}>
-      <Route path="/login"          element={<><StarField /><Login onSwitch={(p) => navigate(p === 'login' ? '/login' : p === 'signup' ? '/signup' : p === 'forgot' ? '/forgot' : '/')} /></>} />
-      <Route path="/signup"         element={<><StarField /><SignUp onSwitch={(p) => navigate(p === 'login' ? '/login' : p === 'signup' ? '/signup' : p === 'forgot' ? '/forgot' : '/')} /></>} />
-      <Route path="/forgot"         element={<><StarField /><ForgotPassword onSwitch={(p) => navigate(p === 'login' ? '/login' : p === 'signup' ? '/signup' : p === 'forgot' ? '/forgot' : '/')} /></>} />
-      <Route path="/auth/callback"  element={<AuthCallback />} />
-      <Route path="/" element={<RootRoute />} />
-      <Route path="/analyze" element={<App />} />
-      <Route path="/tracker" element={<Tracker />} />
-      <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
-      <Route path="/forum" element={<Forum />} />
-      <Route path="/forum/category/:slug" element={<ForumCategory />} />
-      <Route path="/forum/thread/:id" element={<ForumThread />} />
-      <Route path="/forum/new" element={<ProtectedRoute><ForumNew /></ProtectedRoute>} />
-      <Route path="/leaderboard" element={<Leaderboard />} />
-      <Route path="/profile/:username" element={<Profile />} />
-      <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
-      <Route path="/edit-profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
-      <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
-      <Route path="/badges" element={<Badges />} />
-      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-      <Route path="/share/:id" element={<ShareAnalysis />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-    </PageTransition>
+    <>
+      <StarField />
+      <PageTransition key={location.pathname}>
+      <Routes location={location}>
+        <Route path="/login"          element={<Login onSwitch={(p) => navigate(p === 'login' ? '/login' : p === 'signup' ? '/signup' : p === 'forgot' ? '/forgot' : '/')} />} />
+        <Route path="/signup"         element={<SignUp onSwitch={(p) => navigate(p === 'login' ? '/login' : p === 'signup' ? '/signup' : p === 'forgot' ? '/forgot' : '/')} />} />
+        <Route path="/forgot"         element={<ForgotPassword onSwitch={(p) => navigate(p === 'login' ? '/login' : p === 'signup' ? '/signup' : p === 'forgot' ? '/forgot' : '/')} />} />
+        <Route path="/auth/callback"  element={<AuthCallback />} />
+        <Route path="/" element={<RootRoute />} />
+        <Route path="/analyze" element={<App />} />
+        <Route path="/tracker" element={<Tracker />} />
+        <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
+        <Route path="/forum" element={<Forum />} />
+        <Route path="/forum/category/:slug" element={<ForumCategory />} />
+        <Route path="/forum/thread/:id" element={<ForumThread />} />
+        <Route path="/forum/new" element={<ProtectedRoute><ForumNew /></ProtectedRoute>} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
+        <Route path="/profile/:username" element={<Profile />} />
+        <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
+        <Route path="/edit-profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
+        <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
+        <Route path="/badges" element={<Badges />} />
+        <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+        <Route path="/share/:id" element={<ShareAnalysis />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      </PageTransition>
+    </>
   )
 }
 

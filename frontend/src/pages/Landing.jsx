@@ -769,19 +769,35 @@ export default function Landing({ onSwitch }) {
               </div>
               <div className="lp-wallet-card-ranks">
                 <div className="lp-rank-section-label">Highest PnL</div>
-                {[['#1','orbitking','38.7','#4ade80'],['#2','sol_runner','22.1','#4ade80'],['#3','7xK2...','14.2','#4ade80']].map(([rank, name, pnl, col]) => (
-                  <div key={rank} className="lp-rank-row">
-                    <span className="lp-rank-pos">{rank}</span>
-                    <span className="lp-rank-name">{name}</span>
-                    <span className="lp-rank-pnl" style={{color:col}}>+{pnl} SOL</span>
+                {[
+                  { rank:'#1', name:'orbitking',  pnl:'+38.7', col:'#4ade80', tier:'OMEGA', tierCol:'#f59e0b', init:'OK', bg:'#2d1845' },
+                  { rank:'#2', name:'sol_runner',  pnl:'+22.1', col:'#4ade80', tier:'DEGEN', tierCol:'#a78bfa', init:'SR', bg:'#12274a' },
+                  { rank:'#3', name:'7xK2...mF9p', pnl:'+14.2', col:'#4ade80', tier:'DEGEN', tierCol:'#a78bfa', init:'7K', bg:'#0e2e2e' },
+                ].map(u => (
+                  <div key={u.rank} className="lp-rank-row">
+                    <span className="lp-rank-pos">{u.rank}</span>
+                    <div className="lp-rank-avatar" style={{background: u.bg}}>{u.init}</div>
+                    <div className="lp-rank-meta">
+                      <span className="lp-rank-name">{u.name}</span>
+                      <span className="lp-rank-tier" style={{color: u.tierCol}}>{u.tier}</span>
+                    </div>
+                    <span className="lp-rank-pnl" style={{color: u.col}}>{u.pnl} SOL</span>
                   </div>
                 ))}
                 <div className="lp-rank-section-label lp-rank-section-label-red">Lowest PnL</div>
-                {[['#1','rekt_lord','-18.4','#f87171'],['#2','paper_hands','-12.1','#f87171'],['#3','fomo_bro','-9.3','#f87171']].map(([rank, name, pnl, col]) => (
-                  <div key={rank+name} className="lp-rank-row">
-                    <span className="lp-rank-pos">{rank}</span>
-                    <span className="lp-rank-name">{name}</span>
-                    <span className="lp-rank-pnl" style={{color:col}}>{pnl} SOL</span>
+                {[
+                  { rank:'#1', name:'rekt_lord',   pnl:'-18.4', col:'#f87171', tier:'FREE',  tierCol:'#555570', init:'RL', bg:'#3a1010' },
+                  { rank:'#2', name:'paper_hands',  pnl:'-12.1', col:'#f87171', tier:'DEGEN', tierCol:'#a78bfa', init:'PH', bg:'#1a1535' },
+                  { rank:'#3', name:'fomo_bro',     pnl:'-9.3',  col:'#f87171', tier:'FREE',  tierCol:'#555570', init:'FB', bg:'#1a2015' },
+                ].map(u => (
+                  <div key={u.rank + u.name} className="lp-rank-row">
+                    <span className="lp-rank-pos">{u.rank}</span>
+                    <div className="lp-rank-avatar" style={{background: u.bg}}>{u.init}</div>
+                    <div className="lp-rank-meta">
+                      <span className="lp-rank-name">{u.name}</span>
+                      <span className="lp-rank-tier" style={{color: u.tierCol}}>{u.tier}</span>
+                    </div>
+                    <span className="lp-rank-pnl" style={{color: u.col}}>{u.pnl} SOL</span>
                   </div>
                 ))}
               </div>

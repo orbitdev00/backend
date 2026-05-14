@@ -640,19 +640,33 @@
   display: flex; flex-direction: column; gap: 10px;
 }
 .lp-rank-row {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 9px;
 }
 .lp-rank-pos {
   font-family: var(--mono); font-size: 10px;
-  color: #444; width: 24px;
+  color: #444; width: 22px; flex-shrink: 0;
+}
+.lp-rank-avatar {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 8px; font-weight: 700;
+  color: rgba(255,255,255,0.8);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.lp-rank-meta {
+  display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0;
 }
 .lp-rank-name {
-  font-family: var(--mono); font-size: 12px;
-  color: #777; flex: 1;
+  font-family: var(--mono); font-size: 11px;
+  color: #b0b0c8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lp-rank-tier {
+  font-family: var(--mono); font-size: 8px;
+  letter-spacing: 1.5px; font-weight: 700;
 }
 .lp-rank-pnl {
-  font-family: var(--mono); font-size: 12px;
-  color: #4ade80; font-weight: 600;
+  font-family: var(--mono); font-size: 11px;
+  font-weight: 600; flex-shrink: 0;
 }
 
 /* ── Footer logo spacing ───────────────────────────── */

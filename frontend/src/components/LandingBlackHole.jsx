@@ -169,13 +169,18 @@ export default function LandingBlackHole({ active, origin, onDone }) {
         const holeR = 40 + et * 80
         drawDisk(holeR, 1)
 
-        // Hide landing canvas stars — black hole takes over
+        // Fade out star canvas(es) as BH grows
         if (!lpHidden && t > 0.3) {
-          if (lpCanvas) lpCanvas.style.opacity = `${1 - (t - 0.3) / 0.7}`
+          const fade = `${1 - (t - 0.3) / 0.7}`
+          if (lpCanvas) lpCanvas.style.opacity = fade
+          const sfCanvas = document.querySelector('.starfield-canvas')
+          if (sfCanvas) sfCanvas.style.opacity = fade
         }
 
         if (t >= 1) {
           if (lpCanvas) lpCanvas.style.display = 'none'
+          const sfCanvas = document.querySelector('.starfield-canvas')
+          if (sfCanvas) sfCanvas.style.display = 'none'
           lpHidden = true
           canvas.style.zIndex = '9999'
           document.body.classList.add('lp-bh-sucking')
@@ -253,6 +258,8 @@ export default function LandingBlackHole({ active, origin, onDone }) {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
       if (lpCanvas) { lpCanvas.style.display = ''; lpCanvas.style.opacity = '' }
+      const sfCanvas = document.querySelector('.starfield-canvas')
+      if (sfCanvas) { sfCanvas.style.display = ''; sfCanvas.style.opacity = '' }
       document.body.classList.remove('lp-bh-sucking')
       contentEls.forEach(el => {
         el.style.transform = ''

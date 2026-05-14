@@ -1,6 +1,6 @@
-import { useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
 import orbitPfp from '../orbitPfp.js'
+import LandingBlackHole from '../components/LandingBlackHole'
 import './Landing.css'
 
 const SOCIALS = [
@@ -127,275 +127,22 @@ function Reveal({ children, delay = 0, className = '' }) {
 }
 
 export default function Landing({ onSwitch }) {
-  const canvasRef = useRef(null)
-  const scrollRef = useRef(0)
-  const starRafRef = useRef(null)
   const [visible, setVisible] = useState(false)
   const [mockVisible, setMockVisible] = useState(false)
+  const [bhActive, setBhActive] = useState(false)
+  const [bhOrigin, setBhOrigin] = useState(null)
+  const [bhDest, setBhDest] = useState(null)
   const mockRef = useRef(null)
   const mockInView = useRef(false)
 
   useEffect(() => { setTimeout(() => setVisible(true), 80) }, [])
 
-  useEffect(() => {
-    const onScroll = () => { scrollRef.current = window.scrollY }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  // Starfield — fixed canvas (covers global StarField), viewport-sized with wrap parallax
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    let stars = []
-
-    const resize = () => {
-      canvas.width  = window.innerWidth
-      canvas.height = window.innerHeight
-      stars = Array.from({ length: 900 }, () => {
-        const depth = Math.random() * 0.75 + 0.05
-        const t = (depth - 0.05) / 0.75
-        return {
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
-          r: 0.15 + Math.random() * 0.45 + t * 1.7,
-          o: 0.06 + Math.random() * 0.18 + t * 0.58,
-          speed:  Math.random() * 0.015 + 0.003,
-          phase:  Math.random() * Math.PI * 2,
-          phase2: Math.random() * Math.PI * 2,
-          depth,
-        }
-      })
-    }
-
-    const draw = (ts) => {
-      const W = canvas.width, H = canvas.height
-      ctx.clearRect(0, 0, W, H)
-      const scroll = scrollRef.current
-      for (const s of stars) {
-        const w1 = Math.sin(ts * 0.001  * s.speed * 60 + s.phase)
-        const w2 = Math.sin(ts * 0.0017 * s.speed * 45 + s.phase2) * 0.5
-        const o  = Math.max(0.02, Math.min(0.95, s.o + (w1 + w2) * 0.32))
-        const r  = Math.max(0.1, s.r + w1 * 0.3)
-        // Parallax: foreground stars drift upward as you scroll, wrap around
-        const drawY = ((s.y - scroll * s.depth * 0.2) % H + H) % H
-        if (r > 1.5 && s.depth > 0.52) {
-          const grd = ctx.createRadialGradient(s.x, drawY, 0, s.x, drawY, r * 4.5)
-          grd.addColorStop(0, `rgba(210,190,255,${o * 0.28})`)
-          grd.addColorStop(1, 'rgba(0,0,0,0)')
-          ctx.beginPath(); ctx.arc(s.x, drawY, r * 4.5, 0, Math.PI * 2)
-          ctx.fillStyle = grd; ctx.fill()
-        }
-        ctx.beginPath(); ctx.arc(s.x, drawY, r, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(255,255,255,${o})`; ctx.fill()
-      }
-      starRafRef.current = requestAnimationFrame(draw)
-    }
-
-    resize()
-    window.addEventListener('resize', resize)
-    starRafRef.current = requestAnimationFrame(draw)
-    return () => { cancelAnimationFrame(starRafRef.current); window.removeEventListener('resize', resize) }
-  }, [])
-
-  const bhRef = useRef({ active: false, raf: null })
-
   const flyTo = (e, dest) => {
-    if (bhRef.current.active) return
-    cancelAnimationFrame(starRafRef.current)
-    const scrollY = window.scrollY
-    document.body.style.overflow = 'hidden'
-    document.body.style.top = `-${scrollY}px`
-    document.body.style.position = 'fixed'
-    document.body.style.width = '100%'
-    document.body.dataset.scrollY = scrollY
+    if (bhActive) return
     const rect = e.currentTarget.getBoundingClientRect()
-    const cx = rect.left + rect.width / 2
-    const cy = rect.top + rect.height / 2
-    runBlackHole(cx, cy, dest)
-  }
-
-  const runBlackHole = (cx, cy, dest) => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    if (bhRef.current.active) return
-    bhRef.current.active = true
-    canvas.dataset.bhActive = '1'
-
-    const ctx = canvas.getContext('2d')
-    const W = canvas.width
-    const H = canvas.height
-
-    const ease3  = t => 1 - Math.pow(1 - t, 3)
-    const easeIO = t => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2
-    const easeIn = t => t * t
-
-    // Snapshot viewport stars for the absorption animation
-    const starSnap = Array.from({ length: 320 }, () => ({
-      x: Math.random() * W,
-      y: Math.random() * H,
-      r: Math.random() * 1.2 + 0.2,
-      o: Math.random() * 0.5 + 0.15,
-    }))
-
-    // Page elements to absorb
-    const pageEls = [...document.querySelectorAll(
-      '.lp-nav, .lp-hero, .lp-ticker-outer, .lp-section, .lp-joke-strip, .lp-data-strip, .lp-wallet, .lp-final, .lp-footer'
-    )].filter(el => { const r = el.getBoundingClientRect(); return r.width > 0 })
-    pageEls.forEach(el => {
-      const r = el.getBoundingClientRect()
-      el._dist = Math.sqrt((r.left+r.width/2-cx)**2+(r.top+r.height/2-cy)**2)
-      el.style.transformOrigin = `${cx-r.left}px ${cy-r.top}px`
-      el.style.willChange = 'transform,opacity'
-      el.style.transition = 'none'
-    })
-    const maxDist = Math.max(...pageEls.map(e=>e._dist), 1)
-    const maxR = Math.sqrt(W*W+H*H)
-
-    const NPARTS = 300
-    const parts = Array.from({ length: NPARTS }, (_, i) => ({
-      angle: (i/NPARTS)*Math.PI*2 + Math.random()*0.1,
-      rMult: 1.05 + Math.random()*0.85,
-      speed: (0.007+Math.random()*0.011)*(i%2?1:-1),
-      sz: 0.5+Math.random()*1.7,
-      bright: 0.4+Math.random()*0.6,
-      lane: Math.random(),
-    }))
-
-    const drawDisk = (holeR, alpha) => {
-      if (holeR < 1 || alpha <= 0) return
-      const diskY = holeR * 0.18
-      const glow = ctx.createRadialGradient(cx,cy,holeR*0.4,cx,cy,holeR*3.5)
-      glow.addColorStop(0, `rgba(120,80,220,${0.22*alpha})`)
-      glow.addColorStop(1, 'rgba(0,0,0,0)')
-      ctx.fillStyle = glow
-      ctx.beginPath(); ctx.arc(cx,cy,holeR*3.5,0,Math.PI*2); ctx.fill()
-      ctx.save(); ctx.translate(cx,cy)
-      for (const p of parts) {
-        p.angle += p.speed
-        const r=holeR*p.rMult
-        const px=Math.cos(p.angle)*r, py=Math.sin(p.angle)*r*(diskY/holeR)
-        if (py>0||Math.sqrt(px*px+py*py)<holeR) continue
-        const a=p.bright*alpha*(1-p.lane*0.4)
-        ctx.beginPath(); ctx.arc(px,py,p.sz,0,Math.PI*2)
-        ctx.fillStyle=p.lane<0.4?`rgba(180,140,255,${a})`:`rgba(255,255,255,${a*0.7})`
-        ctx.fill()
-      }
-      ctx.restore()
-      for (let i=0;i<3;i++) {
-        const rr=holeR*(1.06+i*0.06), a=(0.55-i*0.14)*alpha
-        const g=ctx.createRadialGradient(cx,cy,rr*0.88,cx,cy,rr*1.12)
-        g.addColorStop(0,'rgba(200,160,255,0)')
-        g.addColorStop(0.5,`rgba(200,160,255,${a*0.5})`)
-        g.addColorStop(0.65,`rgba(255,255,255,${a})`)
-        g.addColorStop(1,'rgba(200,160,255,0)')
-        ctx.beginPath(); ctx.arc(cx,cy,rr,0,Math.PI*2)
-        ctx.strokeStyle=g; ctx.lineWidth=holeR*0.055; ctx.stroke()
-      }
-      ctx.beginPath(); ctx.arc(cx,cy,holeR,0,Math.PI*2); ctx.fillStyle='#000'; ctx.fill()
-      ctx.save(); ctx.translate(cx,cy)
-      for (const p of parts) {
-        const r=holeR*p.rMult
-        const px=Math.cos(p.angle)*r, py=Math.sin(p.angle)*r*(diskY/holeR)
-        if(py<=0||Math.sqrt(px*px+py*py)<holeR) continue
-        const a=p.bright*alpha*1.3*(1-p.lane*0.3)
-        ctx.beginPath(); ctx.arc(px,py,p.sz*1.1,0,Math.PI*2)
-        ctx.fillStyle=p.lane<0.4?`rgba(180,140,255,${a})`:`rgba(255,255,255,${a*0.85})`
-        ctx.fill()
-      }
-      ctx.restore()
-      const ph=ctx.createRadialGradient(cx,cy,holeR*0.96,cx,cy,holeR*1.05)
-      ph.addColorStop(0,'rgba(200,160,255,0)')
-      ph.addColorStop(0.5,`rgba(220,180,255,${0.6*alpha})`)
-      ph.addColorStop(1,'rgba(200,160,255,0)')
-      ctx.beginPath(); ctx.arc(cx,cy,holeR,0,Math.PI*2)
-      ctx.strokeStyle=ph; ctx.lineWidth=holeR*0.04; ctx.stroke()
-      ctx.beginPath(); ctx.arc(cx,cy,holeR*0.97,0,Math.PI*2)
-      ctx.fillStyle='#000'; ctx.fill()
-    }
-
-    const PHASES = { spawn:933, absorb:1467, implode:667 }
-    const state = { phase:'spawn', t0:performance.now(), called:false }
-
-    const frame = ts => {
-      const dur = PHASES[state.phase]
-      const t = Math.min((ts-state.t0)/dur, 1)
-      // Fill black each frame — hides the page background behind the canvas
-      ctx.fillStyle = '#000'
-      ctx.fillRect(0,0,W,H)
-
-      if (state.phase === 'spawn') {
-        drawDisk(ease3(t)*65, ease3(t))
-        // Draw stars during spawn
-        for (const s of starSnap) {
-          ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2)
-          ctx.fillStyle = `rgba(255,255,255,${s.o})`; ctx.fill()
-        }
-        if (t>=1) { state.phase='absorb'; state.t0=ts }
-
-      } else if (state.phase === 'absorb') {
-        const et = easeIO(t)
-        drawDisk(65, 1)
-        // Stars pulled toward black hole
-        for (const s of starSnap) {
-          const dist = Math.sqrt((s.x-cx)**2+(s.y-cy)**2)
-          const lT = Math.min(1, et*(0.3+(1-dist/maxR)*0.8))
-          const ease = easeIO(lT)
-          const sx2=cx+(s.x-cx)*(1-ease), sy2=cy+(s.y-cy)*(1-ease)
-          const sc=Math.max(0,1-ease)
-          if(sc<0.01) continue
-          ctx.beginPath(); ctx.arc(sx2,sy2,s.r*sc,0,Math.PI*2)
-          ctx.fillStyle=`rgba(255,255,255,${s.o*sc})`; ctx.fill()
-        }
-        // Page elements scale toward black hole
-        pageEls.forEach(el => {
-          const normD=el._dist/maxDist
-          // All elements must reach sc=0 by t=1, closer ones get there sooner
-          const delay = normD * 0.3  // far elements start later
-          const localT = Math.min(1, Math.max(0, (et - delay) / (1 - delay)))
-          const ease = easeIO(localT)
-          const sc = Math.max(0, 1 - ease)
-          el.style.transform=`scale(${sc})`
-          el.style.opacity=t > 0.66 ? `${Math.max(0, 1 - (t - 0.66) / 0.34)}` : '1'
-        })
-        if (t>=1) {
-          pageEls.forEach(el=>{el.style.opacity='0';el.style.transform='scale(0)'})
-          state.phase='implode'; state.t0=ts
-        }
-
-      } else if (state.phase === 'implode') {
-        const et = easeIn(t)
-        const holeR = Math.max(0,65*(1-et))
-        if(holeR>1) drawDisk(holeR,1-et*0.5)
-        ctx.fillStyle=`rgba(0,0,0,${et})`
-        ctx.fillRect(0,0,W,H)
-        if (t>=1 && !state.called) {
-          state.called=true
-          pageEls.forEach(el=>{
-            el.style.transform=''
-            el.style.opacity=''
-            el.style.willChange=''
-          })
-          bhRef.current.active=false
-          delete canvas.dataset.bhActive
-          document.body.style.overflow = ''
-          document.body.style.position = ''
-          document.body.style.width = ''
-          document.body.style.top = ''
-          window.scrollTo(0, parseInt(document.body.dataset.scrollY || '0'))
-          const style=document.createElement('style')
-          style.id='orbit-fadein'
-          style.textContent=`body>*{animation:orbitFI 0.55s ease forwards}@keyframes orbitFI{from{opacity:0}to{opacity:1}}`
-          document.head.appendChild(style)
-          setTimeout(()=>{const s=document.getElementById('orbit-fadein');if(s)s.remove()},700)
-          if(dest) onSwitch(dest)
-          return
-        }
-      }
-      bhRef.current.raf = requestAnimationFrame(frame)
-    }
-    bhRef.current.raf = requestAnimationFrame(frame)
+    setBhOrigin({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
+    setBhDest(dest)
+    setBhActive(true)
   }
 
   // Mock bar reveal
@@ -413,7 +160,11 @@ export default function Landing({ onSwitch }) {
 
   return (
     <div className={`lp ${visible ? 'lp-in' : ''}`}>
-      <canvas ref={canvasRef} className="lp-canvas" />
+      <LandingBlackHole
+        active={bhActive}
+        origin={bhOrigin}
+        onDone={() => { setBhActive(false); onSwitch(bhDest) }}
+      />
 
       {/* ── NAV ── */}
       <nav className="lp-nav">

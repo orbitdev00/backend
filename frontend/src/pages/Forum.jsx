@@ -53,13 +53,19 @@ export default function Forum() {
     if (cats) {
       for (const cat of cats) {
         const { data: latest } = await supabase.from('forum_threads')
-          .select('id,title,author_email,last_reply_at')
+          .select('id,title,author_email,user_id,last_reply_at')
           .eq('category_id', cat.id)
           .order('last_reply_at', { ascending: false })
           .limit(1).maybeSingle()
         const { count: tc } = await supabase.from('forum_threads')
           .select('id', { count: 'exact', head: true }).eq('category_id', cat.id)
-        catMap[cat.id] = { ...cat, latest, threadCount: tc || 0 }
+        let latestAuthor = null
+        if (latest?.user_id) {
+          const { data: rep } = await supabase.from('user_reputation')
+            .select('avatar_url,username').eq('user_id', latest.user_id).maybeSingle()
+          latestAuthor = { avatar_url: rep?.avatar_url, username: rep?.username }
+        }
+        catMap[cat.id] = { ...cat, latest, latestAuthor, threadCount: tc || 0 }
       }
     }
 
@@ -169,12 +175,22 @@ export default function Forum() {
         </div>
         <div className="fcat-latest">
           {cat.latest ? (
-            <>
-              <div className="fcat-latest-title" onClick={e => { e.stopPropagation(); nav(`/forum/thread/${cat.latest.id}`) }}>
-                {cat.latest.title}
+            <div className="fcat-latest-inner">
+              <div className="fcat-latest-pfp">
+                {cat.latestAuthor?.avatar_url
+                  ? <img src={cat.latestAuthor.avatar_url} alt="" />
+                  : (cat.latestAuthor?.username || cat.latest.author_email?.split('@')[0])?.slice(0,2).toUpperCase()
+                }
               </div>
-              <div className="fcat-latest-meta">{timeAgo(cat.latest.last_reply_at)} · {cat.latest.author_email?.split('@')[0]}</div>
-            </>
+              <div className="fcat-latest-text">
+                <div className="fcat-latest-title" onClick={e => { e.stopPropagation(); nav(`/forum/thread/${cat.latest.id}`) }}>
+                  {cat.latest.title}
+                </div>
+                <div className="fcat-latest-meta">
+                  {cat.latestAuthor?.username || cat.latest.author_email?.split('@')[0]} · {timeAgo(cat.latest.last_reply_at)}
+                </div>
+              </div>
+            </div>
           ) : <span className="fcat-empty">No threads yet</span>}
         </div>
       </div>

@@ -150,7 +150,12 @@ export default function LandingBlackHole({ active, origin, onDone }) {
     const frame = ts => {
       const dur = PHASES[state.phase]
       const t   = Math.min((ts - state.t0) / dur, 1)
-      ctx.clearRect(0, 0, W, H)
+      if (state.phase === 'suck' || state.phase === 'implode') {
+        ctx.fillStyle = '#000'
+        ctx.fillRect(0, 0, W, H)
+      } else {
+        ctx.clearRect(0, 0, W, H)
+      }
 
       if (state.phase === 'spawn') {
         // Small black hole appears from button

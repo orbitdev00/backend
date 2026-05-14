@@ -76,6 +76,31 @@ async def create_thread(request: Request):
         return JSONResponse({"error": "invalid category_id"}, status_code=400)
 
     async with httpx.AsyncClient(timeout=10) as client:
+        # Announcements category: only mods/admins/owners may post
+        cat_resp = await client.get(
+            f"{SUPABASE_URL}/rest/v1/forum_categories",
+            params={"id": f"eq.{category_id}", "select": "slug"},
+            headers=_HEADERS,
+        )
+        if cat_resp.status_code == 200:
+            cats = cat_resp.json()
+            if cats and cats[0].get("slug") == "announcements":
+                role_resp = await client.get(
+                    f"{SUPABASE_URL}/rest/v1/user_reputation",
+                    params={"user_id": f"eq.{user['id']}", "select": "role"},
+                    headers=_HEADERS,
+                )
+                role = "member"
+                if role_resp.status_code == 200:
+                    rows = role_resp.json()
+                    if rows:
+                        role = rows[0].get("role") or "member"
+                if role not in ("mod", "admin", "owner"):
+                    return JSONResponse(
+                        {"error": "Only moderators and admins can post in Announcements."},
+                        status_code=403,
+                    )
+
         resp = await client.post(
             f"{SUPABASE_URL}/rest/v1/forum_threads",
             json={

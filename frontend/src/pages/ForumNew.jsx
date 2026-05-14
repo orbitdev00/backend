@@ -83,6 +83,17 @@ export default function ForumNew() {
     if (titleCheck.blocked) { setError(titleCheck.reason); return }
     if (bodyCheck.blocked)  { setError(bodyCheck.reason);  return }
 
+    // Announcements: only mods, admins, and owners may post
+    const selectedCat = categories.find(c => String(c.id) === catId)
+    if (selectedCat?.slug === 'announcements') {
+      const { data: rep } = await supabase.from('user_reputation').select('role').eq('user_id', user.id).maybeSingle()
+      const role = rep?.role || 'member'
+      if (!['mod', 'admin', 'owner'].includes(role)) {
+        setError('Only moderators and admins can post in Announcements.')
+        return
+      }
+    }
+
     setSubmitting(true); setError('')
 
     const { data: { session } } = await supabase.auth.getSession()

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import orbitPfp from '../orbitPfp.js'
 import LandingBlackHole from '../components/LandingBlackHole'
 import './Landing.css'
@@ -146,30 +147,35 @@ export default function Landing({ onSwitch }) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Starfield with parallax — opaque fill covers the global StarField underneath
+  // Starfield — portaled to document.body to escape .lp stacking context entirely
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     let stars = []
 
-    const resize = () => {
+    // 3 distinct parallax layers: far (static), mid (slow drift), near (fast drift)
+    const LAYERS = [
+      { n: 180, spd: 0,    rMin: 0.15, rMax: 0.5,  oMin: 0.04, oMax: 0.18, twk: 0    },
+      { n: 80,  spd: 0.18, rMin: 0.35, rMax: 0.85, oMin: 0.14, oMax: 0.38, twk: 0.15 },
+      { n: 30,  spd: 0.45, rMin: 0.85, rMax: 2.0,  oMin: 0.35, oMax: 0.72, twk: 0.3  },
+    ]
+
+    const init = () => {
       canvas.width  = window.innerWidth
       canvas.height = window.innerHeight
-      stars = Array.from({ length: 380 }, () => {
-        const depth = Math.random() * 0.75 + 0.05
-        const t = (depth - 0.05) / 0.75
-        return {
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
-          r: 0.15 + Math.random() * 0.45 + t * 1.7,
-          o: 0.06 + Math.random() * 0.18 + t * 0.58,
-          speed:  Math.random() * 0.015 + 0.003,
-          phase:  Math.random() * Math.PI * 2,
-          phase2: Math.random() * Math.PI * 2,
-          depth,
-        }
-      })
+      const W = canvas.width, H = canvas.height
+      stars = LAYERS.flatMap(({ n, spd, rMin, rMax, oMin, oMax, twk }) =>
+        Array.from({ length: n }, () => ({
+          x:     Math.random() * W,
+          y:     Math.random() * H,
+          r:     rMin + Math.random() * (rMax - rMin),
+          o:     oMin + Math.random() * (oMax - oMin),
+          spd, twk,
+          phase: Math.random() * Math.PI * 2,
+          rate:  0.5 + Math.random() * 0.7,
+        }))
+      )
     }
 
     const draw = (ts) => {
@@ -177,38 +183,37 @@ export default function Landing({ onSwitch }) {
       ctx.fillStyle = '#08080f'
       ctx.fillRect(0, 0, W, H)
       const scroll = scrollRef.current
+
       for (const s of stars) {
-        const w1 = Math.sin(ts * 0.001  * s.speed * 60 + s.phase)
-        const w2 = Math.sin(ts * 0.0017 * s.speed * 45 + s.phase2) * 0.5
-        const o  = Math.max(0.02, Math.min(0.95, s.o + (w1 + w2) * 0.32))
-        const r  = Math.max(0.1, s.r + w1 * 0.3)
-        // Parallax: foreground stars (high depth) drift upward noticeably as you scroll
-        const rawY = s.y - scroll * s.depth * 0.5
-        const drawY = ((rawY % H) + H) % H
-        // Draw a second copy shifted by H so stars don't pop when wrapping
-        const drawYB = drawY - H
-        const drawStar = (dy) => {
-          if (dy < -r * 5 || dy > H + r * 5) return
-          if (r > 1.5 && s.depth > 0.52) {
-            const grd = ctx.createRadialGradient(s.x, dy, 0, s.x, dy, r * 4.5)
-            grd.addColorStop(0, `rgba(210,190,255,${o * 0.28})`)
-            grd.addColorStop(1, 'rgba(0,0,0,0)')
-            ctx.beginPath(); ctx.arc(s.x, dy, r * 4.5, 0, Math.PI * 2)
-            ctx.fillStyle = grd; ctx.fill()
+        const tw  = s.twk > 0 ? Math.sin(ts * 0.0008 * s.rate + s.phase) * s.twk : 0
+        const o   = Math.max(0.02, Math.min(0.95, s.o + tw))
+        const rawY = s.y - scroll * s.spd
+        const dy1  = ((rawY % H) + H) % H
+        const dy2  = dy1 - H   // ghost copy above to prevent pop on wrap
+
+        const paint = (dy) => {
+          if (dy < -s.r * 6 || dy > H + s.r * 6) return
+          if (s.r > 1.0 && s.spd >= 0.45) {
+            const g = ctx.createRadialGradient(s.x, dy, 0, s.x, dy, s.r * 4)
+            g.addColorStop(0, `rgba(200,180,255,${o * 0.3})`)
+            g.addColorStop(1, 'rgba(0,0,0,0)')
+            ctx.beginPath(); ctx.arc(s.x, dy, s.r * 4, 0, Math.PI * 2)
+            ctx.fillStyle = g; ctx.fill()
           }
-          ctx.beginPath(); ctx.arc(s.x, dy, r, 0, Math.PI * 2)
+          ctx.beginPath(); ctx.arc(s.x, dy, s.r, 0, Math.PI * 2)
           ctx.fillStyle = `rgba(255,255,255,${o})`; ctx.fill()
         }
-        drawStar(drawY)
-        drawStar(drawYB)
+
+        paint(dy1)
+        paint(dy2)
       }
       starRafRef.current = requestAnimationFrame(draw)
     }
 
-    resize()
-    window.addEventListener('resize', resize)
+    init()
+    window.addEventListener('resize', init)
     starRafRef.current = requestAnimationFrame(draw)
-    return () => { cancelAnimationFrame(starRafRef.current); window.removeEventListener('resize', resize) }
+    return () => { cancelAnimationFrame(starRafRef.current); window.removeEventListener('resize', init) }
   }, [])
 
   const flyTo = (e, dest) => {
@@ -234,7 +239,13 @@ export default function Landing({ onSwitch }) {
 
   return (
     <div className={`lp ${visible ? 'lp-in' : ''}`}>
-      <canvas ref={canvasRef} className="lp-canvas" />
+      {createPortal(
+        <canvas ref={canvasRef} style={{
+          position:'fixed', top:0, left:0, width:'100vw', height:'100vh',
+          pointerEvents:'none', zIndex:0, display:'block',
+        }} />,
+        document.body
+      )}
       <LandingBlackHole
         active={bhActive}
         origin={bhOrigin}

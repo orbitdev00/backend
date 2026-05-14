@@ -13,7 +13,7 @@ CREATE POLICY "public read user_reputation"
 -- Users can only update their own row
 CREATE POLICY "own row update user_reputation"
   ON user_reputation FOR UPDATE
-  USING (auth.uid() = user_id);
+  USING (auth.uid()::text = user_id);
 
 -- Insert is service-key only (RLS bypass) — no anon insert policy
 
@@ -29,28 +29,28 @@ CREATE POLICY "public read predictions"
 -- Users can only insert their own predictions
 CREATE POLICY "own insert predictions"
   ON predictions FOR INSERT
-  WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
+  WITH CHECK (auth.uid()::text = user_id OR user_id IS NULL);
 
 -- No direct updates from client — backend service key handles updates
 
 
--- ─── watchlist ───────────────────────────────────────────────────────────────
-ALTER TABLE watchlist ENABLE ROW LEVEL SECURITY;
+-- ─── user_calls (tracker watchlist) ─────────────────────────────────────────
+ALTER TABLE user_calls ENABLE ROW LEVEL SECURITY;
 
 -- Users can only read their own watchlist
-CREATE POLICY "own read watchlist"
-  ON watchlist FOR SELECT
-  USING (auth.uid() = user_id);
+CREATE POLICY "own read user_calls"
+  ON user_calls FOR SELECT
+  USING (auth.uid()::text = user_id);
 
 -- Users can only insert into their own watchlist
-CREATE POLICY "own insert watchlist"
-  ON watchlist FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "own insert user_calls"
+  ON user_calls FOR INSERT
+  WITH CHECK (auth.uid()::text = user_id);
 
 -- Users can only delete their own watchlist entries
-CREATE POLICY "own delete watchlist"
-  ON watchlist FOR DELETE
-  USING (auth.uid() = user_id);
+CREATE POLICY "own delete user_calls"
+  ON user_calls FOR DELETE
+  USING (auth.uid()::text = user_id);
 
 
 -- ─── user_badges ─────────────────────────────────────────────────────────────

@@ -16,8 +16,8 @@ const STATS = [
 ]
 
 const FEATURES = [
-  { num: '01', title: 'Token Intelligence', body: 'Rug probability, bundle detection, fake volume scoring, dev history, fresh wallet concentration — pulled live from the chain in seconds.' },
-  { num: '02', title: 'Trader Community', body: 'Forum built for real degens. Share analysis, discuss tokens, build reputation based on accuracy — not just volume.' },
+  { num: '01', title: 'Token Intelligence', body: 'Rug probability, bundle detection, fake volume scoring, dev history, fresh wallet concentration. Pulled live from the chain in seconds.' },
+  { num: '02', title: 'Trader Community', body: 'Forum built for real degens. Share analysis, discuss tokens, build reputation based on accuracy, not just volume.' },
   { num: '03', title: 'On-Chain Leaderboard', body: 'Monthly PnL rankings pulled directly from DEX swap history. No self-reporting. No lying about entries. Real numbers.' },
   { num: '04', title: 'Price Alerts', body: 'Watch any token and get notified the moment it hits your target market cap. Watchlist syncs across devices.' },
 ]
@@ -410,7 +410,7 @@ export default function Landing({ onSwitch }) {
             <div className="lp-label">Trader Community</div>
             <h2 className="lp-h2">No influencers.<br />No paid promotions.<br /><em>Just traders.</em></h2>
             <p className="lp-community-body">
-              Post your analysis. Share your calls. Build a reputation based on what you actually say — not how many followers you have. The forum is merit-based. The chain keeps score.
+              Post your analysis. Share your calls. Build a reputation based on what you actually say, not how many followers you have. The forum is merit-based. The chain keeps score.
             </p>
           </Reveal>
           <Reveal delay={80}>
@@ -525,7 +525,7 @@ export default function Landing({ onSwitch }) {
             <h2 className="lp-h2 lp-h2-sm"><em>Your PnL is already on-chain.</em><br />Might as well show it off.</h2>
             <p className="lp-wallet-body">
               Add your wallet and you are on the board. Win big and everyone knows.
-              Lose big and... well, everyone still knows. Orbit tracks both sides — Highest PnL
+              Lose big and... well, everyone still knows. Orbit tracks both sides: Highest PnL
               and Lowest PnL, verified on-chain every month.
             </p>
             <p className="lp-wallet-quip">

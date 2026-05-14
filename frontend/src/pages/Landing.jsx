@@ -12,11 +12,11 @@ const SOCIALS = [
 const STATS = [
   { value: '< 5s', label: 'Per analysis' },
   { value: '20+', label: 'On-chain signals' },
-  { value: '100%', label: 'Solana native' },
+  { value: 'SOL + ETH', label: 'Multi-chain' },
 ]
 
 const FEATURES = [
-  { num: '01', title: 'Token Intelligence', body: 'Rug probability, bundle detection, fake volume scoring, dev history, fresh wallet concentration — pulled live from the chain in under 5 seconds.' },
+  { num: '01', title: 'Token Intelligence', body: 'Rug probability, bundle detection, fake volume scoring, dev history, fresh wallet concentration — pulled live from the chain in seconds.' },
   { num: '02', title: 'Trader Community', body: 'Forum built for real degens. Share analysis, discuss tokens, build reputation based on accuracy — not just volume.' },
   { num: '03', title: 'On-Chain Leaderboard', body: 'Monthly PnL rankings pulled directly from DEX swap history. No self-reporting. No lying about entries. Real numbers.' },
   { num: '04', title: 'Price Alerts', body: 'Watch any token and get notified the moment it hits your target market cap. Watchlist syncs across devices.' },
@@ -31,7 +31,7 @@ const PLATFORM_CARDS = [
     scrollTo: 'section-analyzer',
     color: '#a78bfa',
     stats: ['Rug Probability', 'Bundle Detection', 'Fake Chart Score', 'Dev History'],
-    body: 'Orbit pulls 20+ on-chain signals in real time and synthesizes everything into a plain-English verdict in under 5 seconds. Know before you buy.'
+    body: 'Orbit pulls 20+ on-chain signals in real time and synthesizes everything into a plain-English verdict in seconds. Know before you buy.'
   },
   {
     icon: '◈',
@@ -58,7 +58,7 @@ const PLATFORM_CARDS = [
     scrollTo: 'section-alerts',
     color: '#f59e0b',
     stats: ['15s Polling', 'Audio Alerts', 'Any Token', 'Cross-Device Sync'],
-    body: 'Set a target MC, pick a direction, and get an audio alert the moment it triggers. Add as many tokens as you want.'
+    body: 'Set a target MC, pick a direction, and get an audio alert the moment it triggers. Free accounts get 1 alert. Degen and Omega unlock unlimited.'
   },
 ]
 
@@ -414,7 +414,7 @@ export default function Landing({ onSwitch }) {
         <div className="lp-nav-brand">
           <img src={orbitPfp} className="lp-nav-pfp" alt="" />
           <span className="lp-nav-name">ORBIT</span>
-          <span className="lp-nav-ver">v0.5</span>
+          <span className="lp-nav-ver">v0.8</span>
         </div>
         <div className="lp-nav-right">
           <div className="lp-nav-socials">
@@ -432,7 +432,7 @@ export default function Landing({ onSwitch }) {
       <section className="lp-hero">
         <div className="lp-hero-glow" />
         <Reveal className="lp-hero-tag-wrap">
-          <div className="lp-hero-tag"><span className="lp-pulse" />On-chain intelligence · Solana</div>
+          <div className="lp-hero-tag"><span className="lp-pulse" />On-chain intelligence · SOL + ETH</div>
         </Reveal>
         <Reveal delay={100}>
           <h1 className="lp-hero-h1">
@@ -442,7 +442,7 @@ export default function Landing({ onSwitch }) {
         </Reveal>
         <Reveal delay={220}>
           <p className="lp-hero-sub">
-            Orbit analyzes any Pump.fun token in under 5 seconds. Rug probability, holder distribution,
+            Orbit analyzes any Solana or ETH token in seconds. Rug probability, holder distribution,
             fake chart scoring, AI narrative. Then connects you with the traders who are already using it.
           </p>
         </Reveal>
@@ -465,8 +465,8 @@ export default function Landing({ onSwitch }) {
       {/* ── TICKER ── */}
       <div className="lp-ticker-outer">
         <div className="lp-ticker-inner">
-          {['RUG DETECTION','HOLDER ANALYSIS','BUNDLE SCORING','FAKE CHART','DEV HISTORY','MIGRATION TRACKING','FRESH WALLETS','SNIPER DETECTION','LIQUIDITY DEPTH','MOMENTUM','PURITY SCORE','PEAK MC ESTIMATE',
-            'RUG DETECTION','HOLDER ANALYSIS','BUNDLE SCORING','FAKE CHART','DEV HISTORY','MIGRATION TRACKING','FRESH WALLETS','SNIPER DETECTION','LIQUIDITY DEPTH','MOMENTUM','PURITY SCORE','PEAK MC ESTIMATE'
+          {['RUG DETECTION','HOLDER ANALYSIS','BUNDLE SCORING','FAKE CHART','DEV HISTORY','MIGRATION TRACKING','FRESH WALLETS','SNIPER DETECTION','LIQUIDITY DEPTH','MOMENTUM','PURITY SCORE','PEAK MC ESTIMATE','ETH SUPPORT','GOPLUS SECURITY','CHAIN DETECTION',
+            'RUG DETECTION','HOLDER ANALYSIS','BUNDLE SCORING','FAKE CHART','DEV HISTORY','MIGRATION TRACKING','FRESH WALLETS','SNIPER DETECTION','LIQUIDITY DEPTH','MOMENTUM','PURITY SCORE','PEAK MC ESTIMATE','ETH SUPPORT','GOPLUS SECURITY','CHAIN DETECTION'
           ].map((t, i) => <span key={i} className="lp-tick">{t}<span className="lp-tick-sep">◆</span></span>)}
         </div>
       </div>
@@ -522,14 +522,15 @@ export default function Landing({ onSwitch }) {
       <section className="lp-section lp-mock-section" id="section-analyzer">
         <Reveal>
           <div className="lp-label">Token Intelligence</div>
-          <h2 className="lp-h2">This is what you get.<br />In under <span className="lp-purple">5 seconds.</span></h2>
+          <h2 className="lp-h2">This is what you get.<br /><span className="lp-purple">In seconds.</span></h2>
         </Reveal>
         <div ref={mockRef} className={`lp-mock ${mockVisible ? 'lp-mock-go' : ''}`}>
           <div className="lp-mock-top">
             <div className="lp-mock-coin">
               <span className="lp-mock-dot" />
-              <span className="lp-mock-name">DOGE</span>
-              <span className="lp-mock-sym">DOGE</span>
+              <span className="lp-mock-name">PEPE</span>
+              <span className="lp-mock-sym">PEPE</span>
+              <span className="lp-mock-badge lp-mock-badge-chain">SOL</span>
               <span className="lp-mock-badge">Migrated</span>
             </div>
             <span className="lp-mock-mc">$5.15M</span>
@@ -591,9 +592,10 @@ export default function Landing({ onSwitch }) {
 
           <div className="lp-mock-ai">
             <span className="lp-mock-ai-label">Orbit Analysis</span>
-            DOGE shows strong post-migration fundamentals with clean holder distribution and zero dev risk.
-            High organic volume suggests sustained interest. Low rug probability (12) reflects clean dev history
-            and zero manipulation signals. Recommend monitoring for entry on dips toward $4.2M...
+            PEPE shows strong post-migration fundamentals with clean holder distribution and zero dev risk.
+            Chain detection: Solana. GoPlus security check passed. High organic volume suggests sustained
+            interest. Low rug probability (12) reflects clean dev history and zero manipulation signals.
+            Recommend monitoring for entry on dips toward $4.2M...
           </div>
         </div>
 
@@ -674,7 +676,7 @@ export default function Landing({ onSwitch }) {
             <div className="lp-alerts-demo">
               <div className="lp-alerts-header">
                 <span className="lp-alerts-title">Watchlist</span>
-                <span className="lp-alerts-count">4 tokens</span>
+                <span className="lp-alerts-count">Degen plan · unlimited alerts</span>
               </div>
               {[
                 { name:'DOGE', ca:'7xK2...mF9p', target:'$8M', dir:'above', mc:'$5.15M', status:'watching', pct:64 },
@@ -732,12 +734,12 @@ export default function Landing({ onSwitch }) {
             <div className="lp-wallet-compete">
               <span className="lp-wallet-compete-label">Top trader this month</span>
               <span className="lp-wallet-compete-val">+38.7 SOL</span>
-              <span className="lp-wallet-compete-q">Top spot is empty. Someone has to take it.</span>
+              <span className="lp-wallet-compete-q">Rankings reset each month. May is live.</span>
             </div>
           </Reveal>
           <Reveal delay={150}>
             <div className="lp-wallet-card">
-              <div className="lp-wallet-card-label">Monthly PnL · April 2026</div>
+              <div className="lp-wallet-card-label">Monthly PnL · May 2026</div>
               <div className="lp-wallet-card-val">+14.2 SOL</div>
               <div className="lp-wallet-card-sub">Verified on-chain · Rank #3</div>
               <div className="lp-wallet-card-addr">7xK2...mF9p</div>
@@ -798,9 +800,9 @@ export default function Landing({ onSwitch }) {
             <div className="lp-footer-logo">
               <img src={orbitPfp} className="lp-nav-pfp" alt="" />
               <span className="lp-nav-name">ORBIT</span>
-              <span className="lp-nav-ver">v0.5</span>
+              <span className="lp-nav-ver">v0.8</span>
             </div>
-            <p className="lp-footer-tag">On-chain intelligence for Solana traders.</p>
+            <p className="lp-footer-tag">On-chain intelligence for Solana and ETH traders.</p>
             <div className="lp-footer-status"><span className="lp-status-dot" />All systems operational</div>
           </div>
           <div className="lp-footer-col">

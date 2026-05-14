@@ -166,8 +166,7 @@ export default function Landing({ onSwitch }) {
 
   const flyTo = (e, dest) => {
     if (bhActive) return
-    const rect = e.currentTarget.getBoundingClientRect()
-    setBhOrigin({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
+    setBhOrigin({ x: e.clientX, y: e.clientY })
     setBhDest(dest)
     setBhActive(true)
   }

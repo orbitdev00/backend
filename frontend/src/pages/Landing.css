@@ -102,8 +102,8 @@
 .lp-hero-glow {
   position: absolute;
   top: 20%; left: 50%; transform: translateX(-50%);
-  width: 600px; height: 600px;
-  background: radial-gradient(circle, rgba(167,139,250,0.08) 0%, transparent 70%);
+  width: 700px; height: 700px;
+  background: radial-gradient(circle, rgba(167,139,250,0.14) 0%, rgba(96,165,250,0.04) 50%, transparent 70%);
   pointer-events: none; z-index: -1;
 }
 .lp-hero-tag-wrap { margin-bottom: 32px; }
@@ -137,7 +137,7 @@
 }
 .lp-hero-sub {
   font-family: 'Inter', sans-serif;
-  font-size: 17px; color: #888; font-weight: 300;
+  font-size: 17px; color: #a8a8c4; font-weight: 300;
   max-width: 520px; line-height: 1.75;
   margin-bottom: 44px;
 }
@@ -152,7 +152,8 @@
 .lp-stat { display: flex; flex-direction: column; gap: 4px; }
 .lp-stat-n {
   font-family: var(--display); font-size: 28px;
-  font-weight: 700; color: var(--white); letter-spacing: -0.5px;
+  font-weight: 700; color: #e8e0ff; letter-spacing: -0.5px;
+  text-shadow: 0 0 28px rgba(167,139,250,0.45);
 }
 .lp-stat-l {
   font-family: var(--mono); font-size: 10px;
@@ -171,19 +172,19 @@
 .lp-cta-xl { padding: 16px 40px; font-size: 13px; }
 
 .lp-cta-ghost {
-  background: none; border: 1px solid var(--line);
-  border-radius: 3px; color: #777;
+  background: none; border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 3px; color: #9898b8;
   font-family: var(--mono); font-size: 12px;
   padding: 13px 24px; cursor: pointer;
   transition: all 0.2s; letter-spacing: 0.5px;
 }
-.lp-cta-ghost:hover { border-color: rgba(255,255,255,0.2); color: #ccc; }
+.lp-cta-ghost:hover { border-color: rgba(255,255,255,0.28); color: #ddd; }
 
 /* ── TICKER ────────────────────────────────────────────── */
 .lp-ticker-outer {
-  overflow: hidden; border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  background: #040404; padding: 11px 0;
+  overflow: hidden; border-top: 1px solid rgba(167,139,250,0.12);
+  border-bottom: 1px solid rgba(167,139,250,0.12);
+  background: #06060f; padding: 11px 0;
   position: relative; z-index: 1;
 }
 .lp-ticker-inner {
@@ -192,7 +193,7 @@
 }
 .lp-tick {
   font-family: var(--mono); font-size: 11px;
-  letter-spacing: 2px; color: #888;
+  letter-spacing: 2px; color: #9898b8;
   text-transform: uppercase; padding: 0 16px;
   display: inline-flex; align-items: center; gap: 16px;
 }
@@ -232,10 +233,10 @@
   border-radius: 4px; overflow: hidden;
 }
 .lp-prob-card {
-  background: #050505; padding: 36px 32px;
+  background: #0b0b18; padding: 36px 32px;
   transition: background 0.2s;
 }
-.lp-prob-card:hover { background: #0a0a0a; }
+.lp-prob-card:hover { background: #111125; }
 .lp-prob-num {
   display: block; font-family: var(--mono);
   font-size: 10px; letter-spacing: 2px;
@@ -247,7 +248,7 @@
 }
 .lp-prob-body {
   font-family: 'Inter', sans-serif;
-  font-size: 14px; color: #777; line-height: 1.65; font-weight: 300;
+  font-size: 14px; color: #9090a8; line-height: 1.65; font-weight: 300;
 }
 .lp-problem-close {
   font-family: var(--display); font-size: clamp(22px, 3vw, 32px);
@@ -280,10 +281,10 @@
 }
 .lp-feat-body {
   font-family: 'Inter', sans-serif;
-  font-size: 14px; color: #666; line-height: 1.7; font-weight: 300;
+  font-size: 14px; color: #8888a4; line-height: 1.7; font-weight: 300;
 }
 .lp-feat-arrow {
-  font-size: 18px; color: #2a2a2a;
+  font-size: 18px; color: #3a3a52;
   transition: color 0.2s, transform 0.2s;
   padding-top: 2px;
 }
@@ -291,17 +292,18 @@
 /* ── MOCK ──────────────────────────────────────────────── */
 .lp-mock-section { border-top: 1px solid var(--line); }
 .lp-mock {
-  background: #080808; border: 1px solid #1a1a1a;
+  background: #0d0d1e; border: 1px solid rgba(167,139,250,0.15);
   border-radius: 6px; overflow: hidden;
   margin-top: 48px;
   opacity: 0; transform: translateY(20px);
   transition: opacity 0.7s ease, transform 0.7s ease;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(167,139,250,0.06);
 }
 .lp-mock.lp-mock-go { opacity: 1; transform: translateY(0); }
 .lp-mock-top {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 16px 24px; border-bottom: 1px solid #111;
-  background: #060606;
+  padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.07);
+  background: #0b0b1a;
 }
 .lp-mock-coin { display: flex; align-items: center; gap: 10px; }
 .lp-mock-dot { width: 7px; height: 7px; background: #4ade80; border-radius: 50%; animation: pulse 2s infinite; }

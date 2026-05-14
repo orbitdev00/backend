@@ -1,4 +1,4 @@
-.inbox-screen { min-height: 100vh; background: #080808; color: #ccc; font-family: 'Inter', system-ui, sans-serif; }
+.inbox-screen { min-height: 100vh; background: #08080f; color: #c8c8e0; font-family: 'Inter', system-ui, sans-serif; }
 .inbox-body { display: grid; grid-template-columns: 280px 1fr; height: calc(100vh - 48px); max-width: 1100px; margin: 0 auto; }
 
 /* Sidebar */

@@ -2,7 +2,7 @@
 
 .sa-screen {
   min-height: 100vh;
-  background: #060606;
+  background: #08080f;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -21,8 +21,8 @@
 }
 
 .sa-card {
-  background: #0d0d0d;
-  border: 1px solid #1e1e1e;
+  background: #0e0e1a;
+  border: 1px solid rgba(255,255,255,0.09);
   border-radius: 14px;
   width: 100%;
   max-width: 520px;

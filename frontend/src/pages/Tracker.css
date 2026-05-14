@@ -2,7 +2,7 @@
 .tracker-screen {
   height: 100vh;
   overflow: hidden;
-  background: #000;
+  background: #08080f;
   color: var(--text);
   position: relative;
   display: flex;
@@ -51,17 +51,17 @@
 
 .tracker-tabs {
   display: flex; gap: 4px;
-  background: #0d0d0d; border: 1px solid #1e1e1e;
+  background: #0e0e1a; border: 1px solid rgba(255,255,255,0.09);
   border-radius: 6px; padding: 3px;
 }
 .tracker-tab {
-  background: none; border: none; color: #555;
+  background: none; border: none; color: #666680;
   font-family: inherit; font-size: 11px;
   padding: 6px 14px; cursor: pointer;
   border-radius: 4px; transition: all 0.15s;
   display: flex; align-items: center; gap: 6px;
 }
-.tracker-tab.active { background: #1a1a1a; color: #fff; }
+.tracker-tab.active { background: #1e1e2e; color: #fff; }
 .tracker-badge {
   background: var(--green); color: #000;
   border-radius: 10px; padding: 1px 6px;
@@ -70,9 +70,10 @@
 
 /* ── Add form ─────────────────────────────────────────── */
 .tracker-add {
-  background: #0a0a0a; border: 1px solid #1a1a1a;
+  background: #0e0e1a; border: 1px solid rgba(255,255,255,0.09);
   border-radius: 8px; padding: 20px;
   margin-bottom: 20px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.4);
 }
 .add-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .add-input {
@@ -107,7 +108,7 @@
 .tracker-empty {
   text-align: center; color: #444;
   font-size: 12px; padding: 60px;
-  background: #0a0a0a; border: 1px solid #1a1a1a;
+  background: #0e0e1a; border: 1px solid rgba(255,255,255,0.08);
   border-radius: 8px;
 }
 .tracker-list { display: flex; flex-direction: column; gap: 8px; }
@@ -115,10 +116,10 @@
 .tracker-row {
   display: flex; align-items: center; gap: 16px;
   padding: 14px 18px;
-  background: #0a0a0a; border: 1px solid #1a1a1a;
+  background: #0e0e1a; border: 1px solid rgba(255,255,255,0.08);
   border-radius: 8px; transition: border-color 0.2s;
 }
-.tracker-row:hover { border-color: #2a2a2a; }
+.tracker-row:hover { border-color: rgba(167,139,250,0.25); background: #111125; }
 .tracker-row.triggered { border-color: var(--green); background: rgba(74,222,128,0.03); }
 
 .tr-info { flex: 1; min-width: 0; }

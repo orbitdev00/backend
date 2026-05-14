@@ -1,31 +1,33 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --bg: #0a0a0a;
-  --bg2: #111111;
-  --bg3: #181818;
-  --border: #222222;
-  --border2: #2e2e2e;
+  --bg: #0a0a12;
+  --bg2: #111119;
+  --bg3: #18181f;
+  --border: #24243a;
+  --border2: #30303e;
   --green: #a78bfa;
   --green-dim: #7c3aed;
-  --green-bg: rgba(167,139,250,0.07);
+  --green-bg: rgba(167,139,250,0.08);
   --red: #f87171;
   --red-dim: #ef4444;
-  --red-bg: rgba(248,113,113,0.07);
+  --red-bg: rgba(248,113,113,0.08);
   --yellow: #fbbf24;
-  --yellow-bg: rgba(251,191,36,0.07);
+  --yellow-bg: rgba(251,191,36,0.08);
   --blue: #60a5fa;
-  --text: #e8e8e8;
-  --text-dim: #909090;
-  --text-muted: #505050;
+  --text: #e8e8f0;
+  --text-dim: #9898b0;
+  --text-muted: #58586a;
   --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --mono: 'JetBrains Mono', monospace;
+  --surface: #0e0e1a;
+  --surface2: #13131e;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  background: #000;
+  background: #08080f;
   color: var(--text);
   font-family: var(--sans);
   min-height: 100vh;
@@ -41,6 +43,16 @@ body {
 @keyframes fadeIn  { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 @keyframes spin    { to { transform: rotate(360deg); } }
 @keyframes pulse   { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
+
+/* ── Gradient text & glow utilities ─────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, #a78bfa 0%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.stat-glow-purple { text-shadow: 0 0 28px rgba(167,139,250,0.45); color: #e0d4ff; }
+.stat-glow-green  { text-shadow: 0 0 28px rgba(74,222,128,0.4);  color: #c8ffda; }
 
 /* ── Color utility overrides ─────────────────────────────
    .c-green always means "good/safe/positive" = true green

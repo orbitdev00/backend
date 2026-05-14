@@ -1,8 +1,8 @@
 /* ── Base ────────────────────────────────────────────── */
 .forum-screen {
   min-height: 100vh;
-  background: #060606;
-  color: #ccc;
+  background: #08080f;
+  color: #c8c8e0;
   font-family: 'Inter', system-ui, sans-serif;
   font-weight: 300;
 }
@@ -46,10 +46,10 @@
 .forum-search-wrap { position: relative; }
 
 .forum-search-input {
-  background: #0d0d0d;
-  border: 1px solid #1e1e1e;
+  background: #0e0e1a;
+  border: 1px solid rgba(255,255,255,0.09);
   border-radius: 6px;
-  color: #ccc;
+  color: #c8c8e0;
   font-family: var(--mono);
   font-size: 11px;
   padding: 8px 36px 8px 12px;
@@ -57,7 +57,7 @@
   width: 220px;
   transition: border-color 0.15s;
 }
-.forum-search-input:focus { border-color: #333; }
+.forum-search-input:focus { border-color: rgba(167,139,250,0.35); }
 
 .forum-search-btn {
   position: absolute;
@@ -72,11 +72,12 @@
   position: absolute;
   top: calc(100% + 4px); left: 0;
   width: 100%;
-  background: #111;
-  border: 1px solid #222;
+  background: #111119;
+  border: 1px solid rgba(255,255,255,0.09);
   border-radius: 6px;
   overflow: hidden;
   z-index: 200;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.7);
 }
 .forum-suggest-item {
   display: flex; align-items: center; gap: 10px;
@@ -106,7 +107,7 @@
 
 .forum-notif-wrap { position: relative; }
 .forum-notif-btn {
-  background: #111; border: 1px solid #1e1e1e;
+  background: #0e0e1a; border: 1px solid rgba(255,255,255,0.09);
   border-radius: 6px; color: #777;
   font-size: 14px; padding: 6px 10px;
   cursor: pointer; position: relative;
@@ -121,9 +122,10 @@
 }
 .forum-notif-dropdown {
   position: absolute; right: 0; top: calc(100% + 6px);
-  width: 280px; background: #111;
-  border: 1px solid #222; border-radius: 8px;
+  width: 280px; background: #111119;
+  border: 1px solid rgba(255,255,255,0.09); border-radius: 8px;
   z-index: 200; overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.8);
 }
 .forum-notif-title {
   display: flex; justify-content: space-between;
@@ -608,18 +610,18 @@
 .fsidebar-desc { font-size: 12px; color: #666; line-height: 1.5; }
 
 /* ── New thread form ─────────────────────────────────── */
-.fnew-screen { min-height: 100vh; background: #060606; color: #ccc; font-family: 'Inter', system-ui, sans-serif; }
+.fnew-screen { min-height: 100vh; background: #08080f; color: #c8c8e0; font-family: 'Inter', system-ui, sans-serif; }
 .fnew-body { max-width: 700px; margin: 0 auto; padding: 36px 24px 80px; }
 .fnew-header { margin-bottom: 24px; }
 .fnew-title { font-size: 20px; font-weight: 700; color: #fff; margin: 0 0 4px; }
 .fnew-sub { font-size: 12px; color: #555; }
-.fnew-card { background: #0a0a0a; border: 1px solid #161616; border-radius: 10px; overflow: hidden; }
+.fnew-card { background: #0e0e1a; border: 1px solid rgba(255,255,255,0.09); border-radius: 10px; overflow: hidden; box-shadow: 0 2px 16px rgba(0,0,0,0.5); }
 .fnew-section { padding: 16px 20px; border-bottom: 1px solid #111; }
 .fnew-section:last-of-type { border-bottom: none; }
 .fnew-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #555; margin-bottom: 8px; font-family: var(--mono); }
-.fnew-input { width: 100%; background: #060606; border: 1px solid #1e1e1e; border-radius: 5px; color: #ccc; font-family: inherit; font-size: 13px; font-weight: 300; padding: 9px 12px; outline: none; box-sizing: border-box; }
+.fnew-input { width: 100%; background: #0a0a16; border: 1px solid rgba(255,255,255,0.09); border-radius: 5px; color: #c8c8e0; font-family: inherit; font-size: 13px; font-weight: 300; padding: 9px 12px; outline: none; box-sizing: border-box; }
 .fnew-input:focus { border-color: #2a2a2a; }
-.fnew-textarea { width: 100%; background: #060606; border: 1px solid #1e1e1e; border-radius: 5px; color: #ccc; font-family: inherit; font-size: 13px; font-weight: 300; padding: 9px 12px; outline: none; box-sizing: border-box; resize: vertical; line-height: 1.6; }
+.fnew-textarea { width: 100%; background: #0a0a16; border: 1px solid rgba(255,255,255,0.09); border-radius: 5px; color: #c8c8e0; font-family: inherit; font-size: 13px; font-weight: 300; padding: 9px 12px; outline: none; box-sizing: border-box; resize: vertical; line-height: 1.6; }
 .fnew-textarea:focus { border-color: #2a2a2a; }
 .fnew-select { appearance: none; cursor: pointer; }
 .fnew-actions { display: flex; gap: 10px; justify-content: flex-end; padding: 16px 20px; border-top: 1px solid #111; }
@@ -631,7 +633,7 @@
 .forum-new-btn-side:hover { opacity: 0.85; }
 .forum-subheading { font-size: 12px; color: #555; margin: 4px 0 0; }
 .forum-pagination { display: flex; align-items: center; gap: 12px; justify-content: center; margin-top: 16px; }
-.forum-pagination button { background: #0a0a0a; border: 1px solid #1e1e1e; border-radius: 4px; color: #666; font-family: var(--mono); font-size: 10px; padding: 6px 12px; cursor: pointer; transition: all 0.15s; }
+.forum-pagination button { background: #0e0e1a; border: 1px solid rgba(255,255,255,0.09); border-radius: 4px; color: #666; font-family: var(--mono); font-size: 10px; padding: 6px 12px; cursor: pointer; transition: all 0.15s; }
 .forum-pagination button:hover:not(:disabled) { border-color: #333; color: #aaa; }
 .forum-pagination button:disabled { opacity: 0.3; cursor: default; }
 .forum-pagination span { font-size: 11px; color: #555; font-family: var(--mono); }
@@ -669,7 +671,7 @@
 .fnew-form { display: flex; flex-direction: column; gap: 16px; }
 .fnew-field { display: flex; flex-direction: column; gap: 6px; }
 .fnew-field label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #555; font-family: var(--mono); }
-.fnew-select { width: 100%; background: #060606; border: 1px solid #1e1e1e; border-radius: 5px; color: #ccc; font-family: inherit; font-size: 13px; padding: 9px 12px; outline: none; box-sizing: border-box; appearance: none; cursor: pointer; }
+.fnew-select { width: 100%; background: #0a0a16; border: 1px solid rgba(255,255,255,0.09); border-radius: 5px; color: #c8c8e0; font-family: inherit; font-size: 13px; padding: 9px 12px; outline: none; box-sizing: border-box; appearance: none; cursor: pointer; }
 .fnew-select:focus { border-color: #2a2a2a; }
 
 /* Thread row author + pfp */

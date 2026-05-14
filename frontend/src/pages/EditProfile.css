@@ -1,11 +1,11 @@
-.ep-screen { min-height: 100vh; background: #080808; color: #ccc; font-family: 'Inter', system-ui, sans-serif; }
+.ep-screen { min-height: 100vh; background: #08080f; color: #c8c8e0; font-family: 'Inter', system-ui, sans-serif; }
 .ep-body { max-width: 520px; margin: 0 auto; padding: 32px 24px; }
 .ep-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
 .ep-header h2 { font-size: 16px; font-weight: 500; letter-spacing: 1px; color: #fff; margin: 0; }
 .ep-back { background: none; border: none; color: #555; font-family: inherit; font-size: 12px; cursor: pointer; padding: 0; }
 .ep-back:hover { color: #aaa; }
 
-.ep-card { background: #0d0d0d; border: 1px solid #1e1e1e; border-radius: 8px; overflow: hidden; }
+.ep-card { background: #0e0e1a; border: 1px solid rgba(255,255,255,0.09); border-radius: 8px; overflow: hidden; box-shadow: 0 2px 16px rgba(0,0,0,0.5); }
 .ep-section { padding: 18px 20px; border-bottom: 1px solid #161616; }
 .ep-section:last-of-type { border-bottom: none; }
 .ep-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #555; margin-bottom: 8px; }
@@ -38,7 +38,7 @@
 .ep-upload-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .ep-input {
-  width: 100%; background: #080808; border: 1px solid #1e1e1e;
+  width: 100%; background: #0a0a16; border: 1px solid rgba(255,255,255,0.09);
   border-radius: 4px; color: #ccc; font-family: inherit;
   font-size: 13px; font-weight: 300; padding: 9px 12px;
   outline: none; box-sizing: border-box;

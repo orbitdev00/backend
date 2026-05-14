@@ -3,8 +3,9 @@ import { useEffect, useRef } from 'react'
 export const starRegistry = { cancelDraw: null }
 
 export default function StarField() {
-  const canvasRef = useRef(null)
-  const scrollRef = useRef(0)
+  const canvasRef  = useRef(null)
+  const scrollRef  = useRef(0)   // raw target
+  const smoothRef  = useRef(0)   // lerped display value
 
   useEffect(() => {
     const onScroll = () => { scrollRef.current = window.scrollY }
@@ -22,17 +23,17 @@ export default function StarField() {
       canvas.width  = window.innerWidth
       canvas.height = window.innerHeight
       stars = Array.from({ length: 294 }, () => {
-        const depth = Math.random() * 0.75 + 0.05   // 0.05 (far) → 0.80 (near)
-        const t = (depth - 0.05) / 0.75             // 0–1 closeness
+        const depth = Math.random() * 0.75 + 0.05
+        const t     = (depth - 0.05) / 0.75
         return {
           x:        Math.random() * canvas.width,
           y:        Math.random() * canvas.height,
           r:        0.15 + Math.random() * 0.45 + t * 1.7,
           o:        0.06 + Math.random() * 0.18 + t * 0.58,
-          freq:     0.0006 + Math.random() * 0.002,  // radians/ms → periods 3–10s
+          freq:     0.0006 + Math.random() * 0.002,
           phase:    Math.random() * Math.PI * 2,
           phase2:   Math.random() * Math.PI * 2,
-          parallax: depth * 0.65,                    // far≈0, near≈0.52
+          parallax: depth * 0.65,
           depth,
         }
       })
@@ -41,7 +42,10 @@ export default function StarField() {
     const draw = (ts) => {
       const H = canvas.height
       ctx.clearRect(0, 0, canvas.width, H)
-      const scroll = scrollRef.current
+
+      // Lerp scroll toward target — eliminates discrete scroll jumps
+      smoothRef.current += (scrollRef.current - smoothRef.current) * 0.08
+      const scroll = smoothRef.current
 
       for (const s of stars) {
         const w1 = Math.sin(ts * s.freq + s.phase)
@@ -49,20 +53,16 @@ export default function StarField() {
         const o  = Math.max(0.02, Math.min(0.95, s.o + (w1 + w2) * 0.38))
         const r  = Math.max(0.1,  s.r + w1 * 0.28)
 
-        // parallax — near stars scroll faster, wrap with ghost copy to prevent pop
         const rawY = s.y - scroll * s.parallax
         const dy1  = ((rawY % H) + H) % H
-        const dy2  = dy1 - H
 
         const paint = (dy) => {
           if (dy < -r * 5 || dy > H + r * 5) return
+          // Soft glow — single cheap circle instead of createRadialGradient
           if (r > 1.5 && s.depth > 0.52) {
-            const grd = ctx.createRadialGradient(s.x, dy, 0, s.x, dy, r * 4.5)
-            grd.addColorStop(0, `rgba(210,190,255,${o * 0.28})`)
-            grd.addColorStop(1, 'rgba(0,0,0,0)')
             ctx.beginPath()
-            ctx.arc(s.x, dy, r * 4.5, 0, Math.PI * 2)
-            ctx.fillStyle = grd
+            ctx.arc(s.x, dy, r * 3.5, 0, Math.PI * 2)
+            ctx.fillStyle = `rgba(200,180,255,${o * 0.07})`
             ctx.fill()
           }
           ctx.beginPath()
@@ -72,8 +72,8 @@ export default function StarField() {
         }
 
         paint(dy1)
-        paint(dy2)        // ghost above — seamless wrap when scrolling up
-        paint(dy1 + H)    // ghost below — seamless wrap when scrolling down
+        paint(dy1 - H)   // ghost above
+        paint(dy1 + H)   // ghost below
       }
       animId = requestAnimationFrame(draw)
     }

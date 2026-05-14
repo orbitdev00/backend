@@ -18,7 +18,7 @@ except Exception as e:
     TRIAL_GATE_ENABLED = False
     async def check_trial(fp): return True
     async def consume_trial(fp, mint, ip=""): return True
-from engine.claude import analyze          # Claude Haiku â€” primary
+from engine.claude import analyze          # Claude Haiku â€" primary
 from badge_routes import badge_router
 from stripe_routes import router as stripe_router
 from forum_routes import forum_router
@@ -32,7 +32,7 @@ from badge_engine import (
 from rate_limiter import check_rate_limit, consume_rate_limit, get_usage, get_usage_async
 from stripe_handler import create_checkout_session, create_billing_portal, handle_webhook
 from tier_check import get_tier, invalidate as invalidate_tier_cache
-from ml.predictor import predict_xgboost  # XGBoost â€” background signals
+from ml.predictor import predict_xgboost  # XGBoost â€" background signals
 from config import REFRESH_INTERVAL, MAX_AUTO_REFRESHES
 
 app = FastAPI(title="Pump Analyzer API")
@@ -40,7 +40,7 @@ app.include_router(badge_router)
 app.include_router(stripe_router)
 app.include_router(forum_router)
 
-# â”€â”€ Nightly PnL sync â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â"€â"€ Nightly PnL sync â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 import asyncio as _asyncio
 from datetime import datetime as _dt, timezone as _tz
 
@@ -63,7 +63,7 @@ async def start_pnl_cron():
 
 @app.post("/admin/pnl-sync")
 async def manual_pnl_sync(request: Request):
-    """Manual trigger â€” call from Railway or curl."""
+    """Manual trigger â€" call from Railway or curl."""
     secret = request.headers.get("x-admin-secret", "")
     if secret != (os.getenv("ADMIN_SECRET") or ""):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
@@ -156,14 +156,14 @@ async def health():
     return {"status": "ok", "timestamp": int(time.time())}
 
 
-@app.get(“/snapshot/{mint}”)
+@app.get("/snapshot/{mint}")
 async def snapshot_only(mint: str, request: Request):
-    “””Lightweight endpoint for auto-analyzer — builds snapshot, logs to Supabase, skips Claude.”””
+    """Lightweight endpoint for auto-analyzer — builds snapshot, logs to Supabase, skips Claude."""
     if not is_valid_mint(mint):
-        return JSONResponse({“ok”: False, “error”: “Invalid mint address”}, status_code=400)
-    ip = request.client.host if request.client else “unknown”
+        return JSONResponse({"ok": False, "error": "Invalid mint address"}, status_code=400)
+    ip = request.client.host if request.client else "unknown"
     if not ip_rate_ok(ip, limit=20, window=60):
-        return JSONResponse({“ok”: False, “error”: “Rate limit exceeded”}, status_code=429)
+        return JSONResponse({"ok": False, "error": "Rate limit exceeded"}, status_code=429)
     try:
         snapshot = await build_snapshot(mint)
         mc = snapshot.get("market_cap_usd", 0) or 0
@@ -227,7 +227,7 @@ async def analyze_once(
         return JSONResponse({"error": "Invalid user_id"}, status_code=400)
 
     trial = is_trial.lower() == "true"
-    # Trial mode â€” check fingerprint before running
+    # Trial mode â€" check fingerprint before running
     if trial:
         if not fingerprint:
             return JSONResponse({"error": "trial_no_fingerprint"}, status_code=403)
@@ -289,25 +289,25 @@ async def analyze_once(
         return JSONResponse({"error": "Analysis failed. Please try again."}, status_code=500)
 
 
-@app.get(“/debug/{mint}”)
+@app.get("/debug/{mint}")
 async def debug_snapshot(mint: str, request: Request):
-    “””Debug endpoint — admin only.”””
+    """Debug endpoint — admin only."""
     if not admin_ok(request):
-        return JSONResponse({“error”: “unauthorized”}, status_code=403)
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
     if not is_valid_mint(mint):
-        return JSONResponse({“error”: “Invalid mint address”}, status_code=400)
+        return JSONResponse({"error": "Invalid mint address"}, status_code=400)
     try:
         snapshot = await build_snapshot(mint)
-        return JSONResponse({“snapshot”: snapshot})
+        return JSONResponse({"snapshot": snapshot})
     except Exception as e:
-        print(f”ERROR in debug: {e}\n{traceback.format_exc()}”)
-        return JSONResponse({“error”: “Debug failed”}, status_code=500)
+        print(f"ERROR in debug: {e}\n{traceback.format_exc()}")
+        return JSONResponse({"error": "Debug failed"}, status_code=500)
 
 
 def _calculate_pnl(snapshot: dict, prediction: dict) -> dict:
     """
     Calculate PnL scenarios mathematically from snapshot data.
-    Never trusts Claude for numbers â€” pure math.
+    Never trusts Claude for numbers â€" pure math.
     """
     current_mc   = snapshot.get("market_cap_usd") or 0
     peak_mc      = prediction.get("estimated_peak_mc") or 0
@@ -320,8 +320,8 @@ def _calculate_pnl(snapshot: dict, prediction: dict) -> dict:
     if current_mc <= 0 or peak_mc <= 0:
         return {**prediction, "pnl_scenarios": {"conservative": 0, "moderate": 0, "aggressive": 0}}
 
-    # Dead/rugged coin â€” requires BOTH high risk AND dead price action
-    # A coin with 91% rug prob but $500K volume is NOT dead â€” it's risky but active
+    # Dead/rugged coin â€" requires BOTH high risk AND dead price action
+    # A coin with 91% rug prob but $500K volume is NOT dead â€" it's risky but active
     is_dead = (
         (rug_prob >= 85 and vol_1h < 1000 and change_1h < -10) or
         (pct_from_pk >= 70 and vol_1h < 500) or
@@ -401,32 +401,32 @@ async def preview(mint: str, request: Request):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
-@app.websocket(“/ws/stream/{mint}”)
-async def stream_analysis(websocket: WebSocket, mint: str, user_id: str = “”):
-    “””Streaming analysis WebSocket — pushes partial results as each aggregator completes.”””
+@app.websocket("/ws/stream/{mint}")
+async def stream_analysis(websocket: WebSocket, mint: str, user_id: str = ""):
+    """Streaming analysis WebSocket — pushes partial results as each aggregator completes."""
     await websocket.accept()
 
     async def send(msg_type: str, source: str, data: dict):
         try:
-            await websocket.send_json({“type”: msg_type, “source”: source, “data”: data})
+            await websocket.send_json({"type": msg_type, "source": source, "data": data})
         except Exception:
             pass
 
     if not is_valid_mint(mint):
-        await send(“error”, “system”, {“message”: “Invalid mint address”, “error”: “invalid_mint”})
+        await send("error", "system", {"message": "Invalid mint address", "error": "invalid_mint"})
         await websocket.close()
         return
 
     if user_id and not is_valid_uuid(user_id):
-        await send(“error”, “system”, {“message”: “Invalid user_id”, “error”: “invalid_user”})
+        await send("error", "system", {"message": "Invalid user_id", "error": "invalid_user"})
         await websocket.close()
         return
 
     # Verify access_token matches user_id when provided
-    access_token = websocket.query_params.get(“access_token”, “”)
+    access_token = websocket.query_params.get("access_token", "")
     if user_id and access_token:
         if not await verify_ws_token(access_token, user_id):
-            await send(“error”, “auth”, {“message”: “Token verification failed”, “error”: “auth_failed”})
+            await send("error", "auth", {"message": "Token verification failed", "error": "auth_failed"})
             await websocket.close()
             return
 
@@ -647,7 +647,7 @@ async def submit_outcome(mint: str, request: Request, actual_peak_mc: float, not
         return JSONResponse({"error": "Invalid mint address"}, status_code=400)
     success = await record_outcome(mint, actual_peak_mc, notes)
     if success:
-        # Fire badge checks â€” find user_id from predictions table
+        # Fire badge checks â€" find user_id from predictions table
         try:
             import httpx
             from config import SUPABASE_URL, SUPABASE_SERVICE_KEY

@@ -1,6 +1,7 @@
 # Secrets
 backend/.env
 frontend/.env
+frontend/.env.local
 
 # Dependencies (too large for GitHub)
 node_modules/

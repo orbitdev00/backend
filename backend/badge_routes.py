@@ -2,11 +2,12 @@
 badge_routes.py — Badge API Routes
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 from badges import BADGES, EQUIP_LIMITS
 from badge_engine import grant_badge_manual, equip_badge_fn, unequip_badge_fn
 from config import SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_ANON_KEY
+from security import admin_ok
 import httpx
 
 badge_router = APIRouter(prefix="/badges", tags=["badges"])
@@ -80,7 +81,9 @@ class GrantRequest(BaseModel):
 
 
 @badge_router.post("/grant")
-async def grant(req: GrantRequest):
+async def grant(req: GrantRequest, request: Request):
+    if not admin_ok(request):
+        raise HTTPException(status_code=403, detail="unauthorized")
     result = await grant_badge_manual(req.granter_id, req.target_user_id, req.badge_id, req.granter_role)
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])

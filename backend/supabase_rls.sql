@@ -1,0 +1,64 @@
+-- Supabase Row Level Security policies for Orbit
+-- Run these in the Supabase SQL Editor (Dashboard > SQL Editor)
+-- The service key bypasses RLS, so backend writes are unaffected.
+
+-- ─── user_reputation ────────────────────────────────────────────────────────
+ALTER TABLE user_reputation ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can read public reputation data (leaderboard, profiles)
+CREATE POLICY "public read user_reputation"
+  ON user_reputation FOR SELECT
+  USING (true);
+
+-- Users can only update their own row
+CREATE POLICY "own row update user_reputation"
+  ON user_reputation FOR UPDATE
+  USING (auth.uid() = user_id);
+
+-- Insert is service-key only (RLS bypass) — no anon insert policy
+
+
+-- ─── predictions ────────────────────────────────────────────────────────────
+ALTER TABLE predictions ENABLE ROW LEVEL SECURITY;
+
+-- Public read (accuracy stats, leaderboard)
+CREATE POLICY "public read predictions"
+  ON predictions FOR SELECT
+  USING (true);
+
+-- Users can only insert their own predictions
+CREATE POLICY "own insert predictions"
+  ON predictions FOR INSERT
+  WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
+
+-- No direct updates from client — backend service key handles updates
+
+
+-- ─── watchlist ───────────────────────────────────────────────────────────────
+ALTER TABLE watchlist ENABLE ROW LEVEL SECURITY;
+
+-- Users can only read their own watchlist
+CREATE POLICY "own read watchlist"
+  ON watchlist FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Users can only insert into their own watchlist
+CREATE POLICY "own insert watchlist"
+  ON watchlist FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can only delete their own watchlist entries
+CREATE POLICY "own delete watchlist"
+  ON watchlist FOR DELETE
+  USING (auth.uid() = user_id);
+
+
+-- ─── user_badges ─────────────────────────────────────────────────────────────
+ALTER TABLE user_badges ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can read badge data (public profiles)
+CREATE POLICY "public read user_badges"
+  ON user_badges FOR SELECT
+  USING (true);
+
+-- Only service key can insert/update badges (no client policy = denied for anon/authed)

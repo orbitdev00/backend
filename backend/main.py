@@ -6,6 +6,8 @@ import os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+from security import is_valid_mint, is_valid_uuid, ip_rate_ok, admin_ok, verify_ws_token
 from engine.snapshot import build_snapshot
 from aggregator.pnl import fetch_monthly_pnl
 from supabase_logger import log_prediction, record_outcome, get_accuracy_stats
@@ -37,6 +39,13 @@ app = FastAPI(title="Pump Analyzer API")
 app.include_router(badge_router)
 app.include_router(stripe_router)
 
+class _BodySizeLimit(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        cl = request.headers.get("content-length")
+        if cl and int(cl) > 65_536:
+            return JSONResponse({"error": "Request body too large"}, status_code=413)
+        return await call_next(request)
+
 # â”€â”€ Nightly PnL sync â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import asyncio as _asyncio
 from datetime import datetime as _dt, timezone as _tz
@@ -67,13 +76,18 @@ async def manual_pnl_sync(request: Request):
     _asyncio.create_task(sync_all_wallets())
     return JSONResponse({"status": "sync started"})
 
+_prod_origins = ["https://orbit-app.xyz", "https://www.orbit-app.xyz"]
+_dev_origins  = ["http://localhost:5173", "http://localhost:3000"]
+_cors_origins = _prod_origins if os.getenv("ENVIRONMENT") == "production" else _prod_origins + _dev_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "https://orbit-app.xyz", "https://www.orbit-app.xyz"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "x-admin-secret"],
 )
+app.add_middleware(_BodySizeLimit)
 
 active_watchers: dict[str, list[WebSocket]] = {}
 watcher_tasks: dict[str, asyncio.Task] = {}
@@ -86,17 +100,23 @@ async def refresh_pnl(request: Request):
     Fetches monthly PnL for the authenticated user's linked wallet
     and stores it in user_reputation. Called from Edit Profile page.
     """
+    ip = request.client.host if request.client else "unknown"
+    if not ip_rate_ok(ip, limit=10, window=60):
+        return JSONResponse({"error": "Rate limit exceeded"}, status_code=429)
+
     try:
         body = await request.json()
-        wallet = body.get("wallet", "").strip()
+        wallet  = body.get("wallet", "").strip()
         user_id = body.get("user_id", "").strip()
 
         if not wallet or not user_id:
             return JSONResponse({"error": "wallet and user_id required"}, status_code=400)
 
-        # Validate wallet looks like a Solana address
-        if len(wallet) < 32 or len(wallet) > 44:
+        if not is_valid_mint(wallet):
             return JSONResponse({"error": "Invalid wallet address"}, status_code=400)
+
+        if not is_valid_uuid(user_id):
+            return JSONResponse({"error": "Invalid user_id"}, status_code=400)
 
         print(f"[PnL DEBUG] calling fetch_monthly_pnl for {wallet[:8]}...")
         pnl = await fetch_monthly_pnl(wallet)
@@ -143,9 +163,14 @@ async def health():
     return {"status": "ok", "timestamp": int(time.time())}
 
 
-@app.get("/snapshot/{mint}")
+@app.get(“/snapshot/{mint}”)
 async def snapshot_only(mint: str, request: Request):
-    """Lightweight endpoint for auto-analyzer â€” builds snapshot, logs to Supabase, skips Claude."""
+    “””Lightweight endpoint for auto-analyzer — builds snapshot, logs to Supabase, skips Claude.”””
+    if not is_valid_mint(mint):
+        return JSONResponse({“ok”: False, “error”: “Invalid mint address”}, status_code=400)
+    ip = request.client.host if request.client else “unknown”
+    if not ip_rate_ok(ip, limit=20, window=60):
+        return JSONResponse({“ok”: False, “error”: “Rate limit exceeded”}, status_code=429)
     try:
         snapshot = await build_snapshot(mint)
         mc = snapshot.get("market_cap_usd", 0) or 0
@@ -203,7 +228,12 @@ async def analyze_once(
     is_trial: str = "false",
     user_id: str = "",
 ):
-    trial = is_trial.lower() == "true" 
+    if not is_valid_mint(mint):
+        return JSONResponse({"error": "Invalid mint address"}, status_code=400)
+    if user_id and not is_valid_uuid(user_id):
+        return JSONResponse({"error": "Invalid user_id"}, status_code=400)
+
+    trial = is_trial.lower() == "true"
     # Trial mode â€” check fingerprint before running
     if trial:
         if not fingerprint:
@@ -262,21 +292,23 @@ async def analyze_once(
             result["rate_limit"] = usage
         return JSONResponse(result)
     except Exception as e:
-        tb = traceback.format_exc()
-        print(f"ERROR in analyze_once: {e}\n{tb}")
-        return JSONResponse({"error": str(e), "traceback": tb}, status_code=500)
+        print(f"ERROR in analyze_once: {e}\n{traceback.format_exc()}")
+        return JSONResponse({"error": "Analysis failed. Please try again."}, status_code=500)
 
 
-@app.get("/debug/{mint}")
-async def debug_snapshot(mint: str):
-    """Debug endpoint â€” returns raw snapshot without AI analysis."""
+@app.get(“/debug/{mint}”)
+async def debug_snapshot(mint: str, request: Request):
+    “””Debug endpoint — admin only.”””
+    if not admin_ok(request):
+        return JSONResponse({“error”: “unauthorized”}, status_code=403)
+    if not is_valid_mint(mint):
+        return JSONResponse({“error”: “Invalid mint address”}, status_code=400)
     try:
         snapshot = await build_snapshot(mint)
-        return JSONResponse({"snapshot": snapshot})
+        return JSONResponse({“snapshot”: snapshot})
     except Exception as e:
-        tb = traceback.format_exc()
-        print(f"ERROR in debug: {e}\n{tb}")
-        return JSONResponse({"error": str(e), "traceback": tb}, status_code=500)
+        print(f”ERROR in debug: {e}\n{traceback.format_exc()}”)
+        return JSONResponse({“error”: “Debug failed”}, status_code=500)
 
 
 def _calculate_pnl(snapshot: dict, prediction: dict) -> dict:
@@ -345,11 +377,13 @@ def _calculate_pnl(snapshot: dict, prediction: dict) -> dict:
 
 
 @app.get("/preview/{mint}")
-async def preview(mint: str):
-    """
-    Returns just DexScreener data instantly (~1s).
-    Frontend shows this immediately while full analysis loads.
-    """
+async def preview(mint: str, request: Request):
+    """Returns just DexScreener data instantly (~1s)."""
+    if not is_valid_mint(mint):
+        return JSONResponse({"error": "Invalid mint address"}, status_code=400)
+    ip = request.client.host if request.client else "unknown"
+    if not ip_rate_ok(ip, limit=30, window=60):
+        return JSONResponse({"error": "Rate limit exceeded"}, status_code=429)
     try:
         from aggregator.dexscreener import fetch_dexscreener
         from aggregator.pumpfun import fetch_pumpfun
@@ -374,23 +408,37 @@ async def preview(mint: str):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
-@app.websocket("/ws/stream/{mint}")
-async def stream_analysis(websocket: WebSocket, mint: str, user_id: str = ""):
-    """
-    Streaming analysis WebSocket.
-    Pushes partial results as each aggregator completes.
-    Client receives live updates instead of waiting for full result.
-    """
+@app.websocket(“/ws/stream/{mint}”)
+async def stream_analysis(websocket: WebSocket, mint: str, user_id: str = “”):
+    “””Streaming analysis WebSocket — pushes partial results as each aggregator completes.”””
     await websocket.accept()
 
     async def send(msg_type: str, source: str, data: dict):
         try:
-            await websocket.send_json({"type": msg_type, "source": source, "data": data})
+            await websocket.send_json({“type”: msg_type, “source”: source, “data”: data})
         except Exception:
             pass
 
+    if not is_valid_mint(mint):
+        await send(“error”, “system”, {“message”: “Invalid mint address”, “error”: “invalid_mint”})
+        await websocket.close()
+        return
+
+    if user_id and not is_valid_uuid(user_id):
+        await send(“error”, “system”, {“message”: “Invalid user_id”, “error”: “invalid_user”})
+        await websocket.close()
+        return
+
+    # Verify access_token matches user_id when provided
+    access_token = websocket.query_params.get(“access_token”, “”)
+    if user_id and access_token:
+        if not await verify_ws_token(access_token, user_id):
+            await send(“error”, “auth”, {“message”: “Token verification failed”, “error”: “auth_failed”})
+            await websocket.close()
+            return
+
     try:
-        # â”€â”€ Rate limit check BEFORE any API calls â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # Rate limit check BEFORE any API calls
         if user_id:
             rl = await check_rate_limit(user_id)
             if not rl["allowed"]:
@@ -540,41 +588,6 @@ async def stream_analysis(websocket: WebSocket, mint: str, user_id: str = ""):
             pass
 
 
-@app.get("/test-supabase")
-async def test_supabase():
-    """Test Supabase connectivity directly."""
-    import httpx
-    from config import SUPABASE_URL, SUPABASE_ANON_KEY
-    headers = {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
-        "Content-Type": "application/json",
-        "Prefer": "return=minimal",
-    }
-    test_row = {
-        "mint": "TEST_CONNECTION",
-        "name": "Test",
-        "symbol": "TEST",
-        "snapshot_timestamp": 0,
-        "market_cap_at_analysis": 0,
-    }
-    async with httpx.AsyncClient(timeout=10) as client:
-        try:
-            resp = await client.post(
-                f"{SUPABASE_URL}/rest/v1/predictions",
-                json=test_row,
-                headers=headers,
-            )
-            return JSONResponse({
-                "status": resp.status_code,
-                "body": resp.text[:300],
-                "supabase_url": SUPABASE_URL[:40] + "...",
-                "key_prefix": SUPABASE_ANON_KEY[:20] + "...",
-            })
-        except Exception as e:
-            return JSONResponse({"error": str(e)}, status_code=500)
-
-
 
 @app.post("/stripe/webhook")
 async def stripe_webhook(request: Request):
@@ -633,8 +646,12 @@ async def get_rate_limit_usage(user_id: str = ""):
 
 
 @app.post("/outcome/{mint}")
-async def submit_outcome(mint: str, actual_peak_mc: float, notes: str = ""):
-    """Record the actual outcome for a previously analyzed coin."""
+async def submit_outcome(mint: str, request: Request, actual_peak_mc: float, notes: str = ""):
+    """Record the actual outcome — admin only."""
+    if not admin_ok(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    if not is_valid_mint(mint):
+        return JSONResponse({"error": "Invalid mint address"}, status_code=400)
     success = await record_outcome(mint, actual_peak_mc, notes)
     if success:
         # Fire badge checks â€” find user_id from predictions table
@@ -675,6 +692,10 @@ async def accuracy_stats():
 @app.websocket("/ws/{mint}")
 async def websocket_watch(websocket: WebSocket, mint: str):
     await websocket.accept()
+    if not is_valid_mint(mint):
+        await websocket.send_text(json.dumps({"type": "error", "message": "Invalid mint address"}))
+        await websocket.close()
+        return
     if mint not in active_watchers:
         active_watchers[mint] = []
     active_watchers[mint].append(websocket)
@@ -752,8 +773,12 @@ def _remove_watcher(mint: str, ws: WebSocket):
 
 
 @app.get("/debug/dex/{mint}")
-async def debug_dex(mint: str):
-    """Shows raw DexScreener response for debugging socials."""
+async def debug_dex(mint: str, request: Request):
+    """Shows raw DexScreener response — admin only."""
+    if not admin_ok(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    if not is_valid_mint(mint):
+        return JSONResponse({"error": "Invalid mint address"}, status_code=400)
     import httpx
     url = f"https://api.dexscreener.com/latest/dex/tokens/{mint}"
     async with httpx.AsyncClient(timeout=10) as client:

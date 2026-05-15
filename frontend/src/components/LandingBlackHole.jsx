@@ -131,13 +131,10 @@ export default function LandingBlackHole({ active, origin, onDone }) {
     let suckStars = null
 
     const captureSuckStars = () => {
-      // Hide StarField's canvas — its loop keeps running, we just take over rendering
-      if (sfCanvas) sfCanvas.style.opacity = '0'
-
-      // Compute each star's current on-screen Y using the live scroll offset
+      // Snapshot star positions — sfCanvas fades out gradually in the suck loop
       const scroll = starRegistry.getScrollY ? starRegistry.getScrollY() : 0
       suckStars = (starRegistry.stars || []).map(s => {
-        const rawY   = s.y - scroll * s.parallax
+        const rawY    = s.y - scroll * s.parallax
         const screenY = ((rawY % H) + H) % H
         return { x: s.x, y: screenY, r: s.r, o: s.o, depth: s.depth }
       })
@@ -173,7 +170,11 @@ export default function LandingBlackHole({ active, origin, onDone }) {
         const et    = easeIO(t)
         const holeR = 120 + et * 30
 
-        // Draw each real parallax star being pulled toward the black hole
+        // sfCanvas fades out over first half of suck; canvas stars fade in as complement
+        // so the two layers crossfade seamlessly with no sudden pop or doubling
+        const sfAlpha = Math.max(0, 1 - et * 2)
+        if (sfCanvas) sfCanvas.style.opacity = `${sfAlpha}`
+
         if (suckStars) {
           for (const s of suckStars) {
             const dist    = Math.sqrt((s.x - cx) ** 2 + (s.y - cy) ** 2)
@@ -185,10 +186,11 @@ export default function LandingBlackHole({ active, origin, onDone }) {
             const sy      = cy + (s.y - cy) * (1 - eased)
             const scale   = Math.max(0, 1 - eased)
             if (scale < 0.01) continue
-            // Deep stars get a slight purple tint matching StarField's glow
+            // Alpha complements sfCanvas so total brightness stays constant during crossfade
+            const alpha = s.o * scale * (1 - sfAlpha)
             const col = s.depth > 0.52
-              ? `rgba(220,200,255,${s.o * scale})`
-              : `rgba(255,255,255,${s.o * scale})`
+              ? `rgba(220,200,255,${alpha})`
+              : `rgba(255,255,255,${alpha})`
             ctx.beginPath()
             ctx.arc(sx, sy, Math.max(0.1, s.r * scale), 0, Math.PI * 2)
             ctx.fillStyle = col
@@ -212,6 +214,7 @@ export default function LandingBlackHole({ active, origin, onDone }) {
 
         if (t >= 1) {
           contentEls.forEach(el => { el.style.opacity = '0' })
+          if (sfCanvas) sfCanvas.style.opacity = '0'
           state.phase = 'implode'; state.t0 = ts
         }
 

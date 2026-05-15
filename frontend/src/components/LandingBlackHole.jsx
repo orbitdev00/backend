@@ -196,7 +196,12 @@ export default function LandingBlackHole({ active, origin, onDone }) {
           // Stop StarField RAF loop before hiding — prevents it redrawing on top
           if (starRegistry.cancelDraw) starRegistry.cancelDraw()
           if (lpCanvas) { lpCanvas.style.opacity = '0'; lpCanvas.style.display = 'none' }
-          if (sfCanvas) { sfCanvas.style.opacity = '0'; sfCanvas.style.display = 'none' }
+          if (sfCanvas) {
+            sfCanvas.style.opacity = '0'
+            sfCanvas.style.visibility = 'hidden'
+            sfCanvas.width = 0
+            sfCanvas.height = 0
+          }
           lpHidden = true
           canvas.style.zIndex = '9999'
           document.body.classList.add('lp-bh-sucking')
@@ -278,7 +283,11 @@ export default function LandingBlackHole({ active, origin, onDone }) {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
       if (lpCanvas) { lpCanvas.style.display = ''; lpCanvas.style.opacity = '' }
       const sfCanvas = document.querySelector('.starfield-canvas')
-      if (sfCanvas) { sfCanvas.style.display = ''; sfCanvas.style.opacity = '' }
+      if (sfCanvas) {
+        sfCanvas.style.display = ''
+        sfCanvas.style.opacity = ''
+        sfCanvas.style.visibility = ''
+      }
       document.body.classList.remove('lp-bh-sucking')
       contentEls.forEach(el => {
         el.style.transform = ''

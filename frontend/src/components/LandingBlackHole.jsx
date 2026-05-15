@@ -131,8 +131,7 @@ export default function LandingBlackHole({ active, origin, onDone }) {
     let suckStars = null
 
     const captureSuckStars = () => {
-      // Stop StarField's own draw loop and hide its canvas
-      if (starRegistry.cancelDraw) starRegistry.cancelDraw()
+      // Hide StarField's canvas — its loop keeps running, we just take over rendering
       if (sfCanvas) sfCanvas.style.opacity = '0'
 
       // Compute each star's current on-screen Y using the live scroll offset

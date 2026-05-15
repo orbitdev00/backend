@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { starRegistry } from '../components/StarField'
 
 const ease3  = t => 1 - Math.pow(1 - t, 3)
 const easeIO = t => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2
@@ -13,10 +14,16 @@ export default function LandingBlackHole({ active, origin, onDone }) {
     if (!canvas) return
     if (!active || !origin) { canvas.style.display = 'none'; return }
 
-    const W = canvas.width  = window.innerWidth
-    const H = canvas.height = window.innerHeight
+    const dpr = window.devicePixelRatio || 1
+    const W = window.innerWidth
+    const H = window.innerHeight
+    canvas.width  = W * dpr
+    canvas.height = H * dpr
+    canvas.style.width  = W + 'px'
+    canvas.style.height = H + 'px'
     canvas.style.display = 'block'
     const ctx = canvas.getContext('2d')
+    ctx.scale(dpr, dpr)
     const scrollY = window.scrollY || 0
 
     // Black hole spawns at button click position (viewport coords)
@@ -186,6 +193,8 @@ export default function LandingBlackHole({ active, origin, onDone }) {
         }
 
         if (t >= 1) {
+          // Stop StarField RAF loop before hiding — prevents it redrawing on top
+          if (starRegistry.cancelDraw) starRegistry.cancelDraw()
           if (lpCanvas) { lpCanvas.style.opacity = '0'; lpCanvas.style.display = 'none' }
           if (sfCanvas) { sfCanvas.style.opacity = '0'; sfCanvas.style.display = 'none' }
           lpHidden = true

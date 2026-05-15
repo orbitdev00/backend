@@ -150,7 +150,7 @@ export default function NavBar({ active, onLogoClick }) {
             <button
               key={l.key}
               className={`nb-link ${active === l.key ? 'nb-active' : ''}`}
-              onClick={() => nav(l.path)}
+              onClick={() => active === l.key ? window.location.reload() : nav(l.path)}
             >
               {l.label}
             </button>
@@ -220,7 +220,7 @@ export default function NavBar({ active, onLogoClick }) {
             <button
               key={l.key}
               className={`nb-mobile-link ${active === l.key ? 'nb-active' : ''}`}
-              onClick={() => { nav(l.path); setShowMobile(false) }}
+              onClick={() => { active === l.key ? window.location.reload() : nav(l.path); setShowMobile(false) }}
             >
               {l.label}
             </button>

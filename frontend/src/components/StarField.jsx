@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react'
 
-export const starRegistry = { cancelDraw: null }
+export const starRegistry = { cancelDraw: null, stars: [], getScrollY: null }
 
 export default function StarField() {
   const canvasRef  = useRef(null)
-  const scrollRef  = useRef(0)   // raw target
-  const smoothRef  = useRef(0)   // lerped display value
+  const scrollRef  = useRef(0)
+  const smoothRef  = useRef(0)
 
   useEffect(() => {
     const onScroll = () => { scrollRef.current = window.scrollY }
@@ -37,13 +37,13 @@ export default function StarField() {
           depth,
         }
       })
+      starRegistry.stars = stars
     }
 
     const draw = (ts) => {
       const H = canvas.height
       ctx.clearRect(0, 0, canvas.width, H)
 
-      // Lerp scroll toward target — eliminates discrete scroll jumps
       smoothRef.current += (scrollRef.current - smoothRef.current) * 0.08
       const scroll = smoothRef.current
 
@@ -58,7 +58,6 @@ export default function StarField() {
 
         const paint = (dy) => {
           if (dy < -r * 5 || dy > H + r * 5) return
-          // Soft glow — single cheap circle instead of createRadialGradient
           if (r > 1.5 && s.depth > 0.52) {
             ctx.beginPath()
             ctx.arc(s.x, dy, r * 3.5, 0, Math.PI * 2)
@@ -72,8 +71,8 @@ export default function StarField() {
         }
 
         paint(dy1)
-        paint(dy1 - H)   // ghost above
-        paint(dy1 + H)   // ghost below
+        paint(dy1 - H)
+        paint(dy1 + H)
       }
       animId = requestAnimationFrame(draw)
     }
@@ -81,6 +80,7 @@ export default function StarField() {
     resize()
     window.addEventListener('resize', resize)
     starRegistry.cancelDraw = () => cancelAnimationFrame(animId)
+    starRegistry.getScrollY = () => smoothRef.current
     animId = requestAnimationFrame(draw)
     return () => {
       cancelAnimationFrame(animId)

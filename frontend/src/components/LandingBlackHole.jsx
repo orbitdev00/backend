@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { starRegistry } from './StarField'
 
 const ease3  = t => 1 - Math.pow(1 - t, 3)
 const easeIO = t => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2
@@ -126,6 +127,23 @@ export default function LandingBlackHole({ active, origin, onDone }) {
       })
     }
 
+    // Snapshot of real parallax star positions taken at suck-start
+    let suckStars = null
+
+    const captureSuckStars = () => {
+      // Stop StarField's own draw loop and hide its canvas
+      if (starRegistry.cancelDraw) starRegistry.cancelDraw()
+      if (sfCanvas) sfCanvas.style.opacity = '0'
+
+      // Compute each star's current on-screen Y using the live scroll offset
+      const scroll = starRegistry.getScrollY ? starRegistry.getScrollY() : 0
+      suckStars = (starRegistry.stars || []).map(s => {
+        const rawY   = s.y - scroll * s.parallax
+        const screenY = ((rawY % H) + H) % H
+        return { x: s.x, y: screenY, r: s.r, o: s.o, depth: s.depth }
+      })
+    }
+
     // Phases: spawn(600) -> grow(800) -> suck(1400) -> implode(600)
     const PHASES = { spawn: 600, grow: 800, suck: 1400, implode: 600 }
     const state = { phase: 'spawn', t0: performance.now(), called: false }
@@ -134,37 +152,57 @@ export default function LandingBlackHole({ active, origin, onDone }) {
       const dur = PHASES[state.phase]
       const t   = Math.min((ts - state.t0) / dur, 1)
 
-      // Canvas stays transparent — page content and starfield behind remain visible
+      // Canvas stays transparent — page content behind remains visible
       ctx.clearRect(0, 0, W, H)
 
       if (state.phase === 'spawn') {
-        // Black hole emerges from button click position
         const et    = ease3(t)
         const holeR = et * 40
         drawDisk(holeR, et)
         if (t >= 1) { state.phase = 'grow'; state.t0 = ts }
 
       } else if (state.phase === 'grow') {
-        // Grows behind visible page content — no overlay, no blackout
         const et    = easeIO(t)
         const holeR = 40 + et * 80
         drawDisk(holeR, 1)
-        if (t >= 1) { state.phase = 'suck'; state.t0 = ts }
+        if (t >= 1) {
+          captureSuckStars()
+          state.phase = 'suck'; state.t0 = ts
+        }
 
       } else if (state.phase === 'suck') {
-        // Absorb everything: parallax stars fade out, page content shrinks inward
         const et    = easeIO(t)
         const holeR = 120 + et * 30
 
-        // Parallax starfield fades as it's absorbed by the black hole
-        if (sfCanvas) sfCanvas.style.opacity = `${Math.max(0, 1 - et * 1.5)}`
+        // Draw each real parallax star being pulled toward the black hole
+        if (suckStars) {
+          for (const s of suckStars) {
+            const dist    = Math.sqrt((s.x - cx) ** 2 + (s.y - cy) ** 2)
+            const normD   = Math.min(1, dist / maxR)
+            const gravity = 1 - normD * 0.55
+            const localT  = Math.min(1, et * (0.5 + gravity * 0.8))
+            const eased   = easeIO(localT)
+            const sx      = cx + (s.x - cx) * (1 - eased)
+            const sy      = cy + (s.y - cy) * (1 - eased)
+            const scale   = Math.max(0, 1 - eased)
+            if (scale < 0.01) continue
+            // Deep stars get a slight purple tint matching StarField's glow
+            const col = s.depth > 0.52
+              ? `rgba(220,200,255,${s.o * scale})`
+              : `rgba(255,255,255,${s.o * scale})`
+            ctx.beginPath()
+            ctx.arc(sx, sy, Math.max(0.1, s.r * scale), 0, Math.PI * 2)
+            ctx.fillStyle = col
+            ctx.fill()
+          }
+        }
 
         drawDisk(holeR, 1)
 
         // Pull page elements toward the black hole via CSS
         const maxD = contentEls.reduce((m, el) => Math.max(m, el._dist || 0), 1)
         contentEls.forEach(el => {
-          const normD  = (el._dist || 0) / maxD
+          const normD   = (el._dist || 0) / maxD
           const gravity = 1 - normD * 0.65
           const localT  = Math.min(1, et * (0.4 + gravity * 0.9))
           const eased   = easeIO(localT)
@@ -175,12 +213,10 @@ export default function LandingBlackHole({ active, origin, onDone }) {
 
         if (t >= 1) {
           contentEls.forEach(el => { el.style.opacity = '0' })
-          if (sfCanvas) sfCanvas.style.opacity = '0'
           state.phase = 'implode'; state.t0 = ts
         }
 
       } else if (state.phase === 'implode') {
-        // Black hole collapses to nothing
         const et    = easeIn(t)
         const holeR = Math.max(0, 150 * (1 - et))
         if (holeR > 1) drawDisk(holeR, 1 - et)
@@ -214,8 +250,8 @@ export default function LandingBlackHole({ active, origin, onDone }) {
       const sf = document.querySelector('.starfield-canvas')
       if (sf) { sf.style.display = ''; sf.style.opacity = '' }
       contentEls.forEach(el => {
-        el.style.transform = ''
-        el.style.opacity   = ''
+        el.style.transform  = ''
+        el.style.opacity    = ''
         el.style.willChange = ''
       })
     }

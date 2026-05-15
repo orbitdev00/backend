@@ -7,11 +7,22 @@ export default function AuthCallback() {
   const [status, setStatus] = useState('verifying')
   const [error, setError]   = useState('')
 
+  // Email confirmation — just redirect, no provider checks needed
+  const finishEmail = async (session) => {
+    setStatus('success')
+    const { data: rep } = await supabase
+      .from('user_reputation')
+      .select('username')
+      .eq('user_id', session.user.id)
+      .single()
+    setTimeout(() => { window.location.href = (!rep?.username) ? '/edit-profile?onboarding=1' : '/' }, 1200)
+  }
+
+  // Google OAuth — check for provider conflict then record provider
   const finishGoogle = async (session) => {
     const user  = session.user
     const email = user.email?.trim().toLowerCase()
 
-    // Block if the email was registered via email/password
     try {
       const { data: existing } = await supabase
         .from('user_reputation')
@@ -26,7 +37,6 @@ export default function AuthCallback() {
       }
     } catch (_) { /* no existing row — safe */ }
 
-    // Record Google as the auth provider on first login
     await supabase.from('user_reputation').upsert({
       user_id: user.id,
       email,
@@ -42,20 +52,31 @@ export default function AuthCallback() {
     setTimeout(() => { window.location.href = (!rep?.username) ? '/edit-profile?onboarding=1' : '/' }, 1200)
   }
 
+  // Route to the correct handler based on which provider established the session
+  const finishSession = async (session) => {
+    const provider = session.user.app_metadata?.provider
+    if (provider === 'google') {
+      await finishGoogle(session)
+    } else {
+      await finishEmail(session)
+    }
+  }
+
   useEffect(() => {
     const handleCallback = async () => {
       try {
+        // Supabase auto-parses hash tokens on init, so getSession() may already have a session
         const { data, error } = await supabase.auth.getSession()
-
         if (error) { setError(error.message); setStatus('error'); return }
 
         if (data.session) {
-          await finishGoogle(data.session)
+          await finishSession(data.session)
           return
         }
 
-        const params     = new URLSearchParams(window.location.search)
-        const hashParams = new URLSearchParams(window.location.hash.slice(1))
+        // PKCE flow — code in query string (both Google and email confirmation use this)
+        const params      = new URLSearchParams(window.location.search)
+        const hashParams  = new URLSearchParams(window.location.hash.slice(1))
         const code        = params.get('code')
         const accessToken = hashParams.get('access_token')
         const refreshToken = hashParams.get('refresh_token')
@@ -64,7 +85,7 @@ export default function AuthCallback() {
           const { error: exchError } = await supabase.auth.exchangeCodeForSession(code)
           if (exchError) { setError(exchError.message); setStatus('error'); return }
           const { data: { session } } = await supabase.auth.getSession()
-          await finishGoogle(session)
+          await finishSession(session)
         } else if (accessToken) {
           const { error: setErr } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -72,7 +93,7 @@ export default function AuthCallback() {
           })
           if (setErr) { setError(setErr.message); setStatus('error'); return }
           const { data: { session } } = await supabase.auth.getSession()
-          await finishGoogle(session)
+          await finishSession(session)
         } else {
           setError('No auth token found. Please try signing in again.')
           setStatus('error')

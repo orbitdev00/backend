@@ -30,18 +30,27 @@ export default function SignUp({ onSwitch }) {
       .select('user_id').eq('username', username.trim()).single()
     if (existing) { setError('Username already taken'); setLoading(false); return }
 
-    // Block if email is already registered via Google
+    // Block if any account already exists with this email
     try {
-      const { data: providerRow } = await supabase.from('user_reputation')
+      const { data: existingEmail } = await supabase.from('user_reputation')
         .select('auth_provider').eq('email', email.trim().toLowerCase()).single()
-      if (providerRow?.auth_provider === 'google') {
-        setError('An account with this email already exists. Please sign in with Google.')
+      if (existingEmail) {
+        const hint = existingEmail.auth_provider === 'google' ? ' Please sign in with Google.' : ' Please sign in instead.'
+        setError('An account with this email already exists.' + hint)
         setLoading(false); return
       }
     } catch (_) { /* no row yet — safe to proceed */ }
 
     const { data: authData, error } = await signUp(email, password)
-    if (error) { setError(error.message); setLoading(false); return }
+    if (error) {
+      const msg = error.message?.toLowerCase() || ''
+      if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('email address is already')) {
+        setError('An account with this email already exists. Please sign in instead.')
+      } else {
+        setError(error.message)
+      }
+      setLoading(false); return
+    }
 
     // Save username and auth provider
     if (authData?.user) {

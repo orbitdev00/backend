@@ -18,7 +18,6 @@ export default function LandingBlackHole({ active, origin, onDone }) {
     canvas.style.display = 'block'
     const ctx = canvas.getContext('2d')
 
-    // Black hole spawns at button click position
     const cx = origin.x
     const cy = origin.y
     const maxR = Math.max(
@@ -30,30 +29,21 @@ export default function LandingBlackHole({ active, origin, onDone }) {
 
     const sfCanvas = document.querySelector('.starfield-canvas')
 
-    // Always generate absorption stars matching the parallax starfield density
-    const starData = Array.from({ length: 280 }, () => ({
-      x: Math.random() * W,
-      y: Math.random() * H,
-      r: Math.random() * 1.2 + 0.2,
-      o: Math.random() * 0.5 + 0.2,
-    }))
-
     // Accretion disk particles
     const NPARTS = 300
     const parts = Array.from({ length: NPARTS }, (_, i) => ({
-      angle: (i / NPARTS) * Math.PI * 2 + Math.random() * 0.1,
-      rMult: 1.05 + Math.random() * 0.8,
-      speed: (0.007 + Math.random() * 0.01) * (i % 2 ? 1 : -1),
-      sz:    0.5 + Math.random() * 1.6,
+      angle:  (i / NPARTS) * Math.PI * 2 + Math.random() * 0.1,
+      rMult:  1.05 + Math.random() * 0.8,
+      speed:  (0.007 + Math.random() * 0.01) * (i % 2 ? 1 : -1),
+      sz:     0.5 + Math.random() * 1.6,
       bright: 0.4 + Math.random() * 0.6,
-      lane:  Math.random(),
+      lane:   Math.random(),
     }))
 
     const drawDisk = (holeR, alpha) => {
       if (holeR < 1 || alpha <= 0) return
       const diskY = holeR * 0.18
 
-      // Glow
       const glow = ctx.createRadialGradient(cx, cy, holeR * 0.5, cx, cy, holeR * 3.5)
       glow.addColorStop(0,   `rgba(100,60,200,${0.18 * alpha})`)
       glow.addColorStop(0.5, `rgba(50,30,120,${0.08 * alpha})`)
@@ -61,24 +51,20 @@ export default function LandingBlackHole({ active, origin, onDone }) {
       ctx.fillStyle = glow
       ctx.beginPath(); ctx.arc(cx, cy, holeR * 3.5, 0, Math.PI * 2); ctx.fill()
 
-      // Back disk
       ctx.save(); ctx.translate(cx, cy)
       for (const p of parts) {
         p.angle += p.speed
-        const r = holeR * p.rMult
+        const r  = holeR * p.rMult
         const px = Math.cos(p.angle) * r
         const py = Math.sin(p.angle) * r * (diskY / holeR)
         if (py > 0 || Math.sqrt(px*px+py*py) < holeR) continue
         const a = p.bright * alpha * (1 - p.lane * 0.4)
         ctx.beginPath(); ctx.arc(px, py, p.sz, 0, Math.PI * 2)
-        ctx.fillStyle = p.lane < 0.4
-          ? `rgba(180,140,255,${a})`
-          : `rgba(255,255,255,${a * 0.7})`
+        ctx.fillStyle = p.lane < 0.4 ? `rgba(180,140,255,${a})` : `rgba(255,255,255,${a * 0.7})`
         ctx.fill()
       }
       ctx.restore()
 
-      // Lensing rings
       for (let i = 0; i < 3; i++) {
         const rr = holeR * (1.06 + i * 0.06)
         const a  = (0.55 - i * 0.14) * alpha
@@ -91,27 +77,22 @@ export default function LandingBlackHole({ active, origin, onDone }) {
         ctx.strokeStyle = g; ctx.lineWidth = holeR * 0.055; ctx.stroke()
       }
 
-      // Core
       ctx.beginPath(); ctx.arc(cx, cy, holeR, 0, Math.PI * 2)
       ctx.fillStyle = '#000'; ctx.fill()
 
-      // Front disk
       ctx.save(); ctx.translate(cx, cy)
       for (const p of parts) {
-        const r = holeR * p.rMult
+        const r  = holeR * p.rMult
         const px = Math.cos(p.angle) * r
         const py = Math.sin(p.angle) * r * (diskY / holeR)
         if (py <= 0 || Math.sqrt(px*px+py*py) < holeR) continue
         const a = p.bright * alpha * 1.3 * (1 - p.lane * 0.3)
         ctx.beginPath(); ctx.arc(px, py, p.sz * 1.1, 0, Math.PI * 2)
-        ctx.fillStyle = p.lane < 0.4
-          ? `rgba(180,140,255,${a})`
-          : `rgba(255,255,255,${a * 0.85})`
+        ctx.fillStyle = p.lane < 0.4 ? `rgba(180,140,255,${a})` : `rgba(255,255,255,${a * 0.85})`
         ctx.fill()
       }
       ctx.restore()
 
-      // Photon ring
       const ph = ctx.createRadialGradient(cx, cy, holeR * 0.96, cx, cy, holeR * 1.05)
       ph.addColorStop(0,   'rgba(200,160,255,0)')
       ph.addColorStop(0.5, `rgba(220,180,255,${0.6 * alpha})`)
@@ -145,79 +126,45 @@ export default function LandingBlackHole({ active, origin, onDone }) {
       })
     }
 
-    // Phases: spawn(600) -> grow(800) -> suck(1200) -> implode(500)
-    const PHASES = { spawn: 600, grow: 800, suck: 1200, implode: 500 }
+    // Phases: spawn(600) -> grow(800) -> suck(1400) -> implode(600)
+    const PHASES = { spawn: 600, grow: 800, suck: 1400, implode: 600 }
     const state = { phase: 'spawn', t0: performance.now(), called: false }
-    let lpHidden = false
 
     const frame = ts => {
       const dur = PHASES[state.phase]
       const t   = Math.min((ts - state.t0) / dur, 1)
 
-      // Opaque black during suck/implode; fade in during second half of grow; transparent otherwise
-      if (state.phase === 'suck' || state.phase === 'implode') {
-        ctx.fillStyle = '#000'
-        ctx.fillRect(0, 0, W, H)
-      } else if (state.phase === 'grow' && t > 0.5) {
-        const fade = (t - 0.5) / 0.5
-        ctx.fillStyle = `rgba(0,0,0,${fade})`
-        ctx.fillRect(0, 0, W, H)
-      } else {
-        ctx.clearRect(0, 0, W, H)
-      }
+      // Canvas stays transparent — page content and starfield behind remain visible
+      ctx.clearRect(0, 0, W, H)
 
       if (state.phase === 'spawn') {
-        // Small black hole appears from button
+        // Black hole emerges from button click position
         const et    = ease3(t)
         const holeR = et * 40
         drawDisk(holeR, et)
-
         if (t >= 1) { state.phase = 'grow'; state.t0 = ts }
 
       } else if (state.phase === 'grow') {
-        // Grows to 120px radius — cross-fade real starfield out over second half
+        // Grows behind visible page content — no overlay, no blackout
         const et    = easeIO(t)
         const holeR = 40 + et * 80
         drawDisk(holeR, 1)
-
-        if (t > 0.5) {
-          const fade = 1 - (t - 0.5) / 0.5
-          if (sfCanvas) sfCanvas.style.opacity = `${fade}`
-        }
-
-        if (t >= 1) {
-          if (sfCanvas) { sfCanvas.style.opacity = '0'; sfCanvas.style.display = 'none' }
-          lpHidden = true
-          state.phase = 'suck'; state.t0 = ts
-        }
+        if (t >= 1) { state.phase = 'suck'; state.t0 = ts }
 
       } else if (state.phase === 'suck') {
-        // Suck in all page content
+        // Absorb everything: parallax stars fade out, page content shrinks inward
         const et    = easeIO(t)
         const holeR = 120 + et * 30
 
-        // Draw parallax stars being pulled toward the black hole
-        for (const s of starData) {
-          const dist    = Math.sqrt((s.x - cx) ** 2 + (s.y - cy) ** 2)
-          const normD   = Math.min(1, dist / maxR)
-          const gravity = 1 - normD * 0.6
-          const localT  = Math.min(1, et * (0.6 + gravity))
-          const eased   = easeIO(localT)
-          const sx = cx + (s.x - cx) * (1 - eased)
-          const sy = cy + (s.y - cy) * (1 - eased)
-          const scale = Math.max(0, 1 - eased)
-          if (scale < 0.01) continue
-          ctx.beginPath(); ctx.arc(sx, sy, s.r * scale, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(255,255,255,${s.o * scale})`
-          ctx.fill()
-        }
+        // Parallax starfield fades as it's absorbed by the black hole
+        if (sfCanvas) sfCanvas.style.opacity = `${Math.max(0, 1 - et * 1.5)}`
 
         drawDisk(holeR, 1)
 
-        // Suck page elements
+        // Pull page elements toward the black hole via CSS
         const maxD = contentEls.reduce((m, el) => Math.max(m, el._dist || 0), 1)
         contentEls.forEach(el => {
-          const normD   = (el._dist || 0) / maxD
+          const normD  = (el._dist || 0) / maxD
           const gravity = 1 - normD * 0.65
           const localT  = Math.min(1, et * (0.4 + gravity * 0.9))
           const eased   = easeIO(localT)
@@ -228,6 +175,7 @@ export default function LandingBlackHole({ active, origin, onDone }) {
 
         if (t >= 1) {
           contentEls.forEach(el => { el.style.opacity = '0' })
+          if (sfCanvas) sfCanvas.style.opacity = '0'
           state.phase = 'implode'; state.t0 = ts
         }
 
@@ -235,11 +183,14 @@ export default function LandingBlackHole({ active, origin, onDone }) {
         // Black hole collapses to nothing
         const et    = easeIn(t)
         const holeR = Math.max(0, 150 * (1 - et))
-        if (holeR > 1) drawDisk(holeR, 1 - et * 0.5)
+        if (holeR > 1) drawDisk(holeR, 1 - et)
 
-        // Full black overlay fades in
-        ctx.fillStyle = `rgba(0,0,0,${et})`
-        ctx.fillRect(0, 0, W, H)
+        // Brief black fade at the very end for a clean page transition
+        if (et > 0.6) {
+          const fadeIn = (et - 0.6) / 0.4
+          ctx.fillStyle = `rgba(0,0,0,${fadeIn})`
+          ctx.fillRect(0, 0, W, H)
+        }
 
         if (t >= 1 && !state.called) {
           state.called = true
@@ -264,7 +215,7 @@ export default function LandingBlackHole({ active, origin, onDone }) {
       if (sf) { sf.style.display = ''; sf.style.opacity = '' }
       contentEls.forEach(el => {
         el.style.transform = ''
-        el.style.opacity = ''
+        el.style.opacity   = ''
         el.style.willChange = ''
       })
     }

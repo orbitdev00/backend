@@ -22,7 +22,13 @@ export default function LandingBlackHole({ active, origin, onDone }) {
     // Black hole spawns at button click position (viewport coords)
     const cx = origin.x
     const cy = origin.y
-    const maxR = Math.sqrt(W * W + H * H) * 0.5
+    // Max distance from click origin to any corner — ensures normD ≤ 1 for all viewport stars
+    const maxR = Math.max(
+      Math.sqrt(cx * cx + cy * cy),
+      Math.sqrt((W - cx) * (W - cx) + cy * cy),
+      Math.sqrt(cx * cx + (H - cy) * (H - cy)),
+      Math.sqrt((W - cx) * (W - cx) + (H - cy) * (H - cy)),
+    )
 
     const lpCanvas = document.querySelector('.lp-canvas')
     const sfCanvas = document.querySelector('.starfield-canvas')
@@ -199,9 +205,9 @@ export default function LandingBlackHole({ active, origin, onDone }) {
         // Draw stars being pulled toward the black hole
         for (const s of starData) {
           const dist = Math.sqrt((s.x - cx) ** 2 + (s.y - cy) ** 2)
-          const normD = dist / maxR
-          const gravity = 1 - normD * 0.6
-          const localT = Math.min(1, et * (0.3 + gravity))
+          const normD = Math.min(1, dist / maxR)   // clamp: all viewport stars in [0,1]
+          const gravity = 1 - normD * 0.6          // [0.4 … 1.0]
+          const localT = Math.min(1, et * (0.6 + gravity))  // multiplier [1.0…1.6] — all stars absorb fully at et=1
           const eased  = easeIO(localT)
           const sx = cx + (s.x - cx) * (1 - eased)
           const sy = cy + (s.y - cy) * (1 - eased)

@@ -114,7 +114,8 @@ export default function Forum() {
       .neq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(10)
-    setNotifications(replies || [])
+    const readIds = new Set(JSON.parse(localStorage.getItem(`orbit_read_notifs_${user.id}`) || '[]'))
+    setNotifications((replies || []).filter(r => !readIds.has(r.id)))
   }
 
   const fetchSuggestions = async (q) => {
@@ -253,7 +254,13 @@ export default function Forum() {
                       <div className="forum-notif-title">
                         Notifications
                         {notifications.length > 0 && (
-                          <button className="forum-notif-clear" onClick={() => { setNotifications([]); setShowNotifs(false) }}>
+                          <button className="forum-notif-clear" onClick={() => {
+                            const key = `orbit_read_notifs_${user.id}`
+                            const existing = JSON.parse(localStorage.getItem(key) || '[]')
+                            const merged = [...new Set([...existing, ...notifications.map(n => n.id)])]
+                            localStorage.setItem(key, JSON.stringify(merged))
+                            setNotifications([]); setShowNotifs(false)
+                          }}>
                             Mark all read
                           </button>
                         )}
@@ -261,7 +268,10 @@ export default function Forum() {
                       {notifications.length === 0
                         ? <div className="forum-notif-empty">No notifications</div>
                         : notifications.map(n => (
-                          <div key={n.id} className="forum-notif-item" onClick={async () => {
+                          <div key={n.id} className="forum-notif-item" onClick={() => {
+                            const key = `orbit_read_notifs_${user.id}`
+                            const readIds = JSON.parse(localStorage.getItem(key) || '[]')
+                            if (!readIds.includes(n.id)) { readIds.push(n.id); localStorage.setItem(key, JSON.stringify(readIds)) }
                             setNotifications(prev => prev.filter(x => x.id !== n.id))
                             nav(`/forum/thread/${n.thread_id}`)
                             setShowNotifs(false)

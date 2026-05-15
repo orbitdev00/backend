@@ -1,8 +1,53 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import orbitPfp from '../orbitPfp.js'
 import './Auth.css'
+
+function ConfirmWaiting({ email, onSwitch }) {
+  const [resending, setResending] = useState(false)
+  const [resent, setResent]       = useState(false)
+
+  // If the user confirms in another tab on the same browser, auto-redirect
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') window.location.href = '/'
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const handleResend = async () => {
+    setResending(true)
+    await supabase.auth.resend({ type: 'signup', email })
+    setResent(true)
+    setResending(false)
+  }
+
+  return (
+    <div className="auth-page orbit-page-fadein">
+      <div className="auth-card">
+        <img src={orbitPfp} alt="ORBIT" className="auth-logo" />
+        <h1 className="auth-title">Check your email</h1>
+        <p className="auth-sub" style={{textAlign:'center',maxWidth:280,marginBottom:16}}>
+          We sent an activation link to <strong>{email}</strong>. Open it to access ORBIT.
+        </p>
+        <p className="auth-sub" style={{fontSize:11,color:'#444',textAlign:'center'}}>
+          Check your spam folder if you don't see it within a minute.
+        </p>
+        {!resent ? (
+          <button className="link-btn" style={{marginTop:8}} onClick={handleResend} disabled={resending}>
+            {resending ? 'Resending...' : 'Resend email'}
+          </button>
+        ) : (
+          <p style={{fontSize:12,color:'var(--green)',marginTop:8}}>✓ Sent again</p>
+        )}
+        <button className="btn-primary" style={{marginTop:16,width:'100%'}} onClick={() => onSwitch('login')}>
+          Already confirmed? Sign in
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export default function SignUp({ onSwitch }) {
   const { signUp, signInWithGoogle } = useAuth()
@@ -72,41 +117,8 @@ export default function SignUp({ onSwitch }) {
     if (error) { setError(error.message); setGoogleLoading(false) }
   }
 
-  const [resending, setResending] = useState(false)
-  const [resent, setResent] = useState(false)
-
-  const handleResend = async () => {
-    setResending(true)
-    await supabase.auth.resend({ type: 'signup', email })
-    setResent(true)
-    setResending(false)
-  }
-
   if (success) {
-    return (
-      <div className="auth-page orbit-page-fadein">
-        <div className="auth-card">
-          <img src={orbitPfp} alt="ORBIT" className="auth-logo" />
-          <h1 className="auth-title">Check your email</h1>
-          <p className="auth-sub" style={{textAlign:'center',maxWidth:280,marginBottom:16}}>
-            We sent an activation link to <strong>{email}</strong>. Open it to access ORBIT.
-          </p>
-          <p className="auth-sub" style={{fontSize:11,color:'#444',textAlign:'center'}}>
-            Check your spam folder if you don't see it within a minute.
-          </p>
-          {!resent ? (
-            <button className="link-btn" style={{marginTop:8}} onClick={handleResend} disabled={resending}>
-              {resending ? 'Resending...' : 'Resend email'}
-            </button>
-          ) : (
-            <p style={{fontSize:12,color:'var(--green)',marginTop:8}}>✓ Sent again</p>
-          )}
-          <button className="btn-primary" style={{marginTop:16,width:'100%'}} onClick={() => onSwitch('login')}>
-            Back to sign in
-          </button>
-        </div>
-      </div>
-    )
+    return <ConfirmWaiting email={email} onSwitch={onSwitch} />
   }
 
   return (

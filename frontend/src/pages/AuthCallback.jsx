@@ -74,19 +74,29 @@ export default function AuthCallback() {
           return
         }
 
-        // PKCE flow — code in query string (both Google and email confirmation use this)
         const params      = new URLSearchParams(window.location.search)
         const hashParams  = new URLSearchParams(window.location.hash.slice(1))
+        const tokenHash   = params.get('token_hash')
+        const type        = params.get('type') || 'signup'
         const code        = params.get('code')
         const accessToken = hashParams.get('access_token')
         const refreshToken = hashParams.get('refresh_token')
 
-        if (code) {
+        if (tokenHash) {
+          // Email confirmation — new Supabase PKCE format (?token_hash=...&type=signup)
+          const { error: otpError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type })
+          if (otpError) { setError(otpError.message); setStatus('error'); return }
+          const { data: { session } } = await supabase.auth.getSession()
+          if (!session) { setError('Verification failed. Please try signing in.'); setStatus('error'); return }
+          await finishSession(session)
+        } else if (code) {
+          // OAuth PKCE (?code=...) — used by Google
           const { error: exchError } = await supabase.auth.exchangeCodeForSession(code)
           if (exchError) { setError(exchError.message); setStatus('error'); return }
           const { data: { session } } = await supabase.auth.getSession()
           await finishSession(session)
         } else if (accessToken) {
+          // Legacy hash fragment (#access_token=...)
           const { error: setErr } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken || '',

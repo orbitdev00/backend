@@ -52,9 +52,24 @@ export function AuthProvider({ children }) {
 
   const signIn = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) return { data: null, error }
     if (data?.user && !data.user.email_confirmed_at) {
       await supabase.auth.signOut()
       return { data: null, error: { message: 'Please check your email and verify your account before signing in.' } }
+    }
+    // Block login if this email was registered via Google
+    if (data?.user) {
+      try {
+        const { data: rep } = await supabase
+          .from('user_reputation')
+          .select('auth_provider')
+          .eq('user_id', data.user.id)
+          .single()
+        if (rep?.auth_provider === 'google') {
+          await supabase.auth.signOut()
+          return { data: null, error: { message: 'This email is registered with Google. Please use "Continue with Google" to sign in.' } }
+        }
+      } catch (_) { /* column may not exist yet — allow login */ }
     }
     return { data, error }
   }

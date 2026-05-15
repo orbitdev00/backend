@@ -56,6 +56,39 @@
 .ep-save { background: var(--green); border: none; border-radius: 4px; color: #000; font-family: inherit; font-size: 11px; font-weight: 600; padding: 8px 20px; cursor: pointer; }
 .ep-save:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ── Danger zone ── */
+.ep-danger-zone { border-top: 1px solid #2a1010; }
+.ep-danger-label { color: var(--red) !important; }
+.ep-delete-btn {
+  background: none; border: 1px solid #3a1010; border-radius: 4px;
+  color: #c04040; font-family: inherit; font-size: 11px;
+  padding: 7px 14px; cursor: pointer; transition: all 0.15s;
+}
+.ep-delete-btn:hover { border-color: var(--red); color: var(--red); background: rgba(248,113,113,0.06); }
+
+/* ── Delete confirmation modal ── */
+.ep-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; padding: 24px;
+}
+.ep-modal {
+  background: #0e0e1a; border: 1px solid #2a1010; border-radius: 8px;
+  padding: 24px; width: 100%; max-width: 400px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+}
+.ep-modal-title { font-size: 14px; font-weight: 600; color: var(--red); margin-bottom: 12px; }
+.ep-modal-body { font-size: 12px; color: #888; line-height: 1.6; margin-bottom: 16px; }
+.ep-modal-confirm-label { font-size: 11px; color: #555; margin-bottom: 6px; }
+.ep-modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.ep-delete-confirm-btn {
+  background: var(--red); border: none; border-radius: 4px;
+  color: #fff; font-family: inherit; font-size: 11px; font-weight: 600;
+  padding: 8px 16px; cursor: pointer; transition: opacity 0.15s;
+}
+.ep-delete-confirm-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.ep-delete-confirm-btn:not(:disabled):hover { opacity: 0.85; }
+
 .ep-onboarding-banner {
   background: rgba(74,222,128,0.08);
   border: 1px solid rgba(74,222,128,0.25);

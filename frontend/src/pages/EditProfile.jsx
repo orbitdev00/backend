@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -15,11 +15,16 @@ export default function EditProfile() {
   const [wallet, setWallet]       = useState('')
   const [pfpUrl, setPfpUrl]       = useState(null)
   const [showPnl, setShowPnl]     = useState(true)
-  const [uploading, setUploading] = useState(false)
-  const [saving, setSaving]       = useState(false)
-  const [msg, setMsg]             = useState('')
-  const [error, setError]         = useState('')
+  const [uploading, setUploading]         = useState(false)
+  const [saving, setSaving]               = useState(false)
+  const [msg, setMsg]                     = useState('')
+  const [error, setError]                 = useState('')
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleteError, setDeleteError]     = useState('')
+  const [deleting, setDeleting]           = useState(false)
   const fileRef = useRef(null)
+  const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
 
   useEffect(() => {
     if (!user) { nav('/login'); return }
@@ -95,6 +100,31 @@ export default function EditProfile() {
       setTimeout(() => nav('/onboarding'), 800)
     } else {
       setTimeout(() => nav(`/profile/${username.trim()}`), 800)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') return
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) { setDeleteError('Not authenticated.'); setDeleting(false); return }
+      const res = await fetch(`${BACKEND}/account/delete`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        setDeleteError(d.error || 'Failed to delete account.')
+        setDeleting(false)
+        return
+      }
+      await supabase.auth.signOut()
+      window.location.href = '/'
+    } catch {
+      setDeleteError('Network error. Please try again.')
+      setDeleting(false)
     }
   }
 
@@ -196,8 +226,52 @@ export default function EditProfile() {
               {saving ? 'Saving...' : isOnboarding ? 'Continue →' : 'Save Profile'}
             </button>
           </div>
+
+          {!isOnboarding && (
+            <div className="ep-section ep-danger-zone">
+              <div className="ep-label ep-danger-label">Danger Zone</div>
+              <p className="ep-hint" style={{color:'#664', marginBottom:10}}>
+                Permanently deletes your account, profile, posts, messages, and all data. Cannot be undone.
+              </p>
+              <button className="ep-delete-btn" onClick={() => setShowDeleteModal(true)}>
+                Delete Account
+              </button>
+            </div>
+          )}
         </div>
       </div>
+      {showDeleteModal && (
+        <div className="ep-modal-overlay" onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); setDeleteError('') }}>
+          <div className="ep-modal" onClick={e => e.stopPropagation()}>
+            <div className="ep-modal-title">Delete Account</div>
+            <p className="ep-modal-body">
+              This will permanently delete your account and all associated data — profile, posts, messages, badges, and history.
+              <strong style={{color:'var(--red)'}}> This cannot be undone.</strong>
+            </p>
+            <div className="ep-modal-confirm-label">Type <strong>DELETE</strong> to confirm</div>
+            <input
+              className="ep-input"
+              value={deleteConfirmText}
+              onChange={e => setDeleteConfirmText(e.target.value)}
+              placeholder="DELETE"
+              autoFocus
+            />
+            {deleteError && <div className="ep-error" style={{margin:'8px 0 0'}}>{deleteError}</div>}
+            <div className="ep-modal-actions">
+              <button className="ep-cancel" onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); setDeleteError('') }}>
+                Cancel
+              </button>
+              <button
+                className="ep-delete-confirm-btn"
+                disabled={deleteConfirmText !== 'DELETE' || deleting}
+                onClick={handleDeleteAccount}
+              >
+                {deleting ? 'Deleting...' : 'Delete Forever'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

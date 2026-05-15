@@ -3,10 +3,13 @@ Account deletion endpoint.
 
 Required Supabase migration (run once in SQL editor):
     ALTER TABLE user_reputation ADD COLUMN IF NOT EXISTS auth_provider TEXT DEFAULT 'email';
+
+Requires SUPABASE_SERVICE_KEY (not anon key) to be set in Railway env vars.
 """
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 import httpx
+from supabase import create_client
 from config import SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_ANON_KEY
 
 delete_router = APIRouter()
@@ -30,13 +33,17 @@ async def delete_account(request: Request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     token = auth_header[7:].strip()
 
-    key = SUPABASE_SERVICE_KEY or SUPABASE_ANON_KEY
+    # Use service key for all operations — anon key cannot delete auth users
+    service_key = SUPABASE_SERVICE_KEY
+    if not service_key or service_key == SUPABASE_ANON_KEY:
+        print("[Delete] ERROR: SUPABASE_SERVICE_KEY is not set or equals anon key — auth deletion will fail")
+        return JSONResponse({"error": "server misconfiguration"}, status_code=500)
 
-    # Verify the user's JWT and get their user_id
+    # Verify the user's JWT and extract their user_id
     async with httpx.AsyncClient(timeout=10) as client:
         user_resp = await client.get(
             f"{SUPABASE_URL}/auth/v1/user",
-            headers={"apikey": key, "Authorization": f"Bearer {token}"},
+            headers={"apikey": service_key, "Authorization": f"Bearer {token}"},
         )
     if user_resp.status_code != 200:
         return JSONResponse({"error": "unauthorized"}, status_code=403)
@@ -45,32 +52,33 @@ async def delete_account(request: Request):
     if not user_id:
         return JSONResponse({"error": "unauthorized"}, status_code=403)
 
+    print(f"[Delete] Starting deletion for user {user_id}")
+
+    # Delete all user data rows via REST API
     rest_headers = {
-        "apikey": key,
-        "Authorization": f"Bearer {key}",
+        "apikey": service_key,
+        "Authorization": f"Bearer {service_key}",
         "Content-Type": "application/json",
     }
-
     async with httpx.AsyncClient(timeout=30) as client:
-        # Delete all user data rows
         for table in _USER_TABLES:
             try:
-                await client.delete(
+                resp = await client.delete(
                     f"{SUPABASE_URL}/rest/v1/{table}",
                     params={"user_id": f"eq.{user_id}"},
                     headers=rest_headers,
                 )
+                print(f"[Delete] {table}: status={resp.status_code}")
             except Exception as e:
-                print(f"[DeleteAccount] {table}: {e}")
+                print(f"[Delete] {table} error: {e}")
 
-        # Delete the Supabase Auth user (requires service key)
-        admin_resp = await client.delete(
-            f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
-            headers={"apikey": key, "Authorization": f"Bearer {key}"},
-        )
-        if admin_resp.status_code not in (200, 204):
-            print(f"[DeleteAccount] auth delete failed: {admin_resp.status_code} {admin_resp.text[:200]}")
-            return JSONResponse({"error": "Failed to delete auth account"}, status_code=500)
+    # Delete the Supabase Auth user using the admin SDK (requires service key)
+    try:
+        supabase_admin = create_client(SUPABASE_URL, service_key)
+        supabase_admin.auth.admin.delete_user(user_id)
+        print(f"[Delete] Auth user deleted: {user_id}")
+    except Exception as e:
+        print(f"[Delete] Auth user deletion FAILED for {user_id}: {e}")
+        return JSONResponse({"error": "Failed to delete auth account"}, status_code=500)
 
-    print(f"[DeleteAccount] Deleted user {user_id}")
     return JSONResponse({"status": "deleted"})

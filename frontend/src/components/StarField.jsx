@@ -75,16 +75,14 @@ export default function StarField() {
         paint(dy1 - H)   // ghost above
         paint(dy1 + H)   // ghost below
       }
-      if (!killed) animId = requestAnimationFrame(draw)
+      animId = requestAnimationFrame(draw)
     }
 
-    let killed = false
     resize()
     window.addEventListener('resize', resize)
-    starRegistry.cancelDraw = () => { killed = true; cancelAnimationFrame(animId) }
+    starRegistry.cancelDraw = () => cancelAnimationFrame(animId)
     animId = requestAnimationFrame(draw)
     return () => {
-      killed = true
       cancelAnimationFrame(animId)
       window.removeEventListener('resize', resize)
     }

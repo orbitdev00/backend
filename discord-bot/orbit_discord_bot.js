@@ -7,7 +7,8 @@ require('dotenv').config()
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN
 const ORBIT_BACKEND = process.env.ORBIT_BACKEND || 'https://backend-production-a427a.up.railway.app'
-const DEXSCREENER   = 'https://api.dexscreener.com/tokens/v1/solana'
+const DEXSCREENER_SOL = 'https://api.dexscreener.com/tokens/v1/solana'
+const DEXSCREENER_ETH = 'https://api.dexscreener.com/tokens/v1/ethereum'
 const POLL_MS       = 15_000
 
 const client = new Client({
@@ -29,19 +30,33 @@ function rugEmoji(p) {
   return '🟢'
 }
 
+// ── Chain detection ───────────────────────────────────────────────────────────
+function detectChain(mint) {
+  // ETH addresses: 0x + 40 hex chars
+  if (/^0x[0-9a-fA-F]{40}$/.test(mint)) return 'ethereum'
+  // Solana: base58, 32-44 chars
+  return 'solana'
+}
+
 // ── Fetch data ────────────────────────────────────────────────────────────────
 async function fetchDex(mint) {
-  const res  = await fetch(`${DEXSCREENER}/${mint}`)
+  const chain = detectChain(mint)
+  const url = chain === 'ethereum' ? `${DEXSCREENER_ETH}/${mint}` : `${DEXSCREENER_SOL}/${mint}`
+  const res  = await fetch(url)
   const data = await res.json()
   const pairs = Array.isArray(data) ? data : (data.pairs || [])
-  const sol = pairs.filter(p => p.chainId === 'solana')
-  sol.sort((a,b) => ((b.liquidity?.usd||0) - (a.liquidity?.usd||0)))
-  return sol[0] || null
+  const filtered = pairs.filter(p => p.chainId === chain)
+  filtered.sort((a,b) => ((b.liquidity?.usd||0) - (a.liquidity?.usd||0)))
+  return filtered[0] || null
 }
 
 async function fetchSnapshot(mint) {
   try {
-    const res = await fetch(`${ORBIT_BACKEND}/debug/${mint}`, { signal: AbortSignal.timeout(25000) })
+    const chain = detectChain(mint)
+    const url = chain === 'ethereum'
+      ? `${ORBIT_BACKEND}/debug/eth/${mint}`
+      : `${ORBIT_BACKEND}/debug/${mint}`
+    const res = await fetch(url, { signal: AbortSignal.timeout(25000) })
     if (!res.ok) return null
     const d = await res.json()
     return d.snapshot || d
@@ -86,13 +101,20 @@ async function buildMessage(mint) {
   const bullish  = snap?.bullish_flags || []
 
   // Social links
+  const chain = detectChain(mint)
+  const chainBadge = chain === 'ethereum' ? '⟠ ETH' : '◎ SOL'
   const socials = []
   if (snap?.has_twitter) socials.push('[𝕏](https://twitter.com)')
   if (snap?.has_telegram) socials.push('[✈](https://t.me)')
   if (snap?.has_website) socials.push('[🌐](https://example.com)')
-  socials.push(`[DEX](https://dexscreener.com/solana/${mint})`)
-  socials.push(`[Pump](https://pump.fun/${mint})`)
-  socials.push(`[Birdeye](https://birdeye.so/token/${mint})`)
+  socials.push(`[DEX](https://dexscreener.com/${chain}/${mint})`)
+  if (chain === 'solana') {
+    socials.push(`[Pump](https://pump.fun/${mint})`)
+    socials.push(`[Birdeye](https://birdeye.so/token/${mint})`)
+  } else {
+    socials.push(`[Etherscan](https://etherscan.io/token/${mint})`)
+    socials.push(`[Uniswap](https://app.uniswap.org/explore/tokens/ethereum/${mint})`)
+  }
 
   const lines = []
   lines.push(`**${name}** \\[${symbol}\\] ${isMig ? '✅ Migrated' : '🔵 Bonding'}`)
@@ -120,7 +142,7 @@ async function buildMessage(mint) {
   const embed = new EmbedBuilder()
     .setColor(color)
     .setDescription(lines.join('\n'))
-    .setFooter({ text: `Orbit v0.5 · ${new Date().toLocaleTimeString()}` })
+    .setFooter({ text: `Orbit v0.8 · ${chainBadge} · ${new Date().toLocaleTimeString()}` })
 
   return { embeds: [embed] }
 }
@@ -181,7 +203,7 @@ client.on('messageCreate', async msg => {
   }
 
   if (cmd === '!orbit' || cmd === '!help') {
-    return msg.reply('**Orbit Bot**\n`!a <CA>` — analyze\n`!pnl <wallet>` — monthly PnL\n`!track <CA> <MC> above|below` — price alert\n`!untrack <CA>` — remove\n`!trackers` — list')
+    return msg.reply('**Orbit Bot**\n`!a <CA>` — analyze (SOL or ETH)\n`!pnl <wallet>` — monthly PnL\n`!track <CA> <MC> above|below` — price alert\n`!untrack <CA>` — remove\n`!trackers` — list\norbit-app.xyz')
   }
 })
 

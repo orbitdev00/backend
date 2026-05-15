@@ -21,21 +21,22 @@ export default function LandingBlackHole({ active, origin, onDone }) {
     // Black hole spawns at button click position
     const cx = origin.x
     const cy = origin.y
-    const maxR = Math.sqrt(W * W + H * H) * 0.5
+    const maxR = Math.max(
+      Math.sqrt(cx * cx + cy * cy),
+      Math.sqrt((W - cx) * (W - cx) + cy * cy),
+      Math.sqrt(cx * cx + (H - cy) * (H - cy)),
+      Math.sqrt((W - cx) * (W - cx) + (H - cy) * (H - cy)),
+    )
 
-    // Grab landing canvas stars before hiding it
-    const lpCanvas = document.querySelector('.lp-canvas')
-    let starData = []
-    if (lpCanvas) {
-      // Sample star positions from the canvas pixel data won't work well,
-      // so we generate matching stars based on the same seed approach
-      starData = Array.from({ length: 280 }, () => ({
-        x: Math.random() * W,
-        y: Math.random() * H,
-        r: Math.random() * 1.2 + 0.2,
-        o: Math.random() * 0.5 + 0.2,
-      }))
-    }
+    const sfCanvas = document.querySelector('.starfield-canvas')
+
+    // Always generate absorption stars matching the parallax starfield density
+    const starData = Array.from({ length: 280 }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: Math.random() * 1.2 + 0.2,
+      o: Math.random() * 0.5 + 0.2,
+    }))
 
     // Accretion disk particles
     const NPARTS = 300
@@ -152,7 +153,18 @@ export default function LandingBlackHole({ active, origin, onDone }) {
     const frame = ts => {
       const dur = PHASES[state.phase]
       const t   = Math.min((ts - state.t0) / dur, 1)
-      ctx.clearRect(0, 0, W, H)
+
+      // Opaque black during suck/implode; fade in during second half of grow; transparent otherwise
+      if (state.phase === 'suck' || state.phase === 'implode') {
+        ctx.fillStyle = '#000'
+        ctx.fillRect(0, 0, W, H)
+      } else if (state.phase === 'grow' && t > 0.5) {
+        const fade = (t - 0.5) / 0.5
+        ctx.fillStyle = `rgba(0,0,0,${fade})`
+        ctx.fillRect(0, 0, W, H)
+      } else {
+        ctx.clearRect(0, 0, W, H)
+      }
 
       if (state.phase === 'spawn') {
         // Small black hole appears from button
@@ -163,18 +175,18 @@ export default function LandingBlackHole({ active, origin, onDone }) {
         if (t >= 1) { state.phase = 'grow'; state.t0 = ts }
 
       } else if (state.phase === 'grow') {
-        // Grows to 120px radius
+        // Grows to 120px radius — cross-fade real starfield out over second half
         const et    = easeIO(t)
         const holeR = 40 + et * 80
         drawDisk(holeR, 1)
 
-        // Hide landing canvas stars — black hole takes over
-        if (!lpHidden && t > 0.3) {
-          if (lpCanvas) lpCanvas.style.opacity = `${1 - (t - 0.3) / 0.7}`
+        if (t > 0.5) {
+          const fade = 1 - (t - 0.5) / 0.5
+          if (sfCanvas) sfCanvas.style.opacity = `${fade}`
         }
 
         if (t >= 1) {
-          if (lpCanvas) lpCanvas.style.display = 'none'
+          if (sfCanvas) { sfCanvas.style.opacity = '0'; sfCanvas.style.display = 'none' }
           lpHidden = true
           state.phase = 'suck'; state.t0 = ts
         }
@@ -184,13 +196,13 @@ export default function LandingBlackHole({ active, origin, onDone }) {
         const et    = easeIO(t)
         const holeR = 120 + et * 30
 
-        // Draw remaining stars being pulled in
+        // Draw parallax stars being pulled toward the black hole
         for (const s of starData) {
-          const dist = Math.sqrt((s.x - cx) ** 2 + (s.y - cy) ** 2)
-          const normD = dist / maxR
+          const dist    = Math.sqrt((s.x - cx) ** 2 + (s.y - cy) ** 2)
+          const normD   = Math.min(1, dist / maxR)
           const gravity = 1 - normD * 0.6
-          const localT = Math.min(1, et * (0.3 + gravity))
-          const eased  = easeIO(localT)
+          const localT  = Math.min(1, et * (0.6 + gravity))
+          const eased   = easeIO(localT)
           const sx = cx + (s.x - cx) * (1 - eased)
           const sy = cy + (s.y - cy) * (1 - eased)
           const scale = Math.max(0, 1 - eased)
@@ -231,6 +243,11 @@ export default function LandingBlackHole({ active, origin, onDone }) {
 
         if (t >= 1 && !state.called) {
           state.called = true
+          const style = document.createElement('style')
+          style.id = 'orbit-fadein'
+          style.textContent = 'body > * { animation: orbitFadeIn 0.5s ease forwards !important } @keyframes orbitFadeIn { from { opacity: 0 } to { opacity: 1 } }'
+          document.head.appendChild(style)
+          setTimeout(() => { const s = document.getElementById('orbit-fadein'); if (s) s.remove() }, 700)
           if (onDone) onDone()
         }
       }
@@ -243,7 +260,8 @@ export default function LandingBlackHole({ active, origin, onDone }) {
 
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
-      if (lpCanvas) { lpCanvas.style.display = ''; lpCanvas.style.opacity = '' }
+      const sf = document.querySelector('.starfield-canvas')
+      if (sf) { sf.style.display = ''; sf.style.opacity = '' }
       contentEls.forEach(el => {
         el.style.transform = ''
         el.style.opacity = ''

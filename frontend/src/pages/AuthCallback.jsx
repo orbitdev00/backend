@@ -63,47 +63,65 @@ export default function AuthCallback() {
   }
 
   useEffect(() => {
+    let done = false
+
+    const finish = async (session) => {
+      if (done) return
+      done = true
+      await finishSession(session)
+    }
+
+    // Safety net: supabase fires SIGNED_IN once it finishes processing URL tokens.
+    // This catches the race where getSession() below returns null but the exchange
+    // completes a moment later (e.g. implicit hash exchange on slow connections).
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) await finish(session)
+    })
+
     const handleCallback = async () => {
       try {
-        // Supabase auto-parses hash tokens on init, so getSession() may already have a session
+        // getSession() waits for supabase's internal init (including URL token detection)
+        // to complete, so a session here means supabase already handled the tokens.
         const { data, error } = await supabase.auth.getSession()
         if (error) { setError(error.message); setStatus('error'); return }
 
-        if (data.session) {
-          await finishSession(data.session)
-          return
-        }
+        if (data.session) { await finish(data.session); return }
 
-        const params      = new URLSearchParams(window.location.search)
-        const hashParams  = new URLSearchParams(window.location.hash.slice(1))
-        const tokenHash   = params.get('token_hash')
-        const type        = params.get('type') || 'signup'
-        const code        = params.get('code')
-        const accessToken = hashParams.get('access_token')
+        const params       = new URLSearchParams(window.location.search)
+        const hashParams   = new URLSearchParams(window.location.hash.slice(1))
+        const tokenHash    = params.get('token_hash')
+        const type         = params.get('type') || 'signup'
+        const code         = params.get('code')
+        const accessToken  = hashParams.get('access_token')
         const refreshToken = hashParams.get('refresh_token')
 
         if (tokenHash) {
-          // Email confirmation — new Supabase PKCE format (?token_hash=...&type=signup)
+          // OTP / magic-link format — supabase doesn't auto-handle this, must call verifyOtp
           const { error: otpError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type })
           if (otpError) { setError(otpError.message); setStatus('error'); return }
           const { data: { session } } = await supabase.auth.getSession()
           if (!session) { setError('Verification failed. Please try signing in.'); setStatus('error'); return }
-          await finishSession(session)
+          await finish(session)
         } else if (code) {
-          // OAuth PKCE (?code=...) — used by Google
+          // PKCE code — try exchange (works on same device; cross-device requires implicit flow)
           const { error: exchError } = await supabase.auth.exchangeCodeForSession(code)
-          if (exchError) { setError(exchError.message); setStatus('error'); return }
+          if (exchError) {
+            setError('Confirmation link expired or was opened in a different browser. Please request a new confirmation email.')
+            setStatus('error')
+            return
+          }
           const { data: { session } } = await supabase.auth.getSession()
-          await finishSession(session)
+          await finish(session)
         } else if (accessToken) {
-          // Legacy hash fragment (#access_token=...)
+          // Hash-fragment tokens (#access_token=...) — supabase should auto-handle these,
+          // but fall back to manual setSession just in case
           const { error: setErr } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken || '',
           })
           if (setErr) { setError(setErr.message); setStatus('error'); return }
           const { data: { session } } = await supabase.auth.getSession()
-          await finishSession(session)
+          await finish(session)
         } else {
           setError('No auth token found. Please try signing in again.')
           setStatus('error')
@@ -115,6 +133,7 @@ export default function AuthCallback() {
     }
 
     handleCallback()
+    return () => subscription.unsubscribe()
   }, [])
 
   return (

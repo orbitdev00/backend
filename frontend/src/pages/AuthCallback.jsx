@@ -52,6 +52,11 @@ export default function AuthCallback() {
     setTimeout(() => { window.location.href = (!rep?.username) ? '/edit-profile?onboarding=1' : '/' }, 1200)
   }
 
+  const finishRecovery = () => {
+    setStatus('success')
+    setTimeout(() => { window.location.href = '/update-password' }, 1200)
+  }
+
   // Route to the correct handler based on which provider established the session
   const finishSession = async (session) => {
     const provider = session.user.app_metadata?.provider
@@ -65,17 +70,20 @@ export default function AuthCallback() {
   useEffect(() => {
     let done = false
 
-    const finish = async (session) => {
+    const finish = async (session, isRecovery = false) => {
       if (done) return
       done = true
-      await finishSession(session)
+      if (isRecovery) {
+        finishRecovery()
+      } else {
+        await finishSession(session)
+      }
     }
 
-    // Safety net: supabase fires SIGNED_IN once it finishes processing URL tokens.
-    // This catches the race where getSession() below returns null but the exchange
-    // completes a moment later (e.g. implicit hash exchange on slow connections).
+    // Safety net: supabase fires SIGNED_IN / PASSWORD_RECOVERY once it finishes processing URL tokens.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) await finish(session)
+      if (event === 'SIGNED_IN' && session)          await finish(session, false)
+      if (event === 'PASSWORD_RECOVERY' && session)  await finish(session, true)
     })
 
     const handleCallback = async () => {
@@ -85,15 +93,16 @@ export default function AuthCallback() {
         const { data, error } = await supabase.auth.getSession()
         if (error) { setError(error.message); setStatus('error'); return }
 
-        if (data.session) { await finish(data.session); return }
-
         const params       = new URLSearchParams(window.location.search)
         const hashParams   = new URLSearchParams(window.location.hash.slice(1))
         const tokenHash    = params.get('token_hash')
-        const type         = params.get('type') || 'signup'
+        const type         = params.get('type') || hashParams.get('type') || 'signup'
+        const isRecovery   = type === 'recovery'
         const code         = params.get('code')
         const accessToken  = hashParams.get('access_token')
         const refreshToken = hashParams.get('refresh_token')
+
+        if (data.session) { await finish(data.session, isRecovery); return }
 
         if (tokenHash) {
           // OTP / magic-link format — supabase doesn't auto-handle this, must call verifyOtp
@@ -101,7 +110,7 @@ export default function AuthCallback() {
           if (otpError) { setError(otpError.message); setStatus('error'); return }
           const { data: { session } } = await supabase.auth.getSession()
           if (!session) { setError('Verification failed. Please try signing in.'); setStatus('error'); return }
-          await finish(session)
+          await finish(session, isRecovery)
         } else if (code) {
           // PKCE code — try exchange (works on same device; cross-device requires implicit flow)
           const { error: exchError } = await supabase.auth.exchangeCodeForSession(code)
@@ -111,7 +120,7 @@ export default function AuthCallback() {
             return
           }
           const { data: { session } } = await supabase.auth.getSession()
-          await finish(session)
+          await finish(session, isRecovery)
         } else if (accessToken) {
           // Hash-fragment tokens (#access_token=...) — supabase should auto-handle these,
           // but fall back to manual setSession just in case
@@ -121,7 +130,7 @@ export default function AuthCallback() {
           })
           if (setErr) { setError(setErr.message); setStatus('error'); return }
           const { data: { session } } = await supabase.auth.getSession()
-          await finish(session)
+          await finish(session, isRecovery)
         } else {
           setError('No auth token found. Please try signing in again.')
           setStatus('error')

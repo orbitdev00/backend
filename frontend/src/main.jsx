@@ -23,6 +23,7 @@ import Pricing from './pages/Pricing.jsx'
 import Badges from './pages/Badges.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import ShareAnalysis from './pages/ShareAnalysis.jsx'
+import UpdatePassword from './pages/UpdatePassword.jsx'
 import PageTransition from './components/PageTransition.jsx'
 import StarField from './components/StarField.jsx'
 import './index.css'
@@ -64,7 +65,8 @@ function AppRoutes() {
         <Route path="/login"          element={<Login onSwitch={(p) => navigate(p === 'login' ? '/login' : p === 'signup' ? '/signup' : p === 'forgot' ? '/forgot' : '/')} />} />
         <Route path="/signup"         element={<SignUp onSwitch={(p) => navigate(p === 'login' ? '/login' : p === 'signup' ? '/signup' : p === 'forgot' ? '/forgot' : '/')} />} />
         <Route path="/forgot"         element={<ForgotPassword onSwitch={(p) => navigate(p === 'login' ? '/login' : p === 'signup' ? '/signup' : p === 'forgot' ? '/forgot' : '/')} />} />
-        <Route path="/auth/callback"  element={<AuthCallback />} />
+        <Route path="/auth/callback"   element={<AuthCallback />} />
+        <Route path="/update-password" element={<ProtectedRoute><UpdatePassword /></ProtectedRoute>} />
         <Route path="/" element={<RootRoute />} />
         <Route path="/analyze" element={<App />} />
         <Route path="/tracker" element={<Tracker />} />

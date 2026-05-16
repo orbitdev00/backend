@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import orbitPfp from '../orbitPfp.js'
 import './Auth.css'
 
 export default function AuthCallback() {
+  const navigate = useNavigate()
   const [status, setStatus] = useState('verifying')
   const [error, setError]   = useState('')
 
@@ -15,7 +17,7 @@ export default function AuthCallback() {
       .select('username')
       .eq('user_id', session.user.id)
       .single()
-    setTimeout(() => { window.location.href = (!rep?.username) ? '/edit-profile?onboarding=1' : '/' }, 1200)
+    setTimeout(() => navigate(!rep?.username ? '/edit-profile?onboarding=1' : '/'), 1200)
   }
 
   // Google OAuth — check for provider conflict then record provider
@@ -49,12 +51,12 @@ export default function AuthCallback() {
       .select('username')
       .eq('user_id', user.id)
       .single()
-    setTimeout(() => { window.location.href = (!rep?.username) ? '/edit-profile?onboarding=1' : '/' }, 1200)
+    setTimeout(() => navigate(!rep?.username ? '/edit-profile?onboarding=1' : '/'), 1200)
   }
 
   const finishRecovery = () => {
     setStatus('success')
-    setTimeout(() => { window.location.href = '/update-password' }, 1200)
+    setTimeout(() => navigate('/update-password'), 1200)
   }
 
   // Route to the correct handler based on which provider established the session
@@ -80,7 +82,8 @@ export default function AuthCallback() {
       }
     }
 
-    // Safety net: supabase fires SIGNED_IN / PASSWORD_RECOVERY once it finishes processing URL tokens.
+    // Safety net: catches the race where getSession() returns null but the token
+    // exchange completes a moment later via supabase's internal init.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session)          await finish(session, false)
       if (event === 'PASSWORD_RECOVERY' && session)  await finish(session, true)
@@ -88,8 +91,6 @@ export default function AuthCallback() {
 
     const handleCallback = async () => {
       try {
-        // getSession() waits for supabase's internal init (including URL token detection)
-        // to complete, so a session here means supabase already handled the tokens.
         const { data, error } = await supabase.auth.getSession()
         if (error) { setError(error.message); setStatus('error'); return }
 
@@ -105,11 +106,18 @@ export default function AuthCallback() {
         if (data.session) { await finish(data.session, isRecovery); return }
 
         if (tokenHash) {
-          // OTP / magic-link format — supabase doesn't auto-handle this, must call verifyOtp
-          const { error: otpError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type })
+          const { data: verifyData, error: otpError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type })
           if (otpError) { setError(otpError.message); setStatus('error'); return }
-          const { data: { session } } = await supabase.auth.getSession()
-          if (!session) { setError('Verification failed. Please try signing in.'); setStatus('error'); return }
+
+          // Use the session from verifyOtp response first, fall back to getSession
+          const session = verifyData?.session ?? (await supabase.auth.getSession()).data.session
+
+          if (!session) {
+            // Email confirmed but Supabase didn't auto-create a session — send to login
+            setStatus('success')
+            setTimeout(() => navigate('/login'), 1200)
+            return
+          }
           await finish(session, isRecovery)
         } else if (code) {
           // PKCE code — try exchange (works on same device; cross-device requires implicit flow)
@@ -172,7 +180,7 @@ export default function AuthCallback() {
               {error}
             </div>
             <button className="btn-primary" style={{marginTop: 12}}
-              onClick={() => window.location.href = '/'}>
+              onClick={() => navigate('/')}>
               Go to sign in
             </button>
           </>

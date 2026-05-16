@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import orbitPfp from '../orbitPfp.js'
 import './Auth.css'
 
 function ConfirmWaiting({ email, onSwitch }) {
+  const navigate = useNavigate()
   const [resending, setResending] = useState(false)
   const [resent, setResent]       = useState(false)
 
   // If the user confirms in another tab on the same browser, auto-redirect
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN') window.location.href = '/'
+      if (event === 'SIGNED_IN') navigate('/')
     })
     return () => subscription.unsubscribe()
   }, [])

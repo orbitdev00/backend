@@ -9,7 +9,6 @@ export default function AuthCallback() {
   const [status, setStatus] = useState('verifying')
   const [error, setError]   = useState('')
 
-  // Email confirmation — just redirect, no provider checks needed
   const finishEmail = async (session) => {
     setStatus('success')
     const { data: rep } = await supabase
@@ -20,7 +19,6 @@ export default function AuthCallback() {
     setTimeout(() => navigate(!rep?.username ? '/edit-profile?onboarding=1' : '/'), 1200)
   }
 
-  // Google OAuth — check for provider conflict then record provider
   const finishGoogle = async (session) => {
     const user  = session.user
     const email = user.email?.trim().toLowerCase()
@@ -59,7 +57,6 @@ export default function AuthCallback() {
     setTimeout(() => navigate('/update-password'), 1200)
   }
 
-  // Route to the correct handler based on which provider established the session
   const finishSession = async (session) => {
     const provider = session.user.app_metadata?.provider
     if (provider === 'google') {
@@ -82,56 +79,48 @@ export default function AuthCallback() {
       }
     }
 
-    // Safety net: catches the race where getSession() returns null but the token
-    // exchange completes a moment later via supabase's internal init.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session)          await finish(session, false)
-      if (event === 'PASSWORD_RECOVERY' && session)  await finish(session, true)
+      if (event === 'SIGNED_IN' && session)         await finish(session, false)
+      if (event === 'PASSWORD_RECOVERY' && session) await finish(session, true)
     })
 
     const handleCallback = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession()
-        if (error) { setError(error.message); setStatus('error'); return }
-
-        const params       = new URLSearchParams(window.location.search)
-        const hashParams   = new URLSearchParams(window.location.hash.slice(1))
-        const tokenHash    = params.get('token_hash')
-        const type         = params.get('type') || hashParams.get('type') || 'signup'
-        const isRecovery   = type === 'recovery'
-        const code         = params.get('code')
+        const params     = new URLSearchParams(window.location.search)
+        const hashParams = new URLSearchParams(window.location.hash.slice(1))
+        const code       = params.get('code')
+        const tokenHash  = params.get('token_hash')
+        const type       = params.get('type') || hashParams.get('type') || 'signup'
+        const isRecovery = type === 'recovery'
         const accessToken  = hashParams.get('access_token')
         const refreshToken = hashParams.get('refresh_token')
 
-        if (data.session) { await finish(data.session, isRecovery); return }
+        // Session already exists (e.g. OAuth redirect already handled by SDK)
+        const { data: { session: existing } } = await supabase.auth.getSession()
+        if (existing) { await finish(existing, isRecovery); return }
 
-        if (tokenHash) {
+        if (code) {
+          // PKCE code — the standard Supabase email confirmation format
+          const { data, error: exchError } = await supabase.auth.exchangeCodeForSession(code)
+          if (exchError) {
+            setError('This confirmation link has expired or was already used. Please request a new one.')
+            setStatus('error')
+            return
+          }
+          await finish(data.session, isRecovery)
+        } else if (tokenHash) {
+          // OTP token_hash — used when Supabase is in OTP/implicit mode
           const { data: verifyData, error: otpError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type })
           if (otpError) { setError(otpError.message); setStatus('error'); return }
-
-          // Use the session from verifyOtp response first, fall back to getSession
           const session = verifyData?.session ?? (await supabase.auth.getSession()).data.session
-
           if (!session) {
-            // Email confirmed but Supabase didn't auto-create a session — send to login
             setStatus('success')
             setTimeout(() => navigate('/login'), 1200)
             return
           }
           await finish(session, isRecovery)
-        } else if (code) {
-          // PKCE code — try exchange (works on same device; cross-device requires implicit flow)
-          const { error: exchError } = await supabase.auth.exchangeCodeForSession(code)
-          if (exchError) {
-            setError('Confirmation link expired or was opened in a different browser. Please request a new confirmation email.')
-            setStatus('error')
-            return
-          }
-          const { data: { session } } = await supabase.auth.getSession()
-          await finish(session, isRecovery)
         } else if (accessToken) {
-          // Hash-fragment tokens (#access_token=...) — supabase should auto-handle these,
-          // but fall back to manual setSession just in case
+          // Hash-fragment tokens from implicit OAuth redirect
           const { error: setErr } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken || '',

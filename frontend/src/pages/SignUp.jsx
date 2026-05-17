@@ -82,7 +82,7 @@ export default function SignUp({ onSwitch }) {
       const { data: existingEmail } = await supabase.from('user_reputation')
         .select('auth_provider').eq('email', email.trim().toLowerCase()).single()
       if (existingEmail) {
-        const hint = existingEmail.auth_provider === 'google' ? ' Please sign in with Google.' : ' Please sign in instead.'
+        const hint = existingEmail.auth_provider === 'google' ? ' Please sign in with Google instead.' : ' Please sign in instead.'
         setError('An account with this email already exists.' + hint)
         setLoading(false); return
       }

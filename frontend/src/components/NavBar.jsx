@@ -193,7 +193,7 @@ export default function NavBar({ active, onLogoClick }) {
                       ⚡ Upgrade to Omega
                     </button>
                   )}
-                  <button className="nb-menu-btn" onClick={() => { nav('/profile/' + (username || user.id)); setShowMenu(false) }}>
+                  <button className="nb-menu-btn" onClick={() => { username ? nav('/profile/' + username) : nav('/edit-profile?onboarding=1'); setShowMenu(false) }}>
                     My Profile
                   </button>
                   <button className="nb-menu-btn" onClick={() => { setShowAccount(true); setShowMenu(false) }}>
@@ -237,7 +237,7 @@ export default function NavBar({ active, onLogoClick }) {
             </button>
           )}
           {user && (
-            <button className="nb-mobile-link" onClick={() => { nav('/profile/' + (username || user?.id)); setShowMobile(false) }}>
+            <button className="nb-mobile-link" onClick={() => { username ? nav('/profile/' + username) : nav('/edit-profile?onboarding=1'); setShowMobile(false) }}>
               👤 My Profile
             </button>
           )}

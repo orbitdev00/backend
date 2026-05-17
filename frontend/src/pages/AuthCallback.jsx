@@ -31,7 +31,7 @@ export default function AuthCallback() {
         .single()
       if (existing && existing.user_id !== user.id && existing.auth_provider === 'email') {
         await supabase.auth.signOut()
-        setError('An account with this email already exists. Please sign in with your email and password.')
+        setError('An account with this email already exists. Please sign in with your email and password instead.')
         setStatus('error')
         return
       }

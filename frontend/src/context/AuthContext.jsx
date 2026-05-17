@@ -38,8 +38,8 @@ export function AuthProvider({ children }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
-      fetchProfile(session?.user?.id ?? null)
       setLoading(false)
+      fetchProfile(session?.user?.id ?? null)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -51,8 +51,8 @@ export function AuthProvider({ children }) {
 
       setSession(session)
       setUser(session?.user ?? null)
-      const profileData = await fetchProfile(session?.user?.id ?? null)
       setLoading(false)
+      const profileData = await fetchProfile(session?.user?.id ?? null)
 
       // Redirect to onboarding if signed in but username not yet set
       if (event === 'SIGNED_IN' && session?.user && !profileData?.username) {

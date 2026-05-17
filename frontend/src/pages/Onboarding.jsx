@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import StarField from '../components/StarField'
 import './Onboarding.css'
@@ -8,32 +7,42 @@ import './Onboarding.css'
 const TOTAL_STEPS = 3 // 0: username  1: avatar  2: welcome
 
 export default function Onboarding() {
-  const nav     = useNavigate()
-  const { user } = useAuth()
-  const fileRef  = useRef(null)
+  const nav    = useNavigate()
+  const fileRef = useRef(null)
   const checkRef = useRef(null)
 
-  const [step, setStep]                   = useState(0)
-  const [username, setUsername]           = useState('')
-  const [usernameStatus, setUsernameStatus] = useState('idle') // idle|checking|available|taken|invalid
-  const [pfpPreview, setPfpPreview]       = useState(null)    // data URL or Supabase URL
-  const [pfpFile, setPfpFile]             = useState(null)
-  const [isDragging, setIsDragging]       = useState(false)
-  const [saving, setSaving]               = useState(false)
-  const [error, setError]                 = useState('')
+  // Resolved directly from Supabase — never blocked by AuthContext loading state
+  const [currentUser, setCurrentUser] = useState(null)
 
-  // Load existing profile — skip username step if already set
+  const [step, setStep]                     = useState(0)
+  const [username, setUsername]             = useState('')
+  const [usernameStatus, setUsernameStatus] = useState('idle') // idle|checking|available|taken|invalid
+  const [pfpPreview, setPfpPreview]         = useState(null)
+  const [pfpFile, setPfpFile]               = useState(null)
+  const [isDragging, setIsDragging]         = useState(false)
+  const [saving, setSaving]                 = useState(false)
+  const [error, setError]                   = useState('')
+
+  // Resolve the current user directly — show UI immediately, don't wait.
+  // 3-second timeout: if getUser stalls, proceed with null user so the
+  // form stays interactive (saves will fail gracefully with an error message).
   useEffect(() => {
-    if (!user) { nav('/login'); return }
-    supabase.from('user_reputation')
-      .select('username,avatar_url')
-      .eq('user_id', user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.avatar_url) setPfpPreview(data.avatar_url)
-        if (data?.username)   { setUsername(data.username); setStep(2) }
-      })
-  }, [user])
+    let resolved = false
+
+    const timer = setTimeout(() => {
+      if (!resolved) resolved = true // give up waiting; UI already visible
+    }, 3000)
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      clearTimeout(timer)
+      if (resolved) return // already timed out
+      resolved = true
+      if (!user) { nav('/login'); return }
+      setCurrentUser(user)
+    })
+
+    return () => clearTimeout(timer)
+  }, [])
 
   // Debounced live username availability check
   useEffect(() => {
@@ -45,10 +54,10 @@ export default function Onboarding() {
     checkRef.current = setTimeout(async () => {
       const { data } = await supabase.from('user_reputation')
         .select('user_id').eq('username', u).maybeSingle()
-      setUsernameStatus(data && data.user_id !== user?.id ? 'taken' : 'available')
+      setUsernameStatus(data && data.user_id !== currentUser?.id ? 'taken' : 'available')
     }, 480)
     return () => clearTimeout(checkRef.current)
-  }, [username, user])
+  }, [username, currentUser])
 
   const processFile = useCallback((file) => {
     if (!file || !file.type.startsWith('image/')) return
@@ -76,10 +85,11 @@ export default function Onboarding() {
   }
 
   const saveAndLaunch = async () => {
+    if (!currentUser?.id) { setError('Session expired — please sign in again.'); return }
     setSaving(true); setError('')
     try {
       let avatarUrl = typeof pfpPreview === 'string' && !pfpPreview.startsWith('data:')
-        ? pfpPreview   // already a remote URL (returning user)
+        ? pfpPreview
         : null
 
       if (pfpFile) {
@@ -92,7 +102,7 @@ export default function Onboarding() {
         const w = bitmap.width * scale, h = bitmap.height * scale
         ctx.drawImage(bitmap, (size - w) / 2, (size - h) / 2, w, h)
         const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85))
-        const path  = `${user.id}/avatar.jpg`
+        const path  = `${currentUser.id}/avatar.jpg`
         const { error: uploadErr } = await supabase.storage.from('avatars')
           .upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
         if (!uploadErr) {
@@ -102,8 +112,8 @@ export default function Onboarding() {
       }
 
       const { error: saveErr } = await supabase.from('user_reputation').upsert({
-        user_id:    user.id,
-        email:      user.email,
+        user_id:    currentUser.id,
+        email:      currentUser.email,
         username:   username.trim(),
         avatar_url: avatarUrl || null,
         updated_at: new Date().toISOString(),
@@ -115,17 +125,15 @@ export default function Onboarding() {
     }
   }
 
-  const initials = (username || user?.email || '??').slice(0, 2).toUpperCase()
+  const initials = (username || currentUser?.email || '??').slice(0, 2).toUpperCase()
 
   return (
     <div className="ob-root">
       <StarField />
 
       <div className="ob-card">
-        {/* Wordmark */}
         <div className="ob-wordmark">ORBIT</div>
 
-        {/* Progress dots */}
         <div className="ob-dots">
           {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
             <div
@@ -135,7 +143,6 @@ export default function Onboarding() {
           ))}
         </div>
 
-        {/* Animated content area — key change triggers the enter animation */}
         <div className="ob-content" key={step}>
 
           {/* ── Step 0: Username ──────────────────────────────────── */}

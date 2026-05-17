@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import StarField from '../components/StarField'
 import './Onboarding.css'
@@ -7,12 +8,10 @@ import './Onboarding.css'
 const TOTAL_STEPS = 3 // 0: username  1: avatar  2: welcome
 
 export default function Onboarding() {
-  const nav    = useNavigate()
-  const fileRef = useRef(null)
-  const checkRef = useRef(null)
-
-  // Resolved directly from Supabase — never blocked by AuthContext loading state
-  const [currentUser, setCurrentUser] = useState(null)
+  const nav          = useNavigate()
+  const { user }     = useAuth()   // ProtectedRoute guarantees this is non-null on mount
+  const fileRef      = useRef(null)
+  const checkRef     = useRef(null)
 
   const [step, setStep]                     = useState(0)
   const [username, setUsername]             = useState('')
@@ -23,29 +22,8 @@ export default function Onboarding() {
   const [saving, setSaving]                 = useState(false)
   const [error, setError]                   = useState('')
 
-  // Resolve the current user directly — show UI immediately, don't wait.
-  // 3-second timeout: if getUser stalls, proceed with null user so the
-  // form stays interactive (saves will fail gracefully with an error message).
-  useEffect(() => {
-    let resolved = false
-
-    const timer = setTimeout(() => {
-      if (!resolved) resolved = true // give up waiting; UI already visible
-    }, 3000)
-
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      clearTimeout(timer)
-      if (resolved) return // already timed out
-      resolved = true
-      if (!user) { nav('/login'); return }
-      setCurrentUser(user)
-    })
-
-    return () => clearTimeout(timer)
-  }, [])
-
   // Debounced live username availability check.
-  // Hard 2s cap on "checking..." so a slow/failing query never blocks the user.
+  // Hard 2s cap so a slow/failing query never blocks the user.
   useEffect(() => {
     const u = username.trim()
     if (!u) { setUsernameStatus('idle'); return }
@@ -54,12 +32,10 @@ export default function Onboarding() {
     setUsernameStatus('checking')
     let active = true
 
-    // If query stalls, fail open after 2s so the user can continue
     const hardTimeout = setTimeout(() => {
       if (active) { active = false; setUsernameStatus('available') }
     }, 2000)
 
-    // 500ms debounce before firing the network request
     checkRef.current = setTimeout(async () => {
       try {
         const { data, error } = await supabase.from('user_reputation')
@@ -95,6 +71,55 @@ export default function Onboarding() {
     processFile(e.dataTransfer.files[0])
   }
 
+  const saveAndLaunch = async () => {
+    setSaving(true)
+    setError('')
+    try {
+      let avatarUrl = typeof pfpPreview === 'string' && !pfpPreview.startsWith('data:')
+        ? pfpPreview
+        : null
+
+      if (pfpFile) {
+        const bitmap = await createImageBitmap(pfpFile)
+        const size   = Math.min(bitmap.width, bitmap.height, 256)
+        const canvas = document.createElement('canvas')
+        canvas.width = size; canvas.height = size
+        const ctx    = canvas.getContext('2d')
+        const scale  = size / Math.min(bitmap.width, bitmap.height)
+        const w = bitmap.width * scale, h = bitmap.height * scale
+        ctx.drawImage(bitmap, (size - w) / 2, (size - h) / 2, w, h)
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85))
+        const path = `${user.id}/avatar.jpg`
+        const { error: uploadErr } = await supabase.storage.from('avatars')
+          .upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
+        if (!uploadErr) {
+          const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+          avatarUrl = data.publicUrl + '?t=' + Date.now()
+        }
+      }
+
+      const { error: saveErr } = await supabase.from('user_reputation').upsert({
+        user_id:    user.id,
+        email:      user.email,
+        username:   username.trim(),
+        avatar_url: avatarUrl || null,
+        updated_at: new Date().toISOString(),
+      })
+
+      if (saveErr) {
+        setError(saveErr.message)
+        setSaving(false)
+        return
+      }
+
+      // Full reload so AuthContext re-fetches the updated profile
+      window.location.href = '/'
+    } catch (e) {
+      setError(e.message)
+      setSaving(false)
+    }
+  }
+
   const advance = async () => {
     if (step === 0) {
       if (usernameStatus !== 'available') return
@@ -106,64 +131,7 @@ export default function Onboarding() {
     }
   }
 
-  const isAuthError = (err) => {
-    if (!err) return false
-    const msg = (err.message || '').toLowerCase()
-    return err.status === 401 || msg.includes('jwt') || msg.includes('expired') ||
-      msg.includes('not authenticated') || msg.includes('invalid token')
-  }
-
-  const handleSessionExpired = async () => {
-    try { await supabase.auth.signOut() } catch (_) {}
-    localStorage.clear()
-    window.location.href = '/login?message=session_expired'
-  }
-
-  const saveAndLaunch = async () => {
-    if (!currentUser?.id) { handleSessionExpired(); return }
-    setSaving(true); setError('')
-    try {
-      let avatarUrl = typeof pfpPreview === 'string' && !pfpPreview.startsWith('data:')
-        ? pfpPreview
-        : null
-
-      if (pfpFile) {
-        const bitmap = await createImageBitmap(pfpFile)
-        const size   = Math.min(bitmap.width, bitmap.height, 256)
-        const canvas = document.createElement('canvas')
-        canvas.width = size; canvas.height = size
-        const ctx = canvas.getContext('2d')
-        const scale = size / Math.min(bitmap.width, bitmap.height)
-        const w = bitmap.width * scale, h = bitmap.height * scale
-        ctx.drawImage(bitmap, (size - w) / 2, (size - h) / 2, w, h)
-        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85))
-        const path  = `${currentUser.id}/avatar.jpg`
-        const { error: uploadErr } = await supabase.storage.from('avatars')
-          .upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
-        if (!uploadErr) {
-          const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-          avatarUrl = data.publicUrl + '?t=' + Date.now()
-        }
-      }
-
-      const { error: saveErr } = await supabase.from('user_reputation').upsert({
-        user_id:    currentUser.id,
-        email:      currentUser.email,
-        username:   username.trim(),
-        avatar_url: avatarUrl || null,
-        updated_at: new Date().toISOString(),
-      })
-      if (saveErr) {
-        if (isAuthError(saveErr)) { handleSessionExpired(); return }
-        setError(saveErr.message); setSaving(false); return
-      }
-      window.location.href = '/'
-    } catch (e) {
-      setError(e.message); setSaving(false)
-    }
-  }
-
-  const initials = (username || currentUser?.email || '??').slice(0, 2).toUpperCase()
+  const initials = (username || user?.email || '??').slice(0, 2).toUpperCase()
 
   return (
     <div className="ob-root">
@@ -220,7 +188,7 @@ export default function Onboarding() {
               >
                 Continue →
               </button>
-              <button className="ob-skip" onClick={() => nav('/')}>Skip for now</button>
+              <button className="ob-skip" onClick={() => { window.location.href = '/' }}>Skip for now</button>
             </div>
           )}
 

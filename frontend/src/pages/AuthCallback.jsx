@@ -15,27 +15,26 @@ export default function AuthCallback() {
       .from('user_reputation')
       .select('username')
       .eq('user_id', session.user.id)
-      .single()
-    setTimeout(() => navigate(!rep?.username ? '/onboarding' : '/'), 1200)
+      .maybeSingle()
+    setTimeout(() => navigate(rep?.username ? '/' : '/onboarding'), 1200)
   }
 
   const finishGoogle = async (session) => {
     const user  = session.user
     const email = user.email?.trim().toLowerCase()
 
-    try {
-      const { data: existing } = await supabase
-        .from('user_reputation')
-        .select('auth_provider, user_id')
-        .eq('email', email)
-        .single()
-      if (existing && existing.user_id !== user.id && existing.auth_provider === 'email') {
-        await supabase.auth.signOut()
-        setError('An account with this email already exists. Please sign in with your email and password instead.')
-        setStatus('error')
-        return
-      }
-    } catch (_) { /* no existing row — safe */ }
+    // Block if this email already belongs to an email/password account
+    const { data: existing } = await supabase
+      .from('user_reputation')
+      .select('auth_provider, user_id')
+      .eq('email', email)
+      .maybeSingle()
+    if (existing && existing.user_id !== user.id && existing.auth_provider === 'email') {
+      await supabase.auth.signOut()
+      setError('An account with this email already exists. Please sign in with your email and password instead.')
+      setStatus('error')
+      return
+    }
 
     await supabase.from('user_reputation').upsert({
       user_id: user.id,
@@ -48,8 +47,9 @@ export default function AuthCallback() {
       .from('user_reputation')
       .select('username')
       .eq('user_id', user.id)
-      .single()
-    setTimeout(() => navigate(!rep?.username ? '/onboarding' : '/'), 1200)
+      .maybeSingle()
+    // New Google users (no username) → onboarding; returning users → home
+    setTimeout(() => navigate(rep?.username ? '/' : '/onboarding'), 1200)
   }
 
   const finishRecovery = () => {

@@ -1,32 +1,37 @@
-﻿import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext({})
 
-export function AuthProvider({ children }) {
-  useEffect(() => {
-    const handleVisibility = async () => {
-      if (document.visibilityState === 'visible') {
-        await supabase.auth.getSession()
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibility)
-    return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [])
+const PUBLIC_PATHS = ['/login', '/auth/callback', '/forgot-password', '/update-password']
 
+export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null)
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const fetchProfile = async (userId) => {
-    if (!userId) { setProfile(null); return }
+    if (!userId) { setProfile(null); return null }
     const { data } = await supabase
       .from('user_reputation')
       .select('tier,username,avatar_url,score,role')
       .eq('user_id', userId)
       .single()
     setProfile(data || null)
+    return data || null
+  }
+
+  const forceSignOut = async () => {
+    await supabase.auth.signOut()
+    window.location.href = '/login'
+  }
+
+  const validateSession = async () => {
+    const path = window.location.pathname
+    if (PUBLIC_PATHS.some(p => path.startsWith(p))) return
+    const { data: { session: live }, error } = await supabase.auth.getSession()
+    if (!live || error) forceSignOut()
   }
 
   useEffect(() => {
@@ -36,13 +41,42 @@ export function AuthProvider({ children }) {
       fetchProfile(session?.user?.id ?? null)
       setLoading(false)
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Token refresh failed — account likely deleted
+      if (event === 'TOKEN_REFRESHED' && !session) {
+        forceSignOut()
+        return
+      }
+
       setSession(session)
       setUser(session?.user ?? null)
-      fetchProfile(session?.user?.id ?? null)
+      const profileData = await fetchProfile(session?.user?.id ?? null)
       setLoading(false)
+
+      // Redirect to onboarding if signed in but username not yet set
+      if (event === 'SIGNED_IN' && session?.user && !profileData?.username) {
+        const path = window.location.pathname
+        if (!['/onboarding', '/edit-profile', '/auth/callback', '/login'].includes(path)) {
+          window.location.href = '/onboarding'
+        }
+      }
     })
-    return () => subscription.unsubscribe()
+
+    // Detect deleted-account sessions: poll every 60s
+    const intervalId = setInterval(validateSession, 60_000)
+
+    // Also validate when the tab regains focus
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') validateSession()
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      subscription.unsubscribe()
+      clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
   }, [])
 
   const signUp = async (email, password) => {
@@ -57,7 +91,6 @@ export function AuthProvider({ children }) {
       await supabase.auth.signOut()
       return { data: null, error: { message: 'Please check your email and verify your account before signing in.' } }
     }
-    // Block login if this email was registered via Google
     if (data?.user) {
       try {
         const { data: rep } = await supabase

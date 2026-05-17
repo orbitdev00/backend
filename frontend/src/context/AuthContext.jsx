@@ -22,28 +22,51 @@ export function AuthProvider({ children }) {
     return data || null
   }
 
+  // Always force-clean regardless of whether signOut() succeeds.
+  // Covers deleted accounts where the Supabase call itself may error.
   const forceSignOut = async () => {
-    await supabase.auth.signOut()
+    try { await supabase.auth.signOut() } catch (_) {}
+    localStorage.clear()
+    setUser(null)
+    setSession(null)
+    setProfile(null)
     window.location.href = '/login'
   }
 
+  // Validate the live session server-side (getUser makes a network call).
+  // Only runs on non-public paths to avoid redirect loops on /login etc.
   const validateSession = async () => {
     const path = window.location.pathname
     if (PUBLIC_PATHS.some(p => path.startsWith(p))) return
-    const { data: { session: live }, error } = await supabase.auth.getSession()
-    if (!live || error) forceSignOut()
+    const { data: { user: liveUser }, error } = await supabase.auth.getUser()
+    if (error || !liveUser) forceSignOut()
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
+    // Initial load: check localStorage for an existing session, then
+    // validate it server-side via getUser() so deleted accounts are caught.
+    const init = async () => {
+      const { data: { session: cached } } = await supabase.auth.getSession()
+      if (!cached) {
+        // No session at all — user is not logged in, nothing to validate
+        setLoading(false)
+        return
+      }
+      // Session exists in cache — verify it's still valid with a network call
+      const { data: { user: liveUser }, error } = await supabase.auth.getUser()
+      if (error || !liveUser) {
+        forceSignOut()
+        return
+      }
+      setSession(cached)
+      setUser(liveUser)
       setLoading(false)
-      fetchProfile(session?.user?.id ?? null)
-    })
+      fetchProfile(liveUser.id)
+    }
+    init()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Token refresh failed — account likely deleted
+      // Token refresh returned nothing — account likely deleted mid-session
       if (event === 'TOKEN_REFRESHED' && !session) {
         forceSignOut()
         return
@@ -63,10 +86,9 @@ export function AuthProvider({ children }) {
       }
     })
 
-    // Detect deleted-account sessions: poll every 60s
+    // Periodic server-side validation — catches deleted accounts between token refreshes
     const intervalId = setInterval(validateSession, 60_000)
 
-    // Also validate when the tab regains focus
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') validateSession()
     }
@@ -112,9 +134,15 @@ export function AuthProvider({ children }) {
     return { data, error }
   }
 
+  // Always succeeds: clears localStorage and redirects even if the Supabase
+  // call fails (e.g. the auth user was already deleted from the dashboard).
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    return { error }
+    try { await supabase.auth.signOut() } catch (_) {}
+    localStorage.clear()
+    setUser(null)
+    setSession(null)
+    setProfile(null)
+    window.location.href = '/login'
   }
 
   const resetPassword = async (email) => {

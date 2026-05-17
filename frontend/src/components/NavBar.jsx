@@ -197,7 +197,7 @@ export default function NavBar({ active, onLogoClick }) {
                     My Profile
                   </button>
                   <div className="nb-divider" />
-                  <button className="nb-signout-btn" onClick={async () => { await signOut(); setShowMenu(false); nav('/login') }}>
+                  <button className="nb-signout-btn" onClick={() => { setShowMenu(false); signOut() }}>
                     Sign out
                   </button>
                 </div>
@@ -238,7 +238,7 @@ export default function NavBar({ active, onLogoClick }) {
               👤 My Profile
             </button>
           )}
-          <button className="nb-mobile-link nb-mobile-signout" onClick={async () => { await signOut(); nav('/login') }}>
+          <button className="nb-mobile-link nb-mobile-signout" onClick={() => signOut()}>
             Sign Out
           </button>
         </div>

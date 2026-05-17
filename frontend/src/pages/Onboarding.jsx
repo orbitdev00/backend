@@ -44,20 +44,42 @@ export default function Onboarding() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Debounced live username availability check
+  // Debounced live username availability check.
+  // Hard 2s cap on "checking..." so a slow/failing query never blocks the user.
   useEffect(() => {
     const u = username.trim()
     if (!u) { setUsernameStatus('idle'); return }
     if (u.length < 3 || !/^[a-zA-Z0-9_]+$/.test(u)) { setUsernameStatus('invalid'); return }
+
     setUsernameStatus('checking')
-    clearTimeout(checkRef.current)
+    let active = true
+
+    // If query stalls, fail open after 2s so the user can continue
+    const hardTimeout = setTimeout(() => {
+      if (active) { active = false; setUsernameStatus('available') }
+    }, 2000)
+
+    // 500ms debounce before firing the network request
     checkRef.current = setTimeout(async () => {
-      const { data } = await supabase.from('user_reputation')
-        .select('user_id').eq('username', u).maybeSingle()
-      setUsernameStatus(data && data.user_id !== currentUser?.id ? 'taken' : 'available')
-    }, 480)
-    return () => clearTimeout(checkRef.current)
-  }, [username, currentUser])
+      try {
+        const { data, error } = await supabase.from('user_reputation')
+          .select('username').eq('username', u).maybeSingle()
+        clearTimeout(hardTimeout)
+        if (!active) return
+        if (error) { console.warn('Username check error:', error); setUsernameStatus('available'); return }
+        setUsernameStatus(data ? 'taken' : 'available')
+      } catch (e) {
+        clearTimeout(hardTimeout)
+        if (active) { console.warn('Username check failed:', e); setUsernameStatus('available') }
+      }
+    }, 500)
+
+    return () => {
+      active = false
+      clearTimeout(hardTimeout)
+      clearTimeout(checkRef.current)
+    }
+  }, [username])
 
   const processFile = useCallback((file) => {
     if (!file || !file.type.startsWith('image/')) return

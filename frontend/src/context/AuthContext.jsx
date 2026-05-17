@@ -61,7 +61,17 @@ export function AuthProvider({ children }) {
       setSession(cached)
       setUser(liveUser)
       setLoading(false)
-      fetchProfile(liveUser.id)
+      const profileData = await fetchProfile(liveUser.id)
+
+      // Redirect to onboarding on any page load if username is not set.
+      // (The SIGNED_IN event in onAuthStateChange only fires on actual sign-in,
+      // not on page reload, so we also check here in init().)
+      if (!profileData?.username) {
+        const path = window.location.pathname
+        if (!['/onboarding', '/edit-profile', '/auth/callback', '/login'].includes(path)) {
+          window.location.href = '/onboarding'
+        }
+      }
     }
     init()
 

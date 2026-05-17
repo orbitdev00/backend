@@ -37,18 +37,19 @@ function ProtectedRoute({ children }) {
 }
 
 function RootRoute() {
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const navigate = useNavigate()
-  const [isTrial, setIsTrial] = React.useState(false)
 
   const handleSwitch = (page) => {
     if (page === 'login')   navigate('/login')
     else if (page === 'signup')  navigate('/signup')
     else if (page === 'forgot')  navigate('/forgot')
-    else if (page === 'trial')   { navigate('/analyze?trial=1') }
+    else if (page === 'trial')   navigate('/analyze?trial=1')
   }
 
-  if (loading) return null
+  // Auth still loading, or user is logged in but profile hasn't resolved yet
+  // (also covers user with no username — AuthContext will redirect to /onboarding)
+  if (loading || (user && !profile?.username)) return null
   if (user) return <Home />
   return <Landing onSwitch={handleSwitch} />
 }

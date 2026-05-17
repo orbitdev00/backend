@@ -316,27 +316,21 @@ export default function App() {
     }
   }, [user])
 
-  // Auto-run from onboarding
+  // Auto-run when navigated here with ?mint=CA (e.g. from onboarding CA step)
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const mintParam = params.get('mint')
-    const fromOnboarding = params.get('onboarding') === '1'
-    if (mintParam && fromOnboarding) {
-      setMintAddress(mintParam)
-      setTimeout(() => {
-        streamAnalyze(mintParam).then(result => {
-          if (!user) {
-            localStorage.setItem('orbit_guest_analyzed', '1')
-            setGuestBlocked(true)
-          }
-          if (result?.trialUsed) { setPhase('idle'); setTrialBlocked(true) }
-          if (result?.trialConsumed) setIsTrial(true)
-          setTimeout(() => checkNewBadges(), 3000)
-        })
-        setPhase('animating')
-        setActiveMint(mintParam)
-      }, 400)
-    }
+    if (!mintParam) return
+    window.history.replaceState({}, '', '/analyze')
+    setMint(mintParam)
+    setActiveMint(mintParam)
+    setPhase('animating')
+    streamAnalyze(mintParam).then(result => {
+      if (!user) { localStorage.setItem('orbit_guest_analyzed', '1'); setGuestBlocked(true) }
+      if (result?.trialUsed) { setPhase('idle'); setTrialBlocked(true) }
+      if (result?.trialConsumed) setIsTrial(true)
+      setTimeout(() => checkNewBadges(), 3000)
+    })
   }, [])
 
   // Initialize known badges on mount

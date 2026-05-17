@@ -16,7 +16,7 @@ export default function AuthCallback() {
       .select('username')
       .eq('user_id', session.user.id)
       .single()
-    setTimeout(() => navigate(!rep?.username ? '/edit-profile?onboarding=1' : '/'), 1200)
+    setTimeout(() => navigate(!rep?.username ? '/onboarding' : '/'), 1200)
   }
 
   const finishGoogle = async (session) => {
@@ -49,7 +49,7 @@ export default function AuthCallback() {
       .select('username')
       .eq('user_id', user.id)
       .single()
-    setTimeout(() => navigate(!rep?.username ? '/edit-profile?onboarding=1' : '/'), 1200)
+    setTimeout(() => navigate(!rep?.username ? '/onboarding' : '/'), 1200)
   }
 
   const finishRecovery = () => {

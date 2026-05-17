@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import NavBar from '../components/NavBar'
@@ -7,8 +7,6 @@ import './EditProfile.css'
 
 export default function EditProfile() {
   const nav = useNavigate()
-  const location = useLocation()
-  const isOnboarding = new URLSearchParams(location.search).get('onboarding') === '1'
   const { user } = useAuth()
   const [username, setUsername]   = useState('')
   const [bio, setBio]             = useState('')
@@ -96,11 +94,7 @@ export default function EditProfile() {
     if (saveErr) { setError(saveErr.message); setSaving(false); return }
     setMsg('Profile saved!')
     setSaving(false)
-    if (isOnboarding) {
-      setTimeout(() => nav('/onboarding'), 800)
-    } else {
-      setTimeout(() => nav(`/profile/${username.trim()}`), 800)
-    }
+    setTimeout(() => nav(`/profile/${username.trim()}`), 800)
   }
 
   const handleDeleteAccount = async () => {
@@ -135,15 +129,9 @@ export default function EditProfile() {
       <NavBar />
       <div className="ep-body">
         <div className="ep-header">
-          {!isOnboarding && <button className="ep-back" onClick={() => nav(-1)}>← Back</button>}
-          <h2>{isOnboarding ? 'Set Up Your Profile' : 'Edit Profile'}</h2>
+          <button className="ep-back" onClick={() => nav(-1)}>← Back</button>
+          <h2>Edit Profile</h2>
         </div>
-
-        {isOnboarding && (
-          <div className="ep-onboarding-banner">
-            👋 Welcome to Orbit! Set a username to finish setting up your account.
-          </div>
-        )}
         <div className="ep-card">
           {/* PFP */}
           <div className="ep-section">
@@ -221,14 +209,13 @@ export default function EditProfile() {
           {msg && <div className="ep-success">{msg}</div>}
 
           <div className="ep-actions">
-            {!isOnboarding && <button className="ep-cancel" onClick={() => nav(-1)}>Cancel</button>}
+            <button className="ep-cancel" onClick={() => nav(-1)}>Cancel</button>
             <button className="ep-save" onClick={save} disabled={saving}>
-              {saving ? 'Saving...' : isOnboarding ? 'Continue →' : 'Save Profile'}
+              {saving ? 'Saving...' : 'Save Profile'}
             </button>
           </div>
 
-          {!isOnboarding && (
-            <div className="ep-section ep-danger-zone">
+          <div className="ep-section ep-danger-zone">
               <div className="ep-label ep-danger-label">Danger Zone</div>
               <p className="ep-hint" style={{color:'#664', marginBottom:10}}>
                 Permanently deletes your account, profile, posts, messages, and all data. Cannot be undone.
@@ -237,7 +224,6 @@ export default function EditProfile() {
                 Delete Account
               </button>
             </div>
-          )}
         </div>
       </div>
       {showDeleteModal && (

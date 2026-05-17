@@ -163,7 +163,6 @@ export default function LandingBlackHole({ active, origin, onDone }) {
         drawDisk(holeR, 1)
         if (t >= 1) {
           captureSuckStars()
-          canvas.style.zIndex = '9999'  // jump in front of page content before absorbing it
           state.phase = 'suck'; state.t0 = ts
         }
 

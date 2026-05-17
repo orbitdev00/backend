@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import StarField from '../components/StarField'
 import './Onboarding.css'
@@ -9,7 +8,6 @@ const TOTAL_STEPS = 3 // 0: username  1: avatar  2: welcome
 
 export default function Onboarding() {
   const nav    = useNavigate()
-  const { refreshProfile } = useAuth()
   const fileRef = useRef(null)
   const checkRef = useRef(null)
 
@@ -159,9 +157,7 @@ export default function Onboarding() {
         if (isAuthError(saveErr)) { handleSessionExpired(); return }
         setError(saveErr.message); setSaving(false); return
       }
-      // Refresh AuthContext profile so RootRoute sees the new username and renders Home
-      await refreshProfile()
-      nav('/')
+      window.location.href = '/'
     } catch (e) {
       setError(e.message); setSaving(false)
     }

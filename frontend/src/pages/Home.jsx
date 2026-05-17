@@ -54,9 +54,9 @@ const CARDS = [
 
 export default function Home() {
   const nav = useNavigate()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [visible, setVisible] = useState(false)
-  const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'trader'
+  const username = profile?.username || 'Trader'
 
   useEffect(() => { setTimeout(() => setVisible(true), 60) }, [])
 

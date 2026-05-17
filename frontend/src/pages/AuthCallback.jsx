@@ -95,9 +95,12 @@ export default function AuthCallback() {
         const accessToken  = hashParams.get('access_token')
         const refreshToken = hashParams.get('refresh_token')
 
-        // Session already exists (e.g. OAuth redirect already handled by SDK)
+        // Session already exists (e.g. OAuth redirect already handled by SDK).
+        // Skip this shortcut for signup confirmations — always exchange the token
+        // so a logged-in session from a different account is not reused.
+        const isSignupToken = (code || tokenHash) && type === 'signup'
         const { data: { session: existing } } = await supabase.auth.getSession()
-        if (existing) { await finish(existing, isRecovery); return }
+        if (existing && !isSignupToken) { await finish(existing, isRecovery); return }
 
         if (code) {
           // PKCE code — the standard Supabase email confirmation format

@@ -8,10 +8,12 @@ export default function Login({ onSwitch, onTrial }) {
   const { signIn, signInWithGoogle } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const verified = new URLSearchParams(location.search).get('verified') === '1'
+  const params = new URLSearchParams(location.search)
+  const verified = params.get('verified') === '1'
+  const sessionExpired = params.get('message') === 'session_expired'
 
   useEffect(() => {
-    if (verified) {
+    if (verified || sessionExpired) {
       window.history.replaceState({}, '', '/login')
     }
   }, [])
@@ -46,6 +48,11 @@ export default function Login({ onSwitch, onTrial }) {
         {verified && (
           <div className="auth-success" style={{marginBottom: 8}}>
             ✓ Email confirmed — sign in to continue.
+          </div>
+        )}
+        {sessionExpired && (
+          <div className="auth-error" style={{marginBottom: 8, textAlign: 'center'}}>
+            Your session expired. Please sign in again.
           </div>
         )}
 

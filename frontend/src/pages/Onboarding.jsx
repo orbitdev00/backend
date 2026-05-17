@@ -106,8 +106,21 @@ export default function Onboarding() {
     }
   }
 
+  const isAuthError = (err) => {
+    if (!err) return false
+    const msg = (err.message || '').toLowerCase()
+    return err.status === 401 || msg.includes('jwt') || msg.includes('expired') ||
+      msg.includes('not authenticated') || msg.includes('invalid token')
+  }
+
+  const handleSessionExpired = async () => {
+    try { await supabase.auth.signOut() } catch (_) {}
+    localStorage.clear()
+    window.location.href = '/login?message=session_expired'
+  }
+
   const saveAndLaunch = async () => {
-    if (!currentUser?.id) { setError('Session expired — please sign in again.'); return }
+    if (!currentUser?.id) { handleSessionExpired(); return }
     setSaving(true); setError('')
     try {
       let avatarUrl = typeof pfpPreview === 'string' && !pfpPreview.startsWith('data:')
@@ -140,7 +153,10 @@ export default function Onboarding() {
         avatar_url: avatarUrl || null,
         updated_at: new Date().toISOString(),
       })
-      if (saveErr) { setError(saveErr.message); setSaving(false); return }
+      if (saveErr) {
+        if (isAuthError(saveErr)) { handleSessionExpired(); return }
+        setError(saveErr.message); setSaving(false); return
+      }
       nav('/')
     } catch (e) {
       setError(e.message); setSaving(false)

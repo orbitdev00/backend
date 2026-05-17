@@ -60,34 +60,46 @@ export default function SignUp({ onSwitch }) {
   const [error, setError]         = useState('')
   const [success, setSuccess]     = useState(false)
   const [loading, setLoading]     = useState(false)
+  const [checking, setChecking]   = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+
+    // Synchronous validation — no DB hit needed
     if (password !== confirm) { setError('Passwords do not match'); return }
     if (password.length < 8)  { setError('Password must be at least 8 characters'); return }
     if (!username.trim()) { setError('Username is required'); return }
     if (username.trim().length < 3) { setError('Username must be at least 3 characters'); return }
     if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) { setError('Username: letters, numbers and underscores only'); return }
+
+    // DB checks — show "Checking..." while queries run
+    setChecking(true)
     setLoading(true)
 
-    // Check username uniqueness
-    const { data: existing } = await supabase.from('user_reputation')
-      .select('user_id').eq('username', username.trim()).single()
-    if (existing) { setError('Username already taken'); setLoading(false); return }
+    // 1. Username uniqueness
+    const { data: takenUser } = await supabase.from('user_reputation')
+      .select('user_id').eq('username', username.trim()).maybeSingle()
+    if (takenUser) {
+      setError('Username already taken')
+      setChecking(false); setLoading(false); return
+    }
 
-    // Block if any account already exists with this email
-    try {
-      const { data: existingEmail } = await supabase.from('user_reputation')
-        .select('auth_provider').eq('email', email.trim().toLowerCase()).single()
-      if (existingEmail) {
-        const hint = existingEmail.auth_provider === 'google' ? ' Please sign in with Google instead.' : ' Please sign in instead.'
-        setError('An account with this email already exists.' + hint)
-        setLoading(false); return
-      }
-    } catch (_) { /* no row yet — safe to proceed */ }
+    // 2. Email conflict — check BEFORE calling signUp so Supabase never sees the request
+    const { data: existingEmail } = await supabase.from('user_reputation')
+      .select('auth_provider').eq('email', email.trim().toLowerCase()).maybeSingle()
+    if (existingEmail?.auth_provider === 'google') {
+      setError('An account with this email already exists. Please sign in with Google instead.')
+      setChecking(false); setLoading(false); return
+    }
+    if (existingEmail?.auth_provider === 'email') {
+      setError('An account with this email already exists. Please sign in instead.')
+      setChecking(false); setLoading(false); return
+    }
 
+    // 3. No conflict — proceed with signup
+    setChecking(false)
     const { data: authData, error } = await signUp(email, password)
     if (error) {
       const msg = error.message?.toLowerCase() || ''
@@ -167,7 +179,7 @@ export default function SignUp({ onSwitch }) {
           {error && <div className="auth-error">{error}</div>}
 
           <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? 'Creating account...' : 'Create account'}
+            {checking ? 'Checking...' : loading ? 'Creating account...' : 'Create account'}
           </button>
         </form>
 

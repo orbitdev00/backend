@@ -163,6 +163,7 @@ export default function LandingBlackHole({ active, origin, onDone }) {
         drawDisk(holeR, 1)
         if (t >= 1) {
           captureSuckStars()
+          canvas.style.zIndex = '9999'  // jump in front of page content before absorbing it
           state.phase = 'suck'; state.t0 = ts
         }
 
@@ -249,6 +250,7 @@ export default function LandingBlackHole({ active, origin, onDone }) {
 
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      canvas.style.zIndex = '0'
       const sf = document.querySelector('.starfield-canvas')
       if (sf) { sf.style.display = ''; sf.style.opacity = '' }
       contentEls.forEach(el => {
@@ -265,7 +267,7 @@ export default function LandingBlackHole({ active, origin, onDone }) {
       style={{
         display: 'none',
         position: 'fixed', inset: 0,
-        zIndex: 9999,
+        zIndex: 0,           // starts behind page content (z-index 1); JS raises to 9999 at suck phase
         pointerEvents: active ? 'all' : 'none',
       }}
     />

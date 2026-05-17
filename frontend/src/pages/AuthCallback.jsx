@@ -152,8 +152,10 @@ export default function AuthCallback() {
           const { data: { session } } = await supabase.auth.getSession()
           await finish(session, isRecovery)
         } else {
-          setError('No auth token found. Please try signing in again.')
-          setStatus('error')
+          // No recognisable token in the URL — the link may have been opened on a
+          // second device after already being consumed on the first. Send the user
+          // to /login with the verified banner so they know to sign in manually.
+          navigate('/login?verified=1')
         }
       } catch (e) {
         setError(e.message)

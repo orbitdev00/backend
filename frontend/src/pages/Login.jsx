@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import orbitPfp from '../orbitPfp.js'
@@ -9,6 +9,12 @@ export default function Login({ onSwitch, onTrial }) {
   const navigate = useNavigate()
   const location = useLocation()
   const verified = new URLSearchParams(location.search).get('verified') === '1'
+
+  useEffect(() => {
+    if (verified) {
+      window.history.replaceState({}, '', '/login')
+    }
+  }, [])
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
@@ -39,7 +45,7 @@ export default function Login({ onSwitch, onTrial }) {
 
         {verified && (
           <div className="auth-success" style={{marginBottom: 8}}>
-            Email confirmed — sign in to continue.
+            ✓ Email confirmed — sign in to continue.
           </div>
         )}
 

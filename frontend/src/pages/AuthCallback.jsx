@@ -95,17 +95,26 @@ export default function AuthCallback() {
         const accessToken  = hashParams.get('access_token')
         const refreshToken = hashParams.get('refresh_token')
 
-        // Session already exists (e.g. OAuth redirect already handled by SDK).
-        // Skip this shortcut for signup confirmations — always exchange the token
-        // so a logged-in session from a different account is not reused.
         const isSignupToken = (code || tokenHash) && type === 'signup'
-        const { data: { session: existing } } = await supabase.auth.getSession()
-        if (existing && !isSignupToken) { await finish(existing, isRecovery); return }
+
+        if (isSignupToken) {
+          // Sign out any existing session before exchanging the confirmation token.
+          // This prevents a logged-in account from being reused instead of the
+          // newly confirmed one (e.g. mobile confirms, desktop has a different session).
+          await supabase.auth.signOut()
+        } else {
+          // Non-signup flows: if the SDK already has a session (e.g. OAuth redirect
+          // handled implicitly), use it directly.
+          const { data: { session: existing } } = await supabase.auth.getSession()
+          if (existing) { await finish(existing, isRecovery); return }
+        }
 
         if (code) {
           // PKCE code — the standard Supabase email confirmation format
           const { data, error: exchError } = await supabase.auth.exchangeCodeForSession(code)
           if (exchError) {
+            // Token already consumed (confirmed on mobile, link re-opened on desktop)
+            if (isSignupToken) { navigate('/login?verified=1'); return }
             setError('This confirmation link has expired or was already used. Please request a new one.')
             setStatus('error')
             return
@@ -114,11 +123,22 @@ export default function AuthCallback() {
         } else if (tokenHash) {
           // OTP token_hash — used when Supabase is in OTP/implicit mode
           const { data: verifyData, error: otpError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type })
-          if (otpError) { setError(otpError.message); setStatus('error'); return }
+          if (otpError) {
+            if (isSignupToken) { navigate('/login?verified=1'); return }
+            setError(otpError.message); setStatus('error'); return
+          }
+          const confirmedEmail = verifyData.user?.email
           const session = verifyData?.session ?? (await supabase.auth.getSession()).data.session
           if (!session) {
             setStatus('success')
             setTimeout(() => navigate('/login'), 1200)
+            return
+          }
+          // Guard against the getSession() fallback returning a stale session
+          if (confirmedEmail && session.user.email !== confirmedEmail) {
+            await supabase.auth.signOut()
+            setError('Session mismatch — please sign in with your confirmed account.')
+            setStatus('error')
             return
           }
           await finish(session, isRecovery)

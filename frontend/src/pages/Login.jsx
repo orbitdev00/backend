@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import orbitPfp from '../orbitPfp.js'
 import './Auth.css'
@@ -7,6 +7,8 @@ import './Auth.css'
 export default function Login({ onSwitch, onTrial }) {
   const { signIn, signInWithGoogle } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const verified = new URLSearchParams(location.search).get('verified') === '1'
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
@@ -34,6 +36,12 @@ export default function Login({ onSwitch, onTrial }) {
         <img src={orbitPfp} alt="ORBIT" className="auth-logo" />
         <h1 className="auth-title">ORBIT</h1>
         <p className="auth-sub">Sign in to your account</p>
+
+        {verified && (
+          <div className="auth-success" style={{marginBottom: 8}}>
+            Email confirmed — sign in to continue.
+          </div>
+        )}
 
         <button className="btn-google" onClick={handleGoogle} disabled={googleLoading}>
           <svg width="16" height="16" viewBox="0 0 24 24" style={{flexShrink:0}}>

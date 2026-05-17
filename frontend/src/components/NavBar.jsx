@@ -193,11 +193,8 @@ export default function NavBar({ active, onLogoClick }) {
                       ⚡ Upgrade to Omega
                     </button>
                   )}
-                  <button className="nb-menu-btn" onClick={() => { username ? nav('/profile/' + username) : nav('/edit-profile?onboarding=1'); setShowMenu(false) }}>
+                  <button className="nb-menu-btn" onClick={() => { username ? nav('/profile/' + username) : nav('/onboarding'); setShowMenu(false) }}>
                     My Profile
-                  </button>
-                  <button className="nb-menu-btn" onClick={() => { setShowAccount(true); setShowMenu(false) }}>
-                    Account Settings
                   </button>
                   <div className="nb-divider" />
                   <button className="nb-signout-btn" onClick={async () => { await signOut(); setShowMenu(false); nav('/login') }}>
@@ -237,13 +234,10 @@ export default function NavBar({ active, onLogoClick }) {
             </button>
           )}
           {user && (
-            <button className="nb-mobile-link" onClick={() => { username ? nav('/profile/' + username) : nav('/edit-profile?onboarding=1'); setShowMobile(false) }}>
+            <button className="nb-mobile-link" onClick={() => { username ? nav('/profile/' + username) : nav('/onboarding'); setShowMobile(false) }}>
               👤 My Profile
             </button>
           )}
-          <button className="nb-mobile-link" onClick={() => { setShowAccount(true); setShowMobile(false) }}>
-            Account Settings
-          </button>
           <button className="nb-mobile-link nb-mobile-signout" onClick={async () => { await signOut(); nav('/login') }}>
             Sign Out
           </button>

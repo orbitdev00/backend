@@ -90,12 +90,18 @@ export default function AuthCallback() {
         const hashParams = new URLSearchParams(window.location.hash.slice(1))
         const code       = params.get('code')
         const tokenHash  = params.get('token_hash')
-        const type       = params.get('type') || hashParams.get('type') || 'signup'
-        const isRecovery = type === 'recovery'
+        // explicitType is null for Google OAuth PKCE callbacks (no type param in URL).
+        // Defaulting to 'signup' would incorrectly treat OAuth codes as email confirmations
+        // and call signOut() before the code exchange, breaking the OAuth flow.
+        const explicitType = params.get('type') || hashParams.get('type')
+        const type         = explicitType || 'signup'
+        const isRecovery   = type === 'recovery'
         const accessToken  = hashParams.get('access_token')
         const refreshToken = hashParams.get('refresh_token')
 
-        const isSignupToken = (code || tokenHash) && type === 'signup'
+        // Only true when Supabase explicitly sets type=signup — email confirmations only.
+        // Google OAuth PKCE sends ?code= with no type param, so explicitType is null there.
+        const isSignupToken = (code || tokenHash) && explicitType === 'signup'
 
         if (isSignupToken) {
           // Sign out any existing session before exchanging the confirmation token.

@@ -1,243 +1,249 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import StarField from '../components/StarField'
-import orbitPfp from '../orbitPfp.js'
 import './Onboarding.css'
 
-const SLIDES = [
-  {
-    id: 'welcome',
-    title: 'Welcome to Orbit.',
-    sub: 'The Solana memecoin analysis platform built for degens who want an edge.',
-  },
-  {
-    id: 'what',
-    title: 'What Orbit does.',
-    sub: 'Paste any Solana contract address and get an instant deep analysis — rug risk, market cap prediction, momentum score, dev history, bundle detection, and more.',
-  },
-  {
-    id: 'community',
-    title: 'More than a tool.',
-    sub: 'Track wallets, compare PnL with other traders, post calls in the forum, and earn badges as you build your reputation.',
-  },
-  {
-    id: 'analyze',
-    title: "You're ready.",
-    sub: 'Run your first analysis to see Orbit in action, or head straight to home.',
-  },
-]
+const TOTAL_STEPS = 3 // 0: username  1: avatar  2: welcome
 
 export default function Onboarding() {
-  const nav = useNavigate()
+  const nav     = useNavigate()
   const { user } = useAuth()
-  const fileRef = useRef(null)
+  const fileRef  = useRef(null)
+  const checkRef = useRef(null)
 
-  const [phase, setPhase]           = useState('setup') // 'setup' | 'slides'
-  const [slideIdx, setSlideIdx]     = useState(0)
-  const [username, setUsername]     = useState('')
-  const [pfpUrl, setPfpUrl]         = useState(null)
-  const [saving, setSaving]         = useState(false)
-  const [uploading, setUploading]   = useState(false)
-  const [setupError, setSetupError] = useState('')
-  const [mint, setMint]             = useState('')
-  const [caError, setCaError]       = useState('')
+  const [step, setStep]                   = useState(0)
+  const [username, setUsername]           = useState('')
+  const [usernameStatus, setUsernameStatus] = useState('idle') // idle|checking|available|taken|invalid
+  const [pfpPreview, setPfpPreview]       = useState(null)    // data URL or Supabase URL
+  const [pfpFile, setPfpFile]             = useState(null)
+  const [isDragging, setIsDragging]       = useState(false)
+  const [saving, setSaving]               = useState(false)
+  const [error, setError]                 = useState('')
 
+  // Load existing profile — skip username step if already set
   useEffect(() => {
     if (!user) { nav('/login'); return }
-    supabase.from('user_reputation').select('username,avatar_url').eq('user_id', user.id).single()
+    supabase.from('user_reputation')
+      .select('username,avatar_url')
+      .eq('user_id', user.id)
+      .maybeSingle()
       .then(({ data }) => {
-        if (data?.avatar_url) setPfpUrl(data.avatar_url)
-        // Already has a username — skip setup, go straight to slides
-        if (data?.username) { setUsername(data.username); setPhase('slides') }
+        if (data?.avatar_url) setPfpPreview(data.avatar_url)
+        if (data?.username)   { setUsername(data.username); setStep(2) }
       })
   }, [user])
 
-  const handlePfpUpload = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    setUploading(true)
-    try {
-      const bitmap = await createImageBitmap(file)
-      const size = Math.min(bitmap.width, bitmap.height, 256)
-      const canvas = document.createElement('canvas')
-      canvas.width = size; canvas.height = size
-      const ctx = canvas.getContext('2d')
-      const scale = size / Math.min(bitmap.width, bitmap.height)
-      const w = bitmap.width * scale, h = bitmap.height * scale
-      ctx.drawImage(bitmap, (size - w) / 2, (size - h) / 2, w, h)
-      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85))
-      const path = `${user.id}/avatar.jpg`
-      const { error: uploadErr } = await supabase.storage.from('avatars')
-        .upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
-      if (uploadErr) { setSetupError('Upload failed.'); setUploading(false); return }
-      const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-      setPfpUrl(data.publicUrl + '?t=' + Date.now())
-    } catch { setSetupError('Upload error.') }
-    setUploading(false)
-  }
-
-  const handleSaveProfile = async () => {
+  // Debounced live username availability check
+  useEffect(() => {
     const u = username.trim()
-    if (!u) { setSetupError('Username is required.'); return }
-    if (u.length < 3) { setSetupError('Username must be at least 3 characters.'); return }
-    if (!/^[a-zA-Z0-9_]+$/.test(u)) { setSetupError('Letters, numbers and underscores only.'); return }
-    setSaving(true); setSetupError('')
+    if (!u) { setUsernameStatus('idle'); return }
+    if (u.length < 3 || !/^[a-zA-Z0-9_]+$/.test(u)) { setUsernameStatus('invalid'); return }
+    setUsernameStatus('checking')
+    clearTimeout(checkRef.current)
+    checkRef.current = setTimeout(async () => {
+      const { data } = await supabase.from('user_reputation')
+        .select('user_id').eq('username', u).maybeSingle()
+      setUsernameStatus(data && data.user_id !== user?.id ? 'taken' : 'available')
+    }, 480)
+    return () => clearTimeout(checkRef.current)
+  }, [username, user])
 
-    const { data: taken } = await supabase.from('user_reputation')
-      .select('user_id').eq('username', u).single()
-    if (taken && taken.user_id !== user.id) {
-      setSetupError('Username already taken.'); setSaving(false); return
-    }
+  const processFile = useCallback((file) => {
+    if (!file || !file.type.startsWith('image/')) return
+    const reader = new FileReader()
+    reader.onload = e => setPfpPreview(e.target.result)
+    reader.readAsDataURL(file)
+    setPfpFile(file)
+  }, [])
 
-    const { error: saveErr } = await supabase.from('user_reputation').upsert({
-      user_id: user.id,
-      email: user.email,
-      username: u,
-      avatar_url: pfpUrl || null,
-      updated_at: new Date().toISOString(),
-    })
-    if (saveErr) { setSetupError(saveErr.message); setSaving(false); return }
-    setSaving(false)
-    setPhase('slides')
+  const handleDrop = (e) => {
+    e.preventDefault()
+    setIsDragging(false)
+    processFile(e.dataTransfer.files[0])
   }
 
-  const isLastSlide = slideIdx === SLIDES.length - 1
-
-  function handleNextSlide() {
-    if (isLastSlide) {
-      if (!mint.trim()) { setCaError('Paste a contract address to continue.'); return }
-      nav(`/analyze?mint=${encodeURIComponent(mint.trim())}`)
+  const advance = async () => {
+    if (step === 0) {
+      if (usernameStatus !== 'available') return
+      setStep(1)
+    } else if (step === 1) {
+      setStep(2)
     } else {
-      setSlideIdx(i => i + 1)
+      await saveAndLaunch()
+    }
+  }
+
+  const saveAndLaunch = async () => {
+    setSaving(true); setError('')
+    try {
+      let avatarUrl = typeof pfpPreview === 'string' && !pfpPreview.startsWith('data:')
+        ? pfpPreview   // already a remote URL (returning user)
+        : null
+
+      if (pfpFile) {
+        const bitmap = await createImageBitmap(pfpFile)
+        const size   = Math.min(bitmap.width, bitmap.height, 256)
+        const canvas = document.createElement('canvas')
+        canvas.width = size; canvas.height = size
+        const ctx = canvas.getContext('2d')
+        const scale = size / Math.min(bitmap.width, bitmap.height)
+        const w = bitmap.width * scale, h = bitmap.height * scale
+        ctx.drawImage(bitmap, (size - w) / 2, (size - h) / 2, w, h)
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85))
+        const path  = `${user.id}/avatar.jpg`
+        const { error: uploadErr } = await supabase.storage.from('avatars')
+          .upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
+        if (!uploadErr) {
+          const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+          avatarUrl = data.publicUrl + '?t=' + Date.now()
+        }
+      }
+
+      const { error: saveErr } = await supabase.from('user_reputation').upsert({
+        user_id:    user.id,
+        email:      user.email,
+        username:   username.trim(),
+        avatar_url: avatarUrl || null,
+        updated_at: new Date().toISOString(),
+      })
+      if (saveErr) { setError(saveErr.message); setSaving(false); return }
+      nav('/')
+    } catch (e) {
+      setError(e.message); setSaving(false)
     }
   }
 
   const initials = (username || user?.email || '??').slice(0, 2).toUpperCase()
 
-  // ── Profile setup phase ──────────────────────────────────────────────────
-  if (phase === 'setup') {
-    return (
-      <div className="ob-screen">
-        <StarField />
-        <div className="ob-card">
-          <div className="ob-logo-row">
-            <img src={orbitPfp} className="ob-logo" alt="" />
-            <span className="ob-logo-text">ORBIT</span>
-          </div>
-
-          <div className="ob-content" style={{minHeight: 'unset', marginBottom: 24}}>
-            <h1 className="ob-title">Set up your profile</h1>
-            <p className="ob-sub">Choose a username to get started. You can change it any time.</p>
-          </div>
-
-          {/* Avatar */}
-          <div style={{display:'flex', alignItems:'center', gap:16, marginBottom:20}}>
-            <div
-              onClick={() => fileRef.current?.click()}
-              style={{
-                width:64, height:64, borderRadius:'50%',
-                background:'#111', border:'1px solid #2a2a2a',
-                display:'flex', alignItems:'center', justifyContent:'center',
-                cursor:'pointer', overflow:'hidden', flexShrink:0, position:'relative',
-              }}
-            >
-              {pfpUrl
-                ? <img src={pfpUrl} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}} />
-                : <span style={{fontFamily:'var(--mono)',fontSize:18,color:'#475569'}}>{initials}</span>}
-              <div style={{
-                position:'absolute', inset:0, background:'rgba(0,0,0,0.5)',
-                display:'flex', alignItems:'center', justifyContent:'center',
-                opacity:0, transition:'opacity 0.15s',
-              }}
-                onMouseEnter={e => e.currentTarget.style.opacity = 1}
-                onMouseLeave={e => e.currentTarget.style.opacity = 0}
-              >
-                <span style={{color:'#fff',fontSize:18}}>{uploading ? '…' : '+'}</span>
-              </div>
-            </div>
-            <button
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-              style={{
-                background:'none', border:'1px solid #1e1e1e', borderRadius:6,
-                color:'#64748b', fontFamily:'var(--mono)', fontSize:11,
-                padding:'7px 14px', cursor:'pointer',
-              }}
-            >
-              {uploading ? 'Uploading...' : 'Upload photo (optional)'}
-            </button>
-            <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={handlePfpUpload} />
-          </div>
-
-          {/* Username */}
-          <div className="ob-input-wrap" style={{marginTop:0}}>
-            <input
-              className="ob-input"
-              placeholder="Username..."
-              value={username}
-              onChange={e => { setUsername(e.target.value); setSetupError('') }}
-              onKeyDown={e => e.key === 'Enter' && handleSaveProfile()}
-              maxLength={30}
-              autoFocus
-            />
-            {setupError && <div className="ob-error">{setupError}</div>}
-          </div>
-
-          <div className="ob-actions" style={{marginTop:24}}>
-            <button className="ob-btn-primary" onClick={handleSaveProfile} disabled={saving}>
-              {saving ? 'Saving...' : 'Continue →'}
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ── Slides phase ─────────────────────────────────────────────────────────
-  const current = SLIDES[slideIdx]
   return (
-    <div className="ob-screen">
+    <div className="ob-root">
       <StarField />
-      <div className="ob-card">
-        <div className="ob-logo-row">
-          <img src={orbitPfp} className="ob-logo" alt="" />
-          <span className="ob-logo-text">ORBIT</span>
-        </div>
 
-        <div className="ob-steps">
-          {SLIDES.map((_, i) => (
-            <div key={i} className={`ob-step-dot ${i === slideIdx ? 'ob-step-dot--active' : ''} ${i < slideIdx ? 'ob-step-dot--done' : ''}`} />
+      <div className="ob-card">
+        {/* Wordmark */}
+        <div className="ob-wordmark">ORBIT</div>
+
+        {/* Progress dots */}
+        <div className="ob-dots">
+          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+            <div
+              key={i}
+              className={`ob-dot${i === step ? ' ob-dot--active' : i < step ? ' ob-dot--done' : ''}`}
+            />
           ))}
         </div>
 
-        <div className="ob-content">
-          <h1 className="ob-title">{current.title}</h1>
-          <p className="ob-sub">{current.sub}</p>
+        {/* Animated content area — key change triggers the enter animation */}
+        <div className="ob-content" key={step}>
 
-          {isLastSlide && (
-            <div className="ob-input-wrap">
-              <input
-                className="ob-input"
-                placeholder="Paste contract address..."
-                value={mint}
-                onChange={e => { setMint(e.target.value); setCaError('') }}
-                onKeyDown={e => e.key === 'Enter' && handleNextSlide()}
-                autoFocus
-              />
-              {caError && <div className="ob-error">{caError}</div>}
+          {/* ── Step 0: Username ──────────────────────────────────── */}
+          {step === 0 && (
+            <div className="ob-step">
+              <h1 className="ob-heading">Choose your username</h1>
+              <p className="ob-sub">How you'll appear on the leaderboard, forum, and profile.</p>
+
+              <div className="ob-field">
+                <input
+                  className={`ob-input${
+                    usernameStatus === 'available' ? ' ob-input--ok'  :
+                    usernameStatus === 'taken' || usernameStatus === 'invalid' ? ' ob-input--err' : ''
+                  }`}
+                  placeholder="choose your username"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && usernameStatus === 'available' && advance()}
+                  maxLength={30}
+                  autoFocus
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <div className="ob-field-hint">
+                  {usernameStatus === 'checking' && <span className="ob-hint--muted">checking…</span>}
+                  {usernameStatus === 'available' && <span className="ob-hint--ok">✓ available</span>}
+                  {usernameStatus === 'taken'     && <span className="ob-hint--err">✗ already taken</span>}
+                  {usernameStatus === 'invalid' && username.trim() &&
+                    <span className="ob-hint--err">letters, numbers, underscores only · min 3 chars</span>}
+                </div>
+              </div>
+
+              <button
+                className="ob-btn"
+                onClick={advance}
+                disabled={usernameStatus !== 'available'}
+              >
+                Continue →
+              </button>
+              <button className="ob-skip" onClick={() => nav('/')}>Skip for now</button>
             </div>
           )}
-        </div>
 
-        <div className="ob-actions">
-          <button className="ob-btn-primary" onClick={handleNextSlide}>
-            {isLastSlide ? '🔭 Run Analysis' : 'Continue →'}
-          </button>
-          <button className="ob-btn-skip" onClick={() => nav('/')}>
-            {isLastSlide ? 'Skip — go to home' : 'Skip for now'}
-          </button>
+          {/* ── Step 1: Avatar ────────────────────────────────────── */}
+          {step === 1 && (
+            <div className="ob-step ob-step--center">
+              <h1 className="ob-heading">Add a profile photo</h1>
+              <p className="ob-sub">Optional — you can change this any time from your profile.</p>
+
+              <div
+                className="ob-avatar-ring"
+                onClick={() => fileRef.current?.click()}
+                title="Click to upload"
+              >
+                {pfpPreview
+                  ? <img src={pfpPreview} alt="" className="ob-avatar-img" />
+                  : <span className="ob-avatar-initials">{initials}</span>}
+              </div>
+
+              <div
+                className={`ob-drop${isDragging ? ' ob-drop--over' : ''}`}
+                onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
+                onDragEnter={() => setIsDragging(true)}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                onClick={() => fileRef.current?.click()}
+              >
+                <span className="ob-drop-arrow">↑</span>
+                <span className="ob-drop-label">
+                  {pfpPreview ? 'Click or drag to replace' : 'Click or drag a photo here'}
+                </span>
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={e => processFile(e.target.files[0])}
+              />
+
+              <button className="ob-btn" onClick={advance}>
+                {pfpPreview ? 'Continue →' : 'Skip — no photo'}
+              </button>
+            </div>
+          )}
+
+          {/* ── Step 2: Welcome ───────────────────────────────────── */}
+          {step === 2 && (
+            <div className="ob-step ob-step--welcome">
+              <div className="ob-welcome-avatar">
+                {pfpPreview
+                  ? <img src={pfpPreview} alt="" className="ob-avatar-img" />
+                  : <span className="ob-avatar-initials ob-avatar-initials--lg">{initials}</span>}
+              </div>
+
+              <h1 className="ob-heading ob-heading--lg">
+                gm, <span className="ob-heading--purple">{username}</span>.
+              </h1>
+              <p className="ob-sub">You're all set. Time to find your edge.</p>
+
+              {error && <div className="ob-error">{error}</div>}
+
+              <button className="ob-btn ob-btn--launch" onClick={advance} disabled={saving}>
+                {saving ? 'Setting up…' : 'Start Analyzing →'}
+              </button>
+            </div>
+          )}
+
         </div>
       </div>
     </div>

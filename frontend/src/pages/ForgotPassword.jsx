@@ -29,7 +29,7 @@ export default function ForgotPassword({ onSwitch }) {
 
         {success ? (
           <>
-            <p className="auth-success">Check your email for a reset link.</p>
+            <p className="auth-success">Password reset email sent. Check your inbox.</p>
             <button className="btn-primary" onClick={() => onSwitch('login')}>Back to sign in</button>
           </>
         ) : (

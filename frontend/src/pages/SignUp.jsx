@@ -58,6 +58,7 @@ export default function SignUp({ onSwitch }) {
   const [password, setPassword]   = useState('')
   const [confirm, setConfirm]     = useState('')
   const [error, setError]         = useState('')
+  const [emailError, setEmailError] = useState('')
   const [success, setSuccess]     = useState(false)
   const [loading, setLoading]     = useState(false)
   const [checking, setChecking]   = useState(false)
@@ -66,6 +67,7 @@ export default function SignUp({ onSwitch }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    setEmailError('')
 
     // Synchronous validation — no DB hit needed
     if (password !== confirm) { setError('Passwords do not match'); return }
@@ -90,11 +92,11 @@ export default function SignUp({ onSwitch }) {
     const { data: existingEmail } = await supabase.from('user_reputation')
       .select('auth_provider').eq('email', email.trim().toLowerCase()).maybeSingle()
     if (existingEmail?.auth_provider === 'google') {
-      setError('An account with this email already exists. Please sign in with Google instead.')
+      setEmailError('This email is linked to a Google account. Use "Sign in with Google" instead.')
       setChecking(false); setLoading(false); return
     }
     if (existingEmail?.auth_provider === 'email') {
-      setError('An account with this email already exists. Please sign in instead.')
+      setEmailError('An account with this email already exists. Sign in instead.')
       setChecking(false); setLoading(false); return
     }
 
@@ -104,7 +106,7 @@ export default function SignUp({ onSwitch }) {
     if (error) {
       const msg = error.message?.toLowerCase() || ''
       if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('email address is already')) {
-        setError('An account with this email already exists. Please sign in instead.')
+        setEmailError('This email is already registered. Sign in or reset your password.')
       } else {
         setError(error.message)
       }
@@ -162,8 +164,9 @@ export default function SignUp({ onSwitch }) {
           </div>
           <div className="field">
             <label>Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+            <input type="email" value={email} onChange={e => { setEmail(e.target.value); setEmailError('') }}
               placeholder="you@example.com" required autoComplete="email" />
+            {emailError && <div style={{fontSize:11, color:'#ef4444', marginTop:4, fontFamily:'var(--mono)'}}>{emailError}</div>}
           </div>
           <div className="field">
             <label>Password</label>

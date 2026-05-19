@@ -15,7 +15,10 @@ CREATE POLICY "own row update user_reputation"
   ON user_reputation FOR UPDATE
   USING (auth.uid()::text = user_id);
 
--- Insert is service-key only (RLS bypass) — no anon insert policy
+-- Users can insert their own row (needed for first-time onboarding)
+CREATE POLICY "own insert user_reputation"
+  ON user_reputation FOR INSERT
+  WITH CHECK (auth.uid()::text = user_id);
 
 
 -- ─── predictions ────────────────────────────────────────────────────────────

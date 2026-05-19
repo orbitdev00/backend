@@ -74,7 +74,13 @@ export default function Onboarding() {
   const saveAndLaunch = async () => {
     setSaving(true)
     setError('')
-    try {
+
+    let timeoutHandle
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutHandle = setTimeout(() => reject(new Error('__timeout__')), 8000)
+    })
+
+    const doSave = async () => {
       let avatarUrl = typeof pfpPreview === 'string' && !pfpPreview.startsWith('data:')
         ? pfpPreview
         : null
@@ -104,18 +110,25 @@ export default function Onboarding() {
         username:   username.trim(),
         avatar_url: avatarUrl || null,
         updated_at: new Date().toISOString(),
-      })
+      }, { onConflict: 'user_id' })
 
       if (saveErr) {
-        setError(saveErr.message)
-        setSaving(false)
-        return
+        console.error('Onboarding upsert error:', saveErr)
+        throw new Error(saveErr.message)
       }
+    }
 
+    try {
+      await Promise.race([doSave(), timeoutPromise])
+      clearTimeout(timeoutHandle)
       // Full reload so AuthContext re-fetches the updated profile
       window.location.href = '/'
     } catch (e) {
-      setError(e.message)
+      clearTimeout(timeoutHandle)
+      console.error('Onboarding save failed:', e)
+      setError(e.message === '__timeout__'
+        ? 'Something went wrong. Please try again.'
+        : e.message)
       setSaving(false)
     }
   }

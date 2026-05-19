@@ -104,16 +104,14 @@ export default function Onboarding() {
         }
       }
 
-      const { error: saveErr } = await supabase.from('user_reputation').upsert({
-        user_id:    user.id,
-        email:      user.email,
+      const { error: saveErr } = await supabase.from('user_reputation').update({
         username:   username.trim(),
         avatar_url: avatarUrl || null,
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' })
+      }).eq('user_id', user.id)
 
       if (saveErr) {
-        console.error('Onboarding upsert error:', saveErr)
+        console.error('Onboarding update error:', saveErr)
         throw new Error(saveErr.message)
       }
     }

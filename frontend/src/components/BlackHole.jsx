@@ -48,10 +48,6 @@ export default function BlackHole({ active, onBlack }) {
     canvas.style.display = 'block'
     const ctx = canvas.getContext('2d')
 
-    // Capture sfCanvas reference now, in the closure — same pattern as LandingBlackHole.
-    // Capturing it later (inside the frame loop) risks getting a stale/null reference.
-    const sfCanvas = document.querySelector('.starfield-canvas')
-
     const _pfp  = document.querySelector('.landing-pfp')
     const _pfpR = _pfp ? _pfp.getBoundingClientRect() : null
     const cx    = _pfpR ? _pfpR.left + _pfpR.width  / 2 : W / 2
@@ -67,14 +63,14 @@ export default function BlackHole({ active, onBlack }) {
       const r = el.getBoundingClientRect()
       const ecx = r.left + r.width  / 2
       const ecy = r.top  + r.height / 2
-      el._bhDist = Math.sqrt((ecx - cx)**2 + (ecy - cy)**2)
+      el._bhDist = Math.sqrt((ecx - cx) ** 2 + (ecy - cy) ** 2)
       el.style.transition      = 'none'
       el.style.transformOrigin = `${cx - r.left}px ${cy - r.top}px`
       el.style.willChange      = 'transform'
     })
 
     const NPARTS = 380
-    const parts  = Array.from({ length: NPARTS }, (_, i) => ({
+    const parts = Array.from({ length: NPARTS }, (_, i) => ({
       angle:  (i / NPARTS) * Math.PI * 2 + Math.random() * 0.08,
       rMult:  1.05 + Math.random() * 0.9,
       speed:  (0.006 + Math.random() * 0.012) * (i % 2 ? 1 : -1),
@@ -102,7 +98,7 @@ export default function BlackHole({ active, onBlack }) {
         const r  = holeR * p.rMult
         const px = Math.cos(p.angle) * r
         const py = Math.sin(p.angle) * r * (diskY / holeR)
-        if (py > 0 || Math.sqrt(px*px + py*py) < holeR) continue
+        if (py > 0 || Math.sqrt(px * px + py * py) < holeR) continue
         const a = p.bright * alpha * (1 - p.lane * 0.45)
         ctx.beginPath(); ctx.arc(px, py, p.sz, 0, Math.PI * 2)
         ctx.fillStyle = p.lane < 0.4 ? `rgba(255,255,255,${a})` : `rgba(200,215,255,${a * 0.8})`
@@ -113,24 +109,27 @@ export default function BlackHole({ active, onBlack }) {
       for (let i = 0; i < 3; i++) {
         const rr = holeR * (1.07 + i * 0.065)
         const a  = (0.6 - i * 0.15) * alpha
-        const g  = ctx.createRadialGradient(cx, cy, rr * .87, cx, cy, rr * 1.13)
+        const g  = ctx.createRadialGradient(cx, cy, rr * 0.87, cx, cy, rr * 1.13)
         g.addColorStop(0,    'rgba(255,255,255,0)')
-        g.addColorStop(0.45, `rgba(220,235,255,${a * .5})`)
+        g.addColorStop(0.45, `rgba(220,235,255,${a * 0.5})`)
         g.addColorStop(0.65, `rgba(255,255,255,${a})`)
-        g.addColorStop(0.85, `rgba(200,215,255,${a * .4})`)
+        g.addColorStop(0.85, `rgba(200,215,255,${a * 0.4})`)
         g.addColorStop(1,    'rgba(255,255,255,0)')
         ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2)
         ctx.strokeStyle = g; ctx.lineWidth = holeR * 0.06; ctx.stroke()
       }
 
-      if (fillCore) { ctx.beginPath(); ctx.arc(cx, cy, holeR, 0, Math.PI * 2); ctx.fillStyle = '#000'; ctx.fill() }
+      if (fillCore) {
+        ctx.beginPath(); ctx.arc(cx, cy, holeR, 0, Math.PI * 2)
+        ctx.fillStyle = '#000'; ctx.fill()
+      }
 
       ctx.save(); ctx.translate(cx, cy)
       for (const p of parts) {
         const r  = holeR * p.rMult
         const px = Math.cos(p.angle) * r
         const py = Math.sin(p.angle) * r * (diskY / holeR)
-        if (py <= 0 || Math.sqrt(px*px + py*py) < holeR) continue
+        if (py <= 0 || Math.sqrt(px * px + py * py) < holeR) continue
         const a = p.bright * alpha * 1.4 * (1 - p.lane * 0.3)
         ctx.beginPath(); ctx.arc(px, py, p.sz * 1.1, 0, Math.PI * 2)
         ctx.fillStyle = p.lane < 0.4 ? `rgba(255,255,255,${a})` : `rgba(210,225,255,${a * 0.85})`
@@ -138,14 +137,31 @@ export default function BlackHole({ active, onBlack }) {
       }
       ctx.restore()
 
-      const ph = ctx.createRadialGradient(cx, cy, holeR * .96, cx, cy, holeR * 1.05)
+      const ph = ctx.createRadialGradient(cx, cy, holeR * 0.96, cx, cy, holeR * 1.05)
       ph.addColorStop(0,   'rgba(255,255,255,0)')
       ph.addColorStop(0.5, `rgba(255,255,255,${0.55 * alpha})`)
       ph.addColorStop(1,   'rgba(255,255,255,0)')
       ctx.beginPath(); ctx.arc(cx, cy, holeR, 0, Math.PI * 2)
       ctx.strokeStyle = ph; ctx.lineWidth = holeR * 0.04; ctx.stroke()
 
-      if (fillCore) { ctx.beginPath(); ctx.arc(cx, cy, holeR * .97, 0, Math.PI * 2); ctx.fillStyle = '#000'; ctx.fill() }
+      if (fillCore) {
+        ctx.beginPath(); ctx.arc(cx, cy, holeR * 0.97, 0, Math.PI * 2)
+        ctx.fillStyle = '#000'; ctx.fill()
+      }
+    }
+
+    // Draw a snapshot of stars onto the canvas at their current positions.
+    // Called once at the hold→absorb transition so there is no 1-frame gap
+    // when the sfCanvas is hidden and the BlackHole canvas takes over.
+    const paintStarsAtRest = (stars) => {
+      for (const star of stars) {
+        ctx.beginPath()
+        ctx.arc(star.x, star.y, Math.max(0.1, star.r), 0, Math.PI * 2)
+        ctx.fillStyle = star.depth > 0.52
+          ? `rgba(220,200,255,${star.o})`
+          : `rgba(255,255,255,${star.o})`
+        ctx.fill()
+      }
     }
 
     const pfpEl = document.querySelector('.landing-pfp')
@@ -157,6 +173,7 @@ export default function BlackHole({ active, onBlack }) {
       const t   = Math.min((ts - s.t0) / dur, 1)
       ctx.clearRect(0, 0, W, H)
 
+      // ── pfp: avatar shrinks into the black hole ──────────────────────────
       if (s.phase === 'pfp') {
         const et    = ease3(t)
         const holeR = et * tgtR
@@ -167,10 +184,11 @@ export default function BlackHole({ active, onBlack }) {
           s.phase = 'hold'; s.t0 = ts
         }
 
+      // ── hold: black hole holds at pfp size ───────────────────────────────
       } else if (s.phase === 'hold') {
         drawDisk(tgtR, 1, false, false)
         if (t >= 1) {
-          // Snapshot star positions for the absorb crossfade
+          // Snapshot parallax-corrected star screen positions
           const scroll = starRegistry.getScrollY ? starRegistry.getScrollY() : 0
           const maxR = Math.max(
             Math.sqrt(cx * cx + cy * cy),
@@ -185,20 +203,24 @@ export default function BlackHole({ active, onBlack }) {
           })
           s.maxR    = maxR
           s.maxDist = Math.max(..._els.map(e => e._bhDist || 1), 1)
-          s.phase   = 'absorb'; s.t0 = ts
+
+          // Hide the starfield canvas in this same frame and immediately paint
+          // the snapshotted stars onto the BlackHole canvas at their exact positions.
+          // The browser renders both changes atomically — no visible gap.
+          const sfEl = document.querySelector('.starfield-canvas')
+          if (sfEl) sfEl.style.display = 'none'
+          paintStarsAtRest(s.stars)
+
+          s.phase = 'absorb'; s.t0 = ts
         }
 
+      // ── absorb: stars and elements spiral into the black hole ────────────
       } else if (s.phase === 'absorb') {
         canvas.classList.add('absorbing')
         const et    = easeIO(t)
         const holeR = tgtR + et * tgtR * 0.2
 
-        // Crossfade: sfCanvas opacity fades 1→0 over first half of absorb;
-        // canvas stars fade in as complement so total brightness stays constant.
-        const sfAlpha = Math.max(0, 1 - et * 2)
-        if (sfCanvas) sfCanvas.style.opacity = `${sfAlpha}`
-
-        // Draw canvas stars BEFORE disk so they sit behind the accretion disk
+        // Stars drawn before disk so they appear behind the accretion ring
         if (s.stars) {
           for (const star of s.stars) {
             const dist    = Math.sqrt((star.x - cx) ** 2 + (star.y - cy) ** 2)
@@ -210,21 +232,18 @@ export default function BlackHole({ active, onBlack }) {
             const sy      = cy + (star.y - cy) * (1 - eased)
             const scale   = Math.max(0, 1 - eased)
             if (scale < 0.01) continue
-            // Alpha complements sfCanvas so total brightness stays constant during crossfade
-            const alpha = star.o * scale * (1 - sfAlpha)
-            const col   = (star.depth || 0) > 0.52
-              ? `rgba(220,200,255,${alpha})`
-              : `rgba(255,255,255,${alpha})`
             ctx.beginPath()
             ctx.arc(sx, sy, Math.max(0.1, star.r * scale), 0, Math.PI * 2)
-            ctx.fillStyle = col
+            ctx.fillStyle = star.depth > 0.52
+              ? `rgba(220,200,255,${star.o * scale})`
+              : `rgba(255,255,255,${star.o * scale})`
             ctx.fill()
           }
         }
 
         drawDisk(holeR, 1, true, true)
 
-        // Gravity absorption — closer elements absorbed faster
+        // Page elements pulled toward the black hole
         _els.forEach(el => {
           const normD   = (el._bhDist || 0) / s.maxDist
           const gravity = 1 - normD * 0.65
@@ -237,10 +256,10 @@ export default function BlackHole({ active, onBlack }) {
 
         if (t >= 1) {
           _els.forEach(el => { el.style.opacity = '0' })
-          if (sfCanvas) sfCanvas.style.opacity = '0'
           s.phase = 'implode'; s.t0 = ts
         }
 
+      // ── implode: black hole collapses ────────────────────────────────────
       } else if (s.phase === 'implode') {
         const et    = easeIn(t)
         const holeR = Math.max(0, tgtR * (1 - et))

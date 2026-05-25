@@ -154,7 +154,7 @@ export default function Onboarding() {
 
       let displayError
       if (msg === '__timeout__') {
-        displayError = 'Setup timed out after 30 seconds — the server may be starting up. Please wait a moment and try again.'
+        displayError = 'This is taking longer than expected — our backend is probably waking up from sleep. Wait 10–15 seconds and try again.'
       } else if (msg === '__no_session__') {
         displayError = 'Your session expired. Please sign out and sign back in, then try again.'
       } else if (msg.startsWith('__network__:')) {

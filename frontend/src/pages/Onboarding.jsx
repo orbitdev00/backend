@@ -20,6 +20,7 @@ export default function Onboarding() {
   const [pfpFile, setPfpFile]               = useState(null)
   const [isDragging, setIsDragging]         = useState(false)
   const [saving, setSaving]                 = useState(false)
+  const [savingLabel, setSavingLabel]       = useState('Setting up…')
   const [error, setError]                   = useState('')
 
   // Debounced live username availability check.
@@ -73,16 +74,25 @@ export default function Onboarding() {
 
   const saveAndLaunch = async () => {
     setSaving(true)
+    setSavingLabel('Connecting to server…')
     setError('')
 
     const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
 
     let timeoutHandle
     const timeoutPromise = new Promise((_, reject) => {
-      timeoutHandle = setTimeout(() => reject(new Error('__timeout__')), 12000)
+      timeoutHandle = setTimeout(() => reject(new Error('__timeout__')), 30000)
     })
 
     const doSave = async () => {
+      // Warm up the Railway backend (avoids cold-start adding to the save latency)
+      try {
+        await fetch(`${BACKEND}/health`, { signal: AbortSignal.timeout(20000) })
+      } catch {
+        // Non-fatal — backend may still respond to the save request
+      }
+
+      setSavingLabel('Uploading photo…')
       let avatarUrl = null
 
       if (pfpFile) {
@@ -100,26 +110,32 @@ export default function Onboarding() {
           .upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
         if (uploadErr) {
           console.warn('Avatar upload failed:', uploadErr)
-          // Non-fatal — continue without photo
         } else {
           const { data } = supabase.storage.from('avatars').getPublicUrl(path)
           avatarUrl = data.publicUrl + '?t=' + Date.now()
         }
       }
 
+      setSavingLabel('Saving profile…')
+
       // Use backend endpoint — it has the service key and bypasses RLS
       const { data: sessionData } = await supabase.auth.getSession()
       const accessToken = sessionData?.session?.access_token
       if (!accessToken) throw new Error('__no_session__')
 
-      const resp = await fetch(`${BACKEND}/onboarding/complete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ username: username.trim(), avatar_url: avatarUrl }),
-      })
+      let resp
+      try {
+        resp = await fetch(`${BACKEND}/onboarding/complete`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ username: username.trim(), avatar_url: avatarUrl }),
+        })
+      } catch (fetchErr) {
+        throw new Error(`__network__:${fetchErr.message}`)
+      }
 
       if (!resp.ok) {
         const body = await resp.json().catch(() => ({}))
@@ -138,9 +154,12 @@ export default function Onboarding() {
 
       let displayError
       if (msg === '__timeout__') {
-        displayError = 'Setup timed out — your connection may be slow or the server is busy. Please try again.'
+        displayError = 'Setup timed out after 30 seconds — the server may be starting up. Please wait a moment and try again.'
       } else if (msg === '__no_session__') {
         displayError = 'Your session expired. Please sign out and sign back in, then try again.'
+      } else if (msg.startsWith('__network__:')) {
+        const detail = msg.slice('__network__:'.length)
+        displayError = `Couldn't reach the server (${detail}). Check your internet connection and try again.`
       } else if (msg.startsWith('__backend__:')) {
         const [, status, detail] = msg.split(':')
         if (status === '401') {
@@ -156,6 +175,7 @@ export default function Onboarding() {
 
       setError(displayError)
       setSaving(false)
+      setSavingLabel('Setting up…')
     }
   }
 
@@ -291,7 +311,7 @@ export default function Onboarding() {
               {error && <div className="ob-error">{error}</div>}
 
               <button className="ob-btn ob-btn--launch" onClick={advance} disabled={saving}>
-                {saving ? 'Setting up…' : 'Start Analyzing →'}
+                {saving ? savingLabel : 'Start Analyzing →'}
               </button>
             </div>
           )}

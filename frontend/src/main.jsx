@@ -47,9 +47,7 @@ function RootRoute() {
     else if (page === 'trial')   navigate('/analyze?trial=1')
   }
 
-  // Auth still loading, or user is logged in but profile hasn't resolved yet
-  // (also covers user with no username — AuthContext will redirect to /onboarding)
-  if (loading || (user && !profile?.username)) return null
+  if (loading) return null
   if (user) return <Home />
   return <Landing onSwitch={handleSwitch} />
 }

@@ -63,15 +63,6 @@ export function AuthProvider({ children }) {
       setLoading(false)
       const profileData = await fetchProfile(liveUser.id)
 
-      // Redirect to onboarding on any page load if username is not set.
-      // (The SIGNED_IN event in onAuthStateChange only fires on actual sign-in,
-      // not on page reload, so we also check here in init().)
-      if (!profileData?.username) {
-        const path = window.location.pathname
-        if (!['/onboarding', '/edit-profile', '/auth/callback', '/login'].includes(path)) {
-          window.location.href = '/onboarding'
-        }
-      }
     }
     init()
 
@@ -87,13 +78,6 @@ export function AuthProvider({ children }) {
       setLoading(false)
       const profileData = await fetchProfile(session?.user?.id ?? null)
 
-      // Redirect to onboarding if signed in but username not yet set
-      if (event === 'SIGNED_IN' && session?.user && !profileData?.username) {
-        const path = window.location.pathname
-        if (!['/onboarding', '/edit-profile', '/auth/callback', '/login'].includes(path)) {
-          window.location.href = '/onboarding'
-        }
-      }
     })
 
     // Periodic server-side validation — catches deleted accounts between token refreshes

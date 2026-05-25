@@ -112,18 +112,31 @@ export default function Onboarding() {
         log('Step 3: no avatar')
       }
 
-      log('Step 5: saving to Supabase...')
-      const { error: updateErr } = await supabase
-        .from('user_reputation')
-        .upsert({
-          user_id: currentUser.id,
-          email: currentUser.email,
+      log('Step 5: saving via backend...')
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData?.session?.access_token
+      if (!token) throw new Error('No token available')
+
+      const controller = new AbortController()
+      setTimeout(() => controller.abort(), 8000)
+
+      const resp = await fetch('https://backend-production-a427a.up.railway.app/onboarding/complete', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
           username: username.trim(),
           avatar_url: avatarUrl,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id' })
+        }),
+      }).catch(e => { throw new Error('Fetch failed: ' + e.message) })
 
-      if (updateErr) throw new Error('Save failed: ' + updateErr.message)
+      log('Step 6: response status=' + resp.status)
+      const body = await resp.json().catch(() => ({}))
+      log('Step 7: body=' + JSON.stringify(body))
+      if (!resp.ok) throw new Error('Backend error ' + resp.status + ': ' + JSON.stringify(body))
 
       log('Done! Redirecting...')
       window.location.href = '/'

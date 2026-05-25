@@ -6,10 +6,11 @@ from html.parser import HTMLParser
 from fastapi import Request
 
 _BASE58 = re.compile(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$')
+_ETH    = re.compile(r'^0x[0-9a-fA-F]{40}$')
 _UUID   = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.I)
 
 def is_valid_mint(mint: str) -> bool:
-    return bool(_BASE58.match(mint))
+    return bool(_BASE58.match(mint) or _ETH.match(mint))
 
 def is_valid_uuid(uid: str) -> bool:
     return bool(_UUID.match(uid))

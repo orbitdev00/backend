@@ -81,9 +81,9 @@ export default function Onboarding() {
     }
 
     try {
-      log('Step 1: getting user...')
-      const { data: { user: currentUser }, error: userErr } = await supabase.auth.getUser()
-      if (userErr || !currentUser) throw new Error('Not authenticated — please sign out and sign back in.')
+      log('Step 1: getting user from context...')
+      const currentUser = user
+      if (!currentUser?.id) throw new Error('No user in context — please sign out and sign back in.')
       log('Step 2: user ok, id=' + currentUser.id.slice(0,8))
 
       let avatarUrl = null

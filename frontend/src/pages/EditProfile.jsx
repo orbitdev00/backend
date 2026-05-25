@@ -25,21 +25,29 @@ export default function EditProfile() {
   const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
 
   useEffect(() => {
-    if (!user) { nav('/login'); return }
-    loadProfile()
-  }, [user])
+    if (!user) return
+    const sbKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'))
+    const sbData = sbKey ? JSON.parse(localStorage.getItem(sbKey) || '{}') : {}
+    const token = sbData?.access_token
+    if (!token) return
 
-  const loadProfile = async () => {
-    const { data } = await supabase.from('user_reputation')
-      .select('username,bio,wallet_address,avatar_url')
-      .eq('user_id', user.id).single()
-    if (data) {
-      setUsername(data.username || '')
-      setBio(data.bio || '')
-      setWallet(data.wallet_address || '')
-      setPfpUrl(data.avatar_url || null)
-    }
-  }
+    fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_reputation?user_id=eq.${user.id}&select=username,bio,wallet_address,avatar_url`, {
+      headers: {
+        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+    .then(r => r.json())
+    .then(data => {
+      const row = Array.isArray(data) ? data[0] : data
+      if (!row) return
+      if (row.username) setUsername(row.username)
+      if (row.bio) setBio(row.bio)
+      if (row.wallet_address) setWallet(row.wallet_address)
+      if (row.avatar_url) setPfpUrl(row.avatar_url)
+    })
+    .catch(e => console.warn('Profile fetch failed:', e))
+  }, [user])
 
   const handlePfpUpload = async (e) => {
     const file = e.target.files[0]

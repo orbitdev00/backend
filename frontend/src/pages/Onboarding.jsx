@@ -82,7 +82,11 @@ export default function Onboarding() {
 
     try {
       log('Step 1: checking session...')
-      const { data: sessionData } = await supabase.auth.getSession()
+      const sessionPromise = supabase.auth.getSession()
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('getSession timed out after 5s — clearing session, please sign in again')), 5000)
+      )
+      const { data: sessionData } = await Promise.race([sessionPromise, timeoutPromise])
       const accessToken = sessionData?.session?.access_token
       if (!accessToken) throw new Error('No session — sign out and sign back in.')
       log('Step 2: session ok, user=' + user.id.slice(0,8))

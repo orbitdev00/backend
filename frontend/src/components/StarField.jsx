@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-export const starRegistry = { cancelDraw: null, stars: [], getScrollY: null }
+export const starRegistry = { cancelDraw: null, stars: [], getScrollY: null, canvas: null }
 
 export default function StarField() {
   const canvasRef  = useRef(null)
@@ -81,10 +81,12 @@ export default function StarField() {
     window.addEventListener('resize', resize)
     starRegistry.cancelDraw = () => cancelAnimationFrame(animId)
     starRegistry.getScrollY = () => smoothRef.current
+    starRegistry.canvas = canvas
     animId = requestAnimationFrame(draw)
     return () => {
       cancelAnimationFrame(animId)
       window.removeEventListener('resize', resize)
+      starRegistry.canvas = null
     }
   }, [])
 

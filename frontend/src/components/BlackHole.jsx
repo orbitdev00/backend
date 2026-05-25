@@ -19,7 +19,7 @@ function restoreElements() {
 }
 
 function restoreStarfield() {
-  const sf = document.querySelector('.starfield-canvas')
+  const sf = starRegistry.canvas || document.querySelector('.starfield-canvas')
   if (sf) { sf.style.display = ''; sf.style.opacity = '' }
 }
 
@@ -47,6 +47,7 @@ export default function BlackHole({ active, onBlack }) {
     const H = canvas.height = canvas.offsetHeight || window.innerHeight
     canvas.style.display = 'block'
     const ctx = canvas.getContext('2d')
+    const sfCanvas = starRegistry.canvas
 
     const _pfp  = document.querySelector('.landing-pfp')
     const _pfpR = _pfp ? _pfp.getBoundingClientRect() : null
@@ -207,8 +208,7 @@ export default function BlackHole({ active, onBlack }) {
           // Hide the starfield canvas in this same frame and immediately paint
           // the snapshotted stars onto the BlackHole canvas at their exact positions.
           // The browser renders both changes atomically — no visible gap.
-          const sfEl = document.querySelector('.starfield-canvas')
-          if (sfEl) sfEl.style.display = 'none'
+          if (sfCanvas) sfCanvas.style.display = 'none'
           paintStarsAtRest(s.stars)
 
           s.phase = 'absorb'; s.t0 = ts

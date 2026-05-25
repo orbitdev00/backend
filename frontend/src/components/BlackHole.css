@@ -4,7 +4,7 @@
   width: 100vw;
   height: 100vh;
   pointer-events: none;
-  z-index: 2 !important;
+  z-index: 0 !important;
 }
 
 .blackhole-overlay {
@@ -13,8 +13,4 @@
   z-index: 22;
   pointer-events: none;
   overflow: hidden;
-}
-
-.blackhole-canvas.absorbing {
-  z-index: 25 !important;
 }

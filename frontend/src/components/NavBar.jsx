@@ -66,15 +66,29 @@ export default function NavBar({ active, onLogoClick }) {
 
   useEffect(() => {
     if (!user) return
-    supabase.from('user_reputation').select('username,bio,avatar_url,role,stripe_customer_id').eq('user_id', user.id).single()
-      .then(({ data }) => {
-        if (data?.username) setUsername(data.username)
-        if (data?.bio) setBio(data.bio)
-        if (data?.avatar_url) setPfpUrl(data.avatar_url)
-        if (data?.wallet_address) setWallet(data.wallet_address)
-        if (data?.role) setUserRole(data.role)
-        setHasStripeAccount(!!data?.stripe_customer_id)
-      })
+    // Use raw REST fetch to avoid deadlocked Supabase client
+    const sbKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'))
+    const sbData = sbKey ? JSON.parse(localStorage.getItem(sbKey) || '{}') : {}
+    const token = sbData?.access_token
+    if (!token) return
+    fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_reputation?user_id=eq.${user.id}&select=username,bio,avatar_url,role,stripe_customer_id`, {
+      headers: {
+        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+    .then(r => r.json())
+    .then(data => {
+      const row = Array.isArray(data) ? data[0] : data
+      if (!row) return
+      if (row.username) setUsername(row.username)
+      if (row.bio) setBio(row.bio)
+      if (row.avatar_url) setPfpUrl(row.avatar_url)
+      if (row.wallet_address) setWallet(row.wallet_address)
+      if (row.role) setUserRole(row.role)
+      setHasStripeAccount(!!row.stripe_customer_id)
+    })
+    .catch(e => console.warn('NavBar profile fetch failed:', e))
   }, [user])
 
   const links = [

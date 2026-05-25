@@ -6,16 +6,17 @@ import StarField from '../components/StarField'
 import './Onboarding.css'
 
 const TOTAL_STEPS = 3 // 0: username  1: avatar  2: welcome
+const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
 
 export default function Onboarding() {
   const nav          = useNavigate()
-  const { user }     = useAuth()   // ProtectedRoute guarantees this is non-null on mount
+  const { user }     = useAuth()
   const fileRef      = useRef(null)
   const checkRef     = useRef(null)
 
   const [step, setStep]                     = useState(0)
   const [username, setUsername]             = useState('')
-  const [usernameStatus, setUsernameStatus] = useState('idle') // idle|checking|available|taken|invalid
+  const [usernameStatus, setUsernameStatus] = useState('idle')
   const [pfpPreview, setPfpPreview]         = useState(null)
   const [pfpFile, setPfpFile]               = useState(null)
   const [isDragging, setIsDragging]         = useState(false)
@@ -23,8 +24,6 @@ export default function Onboarding() {
   const [savingLabel, setSavingLabel]       = useState('Setting up…')
   const [error, setError]                   = useState('')
 
-  // Debounced live username availability check.
-  // Hard 2s cap so a slow/failing query never blocks the user.
   useEffect(() => {
     const u = username.trim()
     if (!u) { setUsernameStatus('idle'); return }
@@ -74,11 +73,10 @@ export default function Onboarding() {
 
   const saveAndLaunch = async () => {
     setSaving(true)
-    setSavingLabel('Setting up…')
     setError('')
 
     try {
-      // ── 1. Upload avatar if provided ──────────────────────────
+      // 1. Upload avatar if provided
       setSavingLabel('Uploading photo…')
       let avatarUrl = null
 
@@ -103,39 +101,49 @@ export default function Onboarding() {
         }
       }
 
-      // ── 2. Save profile directly to Supabase (no backend call) ─
+      // 2. Save via backend using service key (bypasses RLS entirely)
       setSavingLabel('Saving profile…')
 
-      const { error: updateErr } = await supabase
-        .from('user_reputation')
-        .update({
-          username:   username.trim(),
-          avatar_url: avatarUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', user.id)
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData?.session?.access_token
+      if (!accessToken) throw new Error('No session — please sign out and sign back in.')
 
-      if (updateErr) {
-        // Row might not exist yet — try insert instead
-        const { error: insertErr } = await supabase
-          .from('user_reputation')
-          .insert({
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 10000)
+
+      let resp
+      try {
+        resp = await fetch(`${BACKEND}/onboarding/save`, {
+          method: 'POST',
+          signal: controller.signal,
+          headers: {
+            'Content-Type':  'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
             user_id:    user.id,
-            email:      user.email,
             username:   username.trim(),
             avatar_url: avatarUrl,
-            updated_at: new Date().toISOString(),
-          })
-
-        if (insertErr) throw new Error(insertErr.message)
+            email:      user.email,
+          }),
+        })
+      } catch (fetchErr) {
+        if (fetchErr.name === 'AbortError') throw new Error('Request timed out. Please try again.')
+        throw new Error('Could not reach server: ' + fetchErr.message)
+      } finally {
+        clearTimeout(timer)
       }
 
-      // ── 3. Done ───────────────────────────────────────────────
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}))
+        throw new Error(body.error || `Server error ${resp.status}`)
+      }
+
       window.location.href = '/'
 
     } catch (e) {
       console.error('Onboarding save failed:', e)
-      setError('Something went wrong. Please try again.')
+      setError(e.message || 'Something went wrong. Please try again.')
       setSaving(false)
       setSavingLabel('Setting up…')
     }
@@ -172,7 +180,6 @@ export default function Onboarding() {
 
         <div className="ob-content" key={step}>
 
-          {/* ── Step 0: Username ──────────────────────────────────── */}
           {step === 0 && (
             <div className="ob-step">
               <h1 className="ob-heading">Choose your username</h1>
@@ -202,28 +209,19 @@ export default function Onboarding() {
                 </div>
               </div>
 
-              <button
-                className="ob-btn"
-                onClick={advance}
-                disabled={usernameStatus !== 'available'}
-              >
+              <button className="ob-btn" onClick={advance} disabled={usernameStatus !== 'available'}>
                 Continue →
               </button>
               <button className="ob-skip" onClick={() => { window.location.href = '/' }}>Skip for now</button>
             </div>
           )}
 
-          {/* ── Step 1: Avatar ────────────────────────────────────── */}
           {step === 1 && (
             <div className="ob-step ob-step--center">
               <h1 className="ob-heading">Add a profile photo</h1>
               <p className="ob-sub">Optional — you can change this any time from your profile.</p>
 
-              <div
-                className="ob-avatar-ring"
-                onClick={() => fileRef.current?.click()}
-                title="Click to upload"
-              >
+              <div className="ob-avatar-ring" onClick={() => fileRef.current?.click()} title="Click to upload">
                 {pfpPreview
                   ? <img src={pfpPreview} alt="" className="ob-avatar-img" />
                   : <span className="ob-avatar-initials">{initials}</span>}
@@ -256,7 +254,6 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* ── Step 2: Welcome ───────────────────────────────────── */}
           {step === 2 && (
             <div className="ob-step ob-step--welcome">
               <div className="ob-welcome-avatar">

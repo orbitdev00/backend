@@ -106,12 +106,11 @@ export default function SignUp({ onSwitch }) {
       setLoading(false); return
     }
 
-    // 3. Save username — upsert so re-registrations after deletion work cleanly
+    // 3. Create reputation row without username — onboarding sets it after email verification
     if (authData?.user) {
       await supabase.from('user_reputation').upsert({
         user_id:       authData.user.id,
         email:         email.trim().toLowerCase(),
-        username:      username.trim(),
         auth_provider: 'email',
         created_at:    new Date().toISOString(),
       }, { onConflict: 'user_id' })

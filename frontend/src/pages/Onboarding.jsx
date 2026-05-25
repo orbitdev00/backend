@@ -141,7 +141,7 @@ export default function Onboarding() {
       if (!resp.ok) throw new Error('Backend error ' + resp.status + ': ' + JSON.stringify(body))
 
       log('Done! Redirecting...')
-      window.location.href = '/'
+      window.location.href = '/analyze'
 
     } catch (e) {
       console.error('[Onboarding] failed:', e)

@@ -75,15 +75,15 @@ export default function Onboarding() {
     setSaving(true)
     setError('')
 
+    const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+
     let timeoutHandle
     const timeoutPromise = new Promise((_, reject) => {
-      timeoutHandle = setTimeout(() => reject(new Error('__timeout__')), 8000)
+      timeoutHandle = setTimeout(() => reject(new Error('__timeout__')), 12000)
     })
 
     const doSave = async () => {
-      let avatarUrl = typeof pfpPreview === 'string' && !pfpPreview.startsWith('data:')
-        ? pfpPreview
-        : null
+      let avatarUrl = null
 
       if (pfpFile) {
         const bitmap = await createImageBitmap(pfpFile)
@@ -98,35 +98,63 @@ export default function Onboarding() {
         const path = `${user.id}/avatar.jpg`
         const { error: uploadErr } = await supabase.storage.from('avatars')
           .upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
-        if (!uploadErr) {
+        if (uploadErr) {
+          console.warn('Avatar upload failed:', uploadErr)
+          // Non-fatal — continue without photo
+        } else {
           const { data } = supabase.storage.from('avatars').getPublicUrl(path)
           avatarUrl = data.publicUrl + '?t=' + Date.now()
         }
       }
 
-      const { error: saveErr } = await supabase.from('user_reputation').update({
-        username:   username.trim(),
-        avatar_url: avatarUrl || null,
-        updated_at: new Date().toISOString(),
-      }).eq('user_id', user.id)
+      // Use backend endpoint — it has the service key and bypasses RLS
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData?.session?.access_token
+      if (!accessToken) throw new Error('__no_session__')
 
-      if (saveErr) {
-        console.error('Onboarding update error:', saveErr)
-        throw new Error(saveErr.message)
+      const resp = await fetch(`${BACKEND}/onboarding/complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ username: username.trim(), avatar_url: avatarUrl }),
+      })
+
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}))
+        throw new Error(`__backend__:${resp.status}:${body.error || 'unknown'}`)
       }
     }
 
     try {
       await Promise.race([doSave(), timeoutPromise])
       clearTimeout(timeoutHandle)
-      // Full reload so AuthContext re-fetches the updated profile
       window.location.href = '/'
     } catch (e) {
       clearTimeout(timeoutHandle)
       console.error('Onboarding save failed:', e)
-      setError(e.message === '__timeout__'
-        ? 'Something went wrong. Please try again.'
-        : e.message)
+      const msg = e.message || ''
+
+      let displayError
+      if (msg === '__timeout__') {
+        displayError = 'Setup timed out — your connection may be slow or the server is busy. Please try again.'
+      } else if (msg === '__no_session__') {
+        displayError = 'Your session expired. Please sign out and sign back in, then try again.'
+      } else if (msg.startsWith('__backend__:')) {
+        const [, status, detail] = msg.split(':')
+        if (status === '401') {
+          displayError = 'Authentication failed — your session may have expired. Please sign out and sign back in.'
+        } else if (status === '400') {
+          displayError = `Invalid request: ${detail}. Make sure your username is valid and try again.`
+        } else {
+          displayError = `The server couldn't save your profile (error ${status}: ${detail}). Please try again in a moment.`
+        }
+      } else {
+        displayError = `Setup failed: ${msg}. Please try again.`
+      }
+
+      setError(displayError)
       setSaving(false)
     }
   }

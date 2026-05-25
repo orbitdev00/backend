@@ -74,17 +74,11 @@ export default function Onboarding() {
 
   const saveAndLaunch = async () => {
     setSaving(true)
-    setSavingLabel('Connecting to server…')
+    setSavingLabel('Setting up…')
     setError('')
 
-    const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
-
-    let timeoutHandle
-    const timeoutPromise = new Promise((_, reject) => {
-      timeoutHandle = setTimeout(() => reject(new Error('__timeout__')), 30000)
-    })
-
-    const doSave = async () => {
+    try {
+      // ── 1. Upload avatar if provided ──────────────────────────
       setSavingLabel('Uploading photo…')
       let avatarUrl = null
 
@@ -109,71 +103,39 @@ export default function Onboarding() {
         }
       }
 
+      // ── 2. Save profile directly to Supabase (no backend call) ─
       setSavingLabel('Saving profile…')
 
-      const { data: sessionData } = await supabase.auth.getSession()
-      const accessToken = sessionData?.session?.access_token
-      if (!accessToken) throw new Error('__no_session__')
-
-      // Abort the fetch itself after 25s so we never silently hang
-      const abort = new AbortController()
-      const abortTimer = setTimeout(() => abort.abort(), 25000)
-
-      let resp
-      try {
-        resp = await fetch(`${BACKEND}/onboarding/complete`, {
-          method: 'POST',
-          signal: abort.signal,
-          headers: {
-            'Content-Type':  'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({ username: username.trim(), avatar_url: avatarUrl }),
+      const { error: updateErr } = await supabase
+        .from('user_reputation')
+        .update({
+          username:   username.trim(),
+          avatar_url: avatarUrl,
+          updated_at: new Date().toISOString(),
         })
-      } catch (fetchErr) {
-        if (fetchErr.name === 'AbortError') throw new Error('__timeout__')
-        throw new Error(`__network__:${fetchErr.message}`)
-      } finally {
-        clearTimeout(abortTimer)
+        .eq('user_id', user.id)
+
+      if (updateErr) {
+        // Row might not exist yet — try insert instead
+        const { error: insertErr } = await supabase
+          .from('user_reputation')
+          .insert({
+            user_id:    user.id,
+            email:      user.email,
+            username:   username.trim(),
+            avatar_url: avatarUrl,
+            updated_at: new Date().toISOString(),
+          })
+
+        if (insertErr) throw new Error(insertErr.message)
       }
 
-      if (!resp.ok) {
-        const body = await resp.json().catch(() => ({}))
-        throw new Error(`__backend__:${resp.status}:${body.error || 'unknown'}`)
-      }
-    }
-
-    try {
-      await Promise.race([doSave(), timeoutPromise])
-      clearTimeout(timeoutHandle)
+      // ── 3. Done ───────────────────────────────────────────────
       window.location.href = '/'
+
     } catch (e) {
-      clearTimeout(timeoutHandle)
       console.error('Onboarding save failed:', e)
-      const msg = e.message || ''
-
-      let displayError
-      if (msg === '__timeout__') {
-        displayError = 'The request timed out — your network may be slow, or our database is temporarily busy. Please try again.'
-      } else if (msg === '__no_session__') {
-        displayError = 'Your session expired. Please sign out and sign back in, then try again.'
-      } else if (msg.startsWith('__network__:')) {
-        const detail = msg.slice('__network__:'.length)
-        displayError = `Couldn't reach the server (${detail}). Check your internet connection and try again.`
-      } else if (msg.startsWith('__backend__:')) {
-        const [, status, detail] = msg.split(':')
-        if (status === '401') {
-          displayError = 'Authentication failed — your session may have expired. Please sign out and sign back in.'
-        } else if (status === '400') {
-          displayError = `Invalid request: ${detail}. Make sure your username is valid and try again.`
-        } else {
-          displayError = `The server couldn't save your profile (error ${status}: ${detail}). Please try again in a moment.`
-        }
-      } else {
-        displayError = `Setup failed: ${msg}. Please try again.`
-      }
-
-      setError(displayError)
+      setError('Something went wrong. Please try again.')
       setSaving(false)
       setSavingLabel('Setting up…')
     }

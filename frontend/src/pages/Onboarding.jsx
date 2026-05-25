@@ -81,19 +81,14 @@ export default function Onboarding() {
     }
 
     try {
-      log('Step 1: checking session...')
-      const sessionPromise = supabase.auth.getSession()
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('getSession timed out after 5s — clearing session, please sign in again')), 5000)
-      )
-      const { data: sessionData } = await Promise.race([sessionPromise, timeoutPromise])
-      const accessToken = sessionData?.session?.access_token
-      if (!accessToken) throw new Error('No session — sign out and sign back in.')
-      log('Step 2: session ok, user=' + user.id.slice(0,8))
+      log('Step 1: getting user...')
+      const { data: { user: currentUser }, error: userErr } = await supabase.auth.getUser()
+      if (userErr || !currentUser) throw new Error('Not authenticated — please sign out and sign back in.')
+      log('Step 2: user ok, id=' + currentUser.id.slice(0,8))
 
       let avatarUrl = null
       if (pfpFile) {
-        log('Step 3: resizing avatar...')
+        log('Step 3: uploading avatar...')
         const bitmap = await createImageBitmap(pfpFile)
         const size = Math.min(bitmap.width, bitmap.height, 256)
         const canvas = document.createElement('canvas')
@@ -103,43 +98,32 @@ export default function Onboarding() {
         const w = bitmap.width * scale, h = bitmap.height * scale
         ctx.drawImage(bitmap, (size - w) / 2, (size - h) / 2, w, h)
         const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85))
-        log('Step 4: uploading avatar...')
-        const path = `${user.id}/avatar.jpg`
+        const path = `${currentUser.id}/avatar.jpg`
         const { error: uploadErr } = await supabase.storage.from('avatars')
           .upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
         if (uploadErr) {
-          log('Avatar upload failed: ' + uploadErr.message + ' — continuing without photo')
+          log('Avatar failed: ' + uploadErr.message + ' — continuing without photo')
         } else {
           const { data } = supabase.storage.from('avatars').getPublicUrl(path)
           avatarUrl = data.publicUrl + '?t=' + Date.now()
-          log('Step 5: avatar uploaded ok')
+          log('Step 4: avatar ok')
         }
       } else {
-        log('Step 3: no avatar, skipping')
+        log('Step 3: no avatar')
       }
 
-      log('Step 6: calling backend...')
-      const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), 10000)
-      let resp
-      try {
-        resp = await fetch('https://backend-production-a427a.up.railway.app/onboarding/complete', {
-          method: 'POST',
-          signal: controller.signal,
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
-          body: JSON.stringify({ username: username.trim(), avatar_url: avatarUrl }),
-        })
-      } catch (fetchErr) {
-        clearTimeout(timer)
-        if (fetchErr.name === 'AbortError') throw new Error('Backend timed out after 10s — step 6 hung')
-        throw new Error('Fetch failed at step 6: ' + fetchErr.message)
-      }
-      clearTimeout(timer)
+      log('Step 5: saving to Supabase...')
+      const { error: updateErr } = await supabase
+        .from('user_reputation')
+        .upsert({
+          user_id: currentUser.id,
+          email: currentUser.email,
+          username: username.trim(),
+          avatar_url: avatarUrl,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' })
 
-      log('Step 7: status=' + resp.status)
-      const respBody = await resp.json().catch(() => ({}))
-      log('Step 8: body=' + JSON.stringify(respBody))
-      if (!resp.ok) throw new Error('Backend error ' + resp.status + ': ' + JSON.stringify(respBody))
+      if (updateErr) throw new Error('Save failed: ' + updateErr.message)
 
       log('Done! Redirecting...')
       window.location.href = '/'

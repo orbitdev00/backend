@@ -112,10 +112,12 @@ export default function Onboarding() {
         log('Step 3: no avatar')
       }
 
-      log('Step 5: saving via backend...')
-      const { data: sessionData } = await supabase.auth.getSession()
-      const token = sessionData?.session?.access_token
-      if (!token) throw new Error('No token available')
+      log('Step 5: getting token from storage...')
+      const sbKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'))
+      const sbData = sbKey ? JSON.parse(localStorage.getItem(sbKey) || '{}') : {}
+      const token = sbData?.access_token
+      if (!token) throw new Error('No token in localStorage — please sign out and sign back in.')
+      log('Step 6: got token, calling backend...')
 
       const controller = new AbortController()
       setTimeout(() => controller.abort(), 8000)
@@ -133,9 +135,9 @@ export default function Onboarding() {
         }),
       }).catch(e => { throw new Error('Fetch failed: ' + e.message) })
 
-      log('Step 6: response status=' + resp.status)
+      log('Step 7: status=' + resp.status)
       const body = await resp.json().catch(() => ({}))
-      log('Step 7: body=' + JSON.stringify(body))
+      log('Step 8: body=' + JSON.stringify(body))
       if (!resp.ok) throw new Error('Backend error ' + resp.status + ': ' + JSON.stringify(body))
 
       log('Done! Redirecting...')

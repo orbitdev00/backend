@@ -10,7 +10,6 @@ function ConfirmWaiting({ email, onSwitch }) {
   const [resending, setResending] = useState(false)
   const [resent, setResent]       = useState(false)
 
-  // If the user confirms in another tab on the same browser, auto-redirect
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN') navigate('/')
@@ -53,15 +52,15 @@ function ConfirmWaiting({ email, onSwitch }) {
 
 export default function SignUp({ onSwitch }) {
   const { signUp, signInWithGoogle } = useAuth()
-  const [username, setUsername] = useState('')
-  const [email, setEmail]         = useState('')
-  const [password, setPassword]   = useState('')
-  const [confirm, setConfirm]     = useState('')
-  const [error, setError]         = useState('')
-  const [emailError, setEmailError] = useState('')
-  const [success, setSuccess]     = useState(false)
-  const [loading, setLoading]     = useState(false)
-  const [checking, setChecking]   = useState(false)
+  const [username, setUsername]           = useState('')
+  const [email, setEmail]                 = useState('')
+  const [password, setPassword]           = useState('')
+  const [confirm, setConfirm]             = useState('')
+  const [error, setError]                 = useState('')
+  const [emailError, setEmailError]       = useState('')
+  const [success, setSuccess]             = useState(false)
+  const [loading, setLoading]             = useState(false)
+  const [checking, setChecking]           = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
 
   const handleSubmit = async (e) => {
@@ -69,18 +68,18 @@ export default function SignUp({ onSwitch }) {
     setError('')
     setEmailError('')
 
-    // Synchronous validation — no DB hit needed
+    // Synchronous validation
     if (password !== confirm) { setError('Passwords do not match'); return }
     if (password.length < 8)  { setError('Password must be at least 8 characters'); return }
-    if (!username.trim()) { setError('Username is required'); return }
+    if (!username.trim())     { setError('Username is required'); return }
     if (username.trim().length < 3) { setError('Username must be at least 3 characters'); return }
     if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) { setError('Username: letters, numbers and underscores only'); return }
 
-    // DB checks — show "Checking..." while queries run
     setChecking(true)
     setLoading(true)
 
-    // 1. Username uniqueness
+    // 1. Username uniqueness check only — no email check against user_reputation
+    //    (ghost rows from deleted accounts would permanently block re-registration)
     const { data: takenUser } = await supabase.from('user_reputation')
       .select('user_id').eq('username', username.trim()).maybeSingle()
     if (takenUser) {
@@ -88,41 +87,36 @@ export default function SignUp({ onSwitch }) {
       setChecking(false); setLoading(false); return
     }
 
-    // 2. Email conflict — check BEFORE calling signUp so Supabase never sees the request
-    const { data: existingEmail } = await supabase.from('user_reputation')
-      .select('auth_provider').eq('email', email.trim().toLowerCase()).maybeSingle()
-    if (existingEmail?.auth_provider === 'google') {
-      setEmailError('This email is linked to a Google account. Use "Sign in with Google" instead.')
-      setChecking(false); setLoading(false); return
-    }
-    if (existingEmail?.auth_provider === 'email') {
-      setEmailError('An account with this email already exists. Sign in instead.')
-      setChecking(false); setLoading(false); return
-    }
-
-    // 3. No conflict — proceed with signup
     setChecking(false)
-    const { data: authData, error } = await signUp(email, password)
-    if (error) {
-      const msg = error.message?.toLowerCase() || ''
-      if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('email address is already')) {
-        setEmailError('This email is already registered. Sign in or reset your password.')
+
+    // 2. Attempt signup — Supabase handles duplicate email detection natively
+    const { data: authData, error: signUpError } = await signUp(email, password)
+    if (signUpError) {
+      const msg = signUpError.message?.toLowerCase() || ''
+      if (
+        msg.includes('already registered') ||
+        msg.includes('already exists') ||
+        msg.includes('email address is already') ||
+        msg.includes('user already registered')
+      ) {
+        setEmailError('An account with this email already exists. Sign in or reset your password.')
       } else {
-        setError(error.message)
+        setError(signUpError.message)
       }
       setLoading(false); return
     }
 
-    // Save username and auth provider
+    // 3. Save username — upsert so re-registrations after deletion work cleanly
     if (authData?.user) {
       await supabase.from('user_reputation').upsert({
-        user_id: authData.user.id,
-        email: email.trim().toLowerCase(),
-        username: username.trim(),
+        user_id:       authData.user.id,
+        email:         email.trim().toLowerCase(),
+        username:      username.trim(),
         auth_provider: 'email',
-        created_at: new Date().toISOString(),
-      })
+        created_at:    new Date().toISOString(),
+      }, { onConflict: 'user_id' })
     }
+
     setSuccess(true)
     setLoading(false)
   }
@@ -166,7 +160,7 @@ export default function SignUp({ onSwitch }) {
             <label>Email</label>
             <input type="email" value={email} onChange={e => { setEmail(e.target.value); setEmailError('') }}
               placeholder="you@example.com" required autoComplete="email" />
-            {emailError && <div style={{fontSize:11, color:'#ef4444', marginTop:4, fontFamily:'var(--mono)'}}>{emailError}</div>}
+            {emailError && <div style={{fontSize:11,color:'#ef4444',marginTop:4,fontFamily:'var(--mono)'}}>{emailError}</div>}
           </div>
           <div className="field">
             <label>Password</label>

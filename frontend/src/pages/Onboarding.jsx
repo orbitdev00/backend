@@ -85,13 +85,6 @@ export default function Onboarding() {
     })
 
     const doSave = async () => {
-      // Warm up the Railway backend (avoids cold-start adding to the save latency)
-      try {
-        await fetch(`${BACKEND}/health`, { signal: AbortSignal.timeout(20000) })
-      } catch {
-        // Non-fatal — backend may still respond to the save request
-      }
-
       setSavingLabel('Uploading photo…')
       let avatarUrl = null
 
@@ -118,23 +111,30 @@ export default function Onboarding() {
 
       setSavingLabel('Saving profile…')
 
-      // Use backend endpoint — it has the service key and bypasses RLS
       const { data: sessionData } = await supabase.auth.getSession()
       const accessToken = sessionData?.session?.access_token
       if (!accessToken) throw new Error('__no_session__')
+
+      // Abort the fetch itself after 25s so we never silently hang
+      const abort = new AbortController()
+      const abortTimer = setTimeout(() => abort.abort(), 25000)
 
       let resp
       try {
         resp = await fetch(`${BACKEND}/onboarding/complete`, {
           method: 'POST',
+          signal: abort.signal,
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type':  'application/json',
             'Authorization': `Bearer ${accessToken}`,
           },
           body: JSON.stringify({ username: username.trim(), avatar_url: avatarUrl }),
         })
       } catch (fetchErr) {
+        if (fetchErr.name === 'AbortError') throw new Error('__timeout__')
         throw new Error(`__network__:${fetchErr.message}`)
+      } finally {
+        clearTimeout(abortTimer)
       }
 
       if (!resp.ok) {
@@ -154,7 +154,7 @@ export default function Onboarding() {
 
       let displayError
       if (msg === '__timeout__') {
-        displayError = 'This is taking longer than expected — our backend is probably waking up from sleep. Wait 10–15 seconds and try again.'
+        displayError = 'The request timed out — your network may be slow, or our database is temporarily busy. Please try again.'
       } else if (msg === '__no_session__') {
         displayError = 'Your session expired. Please sign out and sign back in, then try again.'
       } else if (msg.startsWith('__network__:')) {

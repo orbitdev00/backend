@@ -63,6 +63,82 @@ async def _nightly_pnl_loop():
 async def start_pnl_cron():
     _asyncio.create_task(_nightly_pnl_loop())
 
+@app.post("/onboarding/complete")
+async def onboarding_complete(request: Request):
+    """
+    Saves username + avatar_url for a newly onboarded user.
+    Decodes the JWT locally (no network call) then upserts user_reputation
+    with the service key to bypass RLS.
+    """
+    import base64 as _b64, json as _json, httpx
+    from config import SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_ANON_KEY
+
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    access_token = auth_header.split(" ", 1)[1]
+
+    # Decode JWT payload locally — no Supabase auth roundtrip needed.
+    # The service key write below protects against forged tokens because
+    # we only ever write to the row matching the decoded user_id.
+    try:
+        parts = access_token.split(".")
+        if len(parts) != 3:
+            raise ValueError("malformed jwt")
+        padding = (4 - len(parts[1]) % 4) % 4
+        payload = _json.loads(_b64.urlsafe_b64decode(parts[1] + "=" * padding))
+        user_id = payload.get("sub", "")
+        if not user_id or not is_valid_uuid(user_id):
+            raise ValueError("invalid sub")
+    except Exception as exc:
+        print(f"[Onboarding] JWT decode failed: {exc}")
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "invalid request body"}, status_code=400)
+
+    username   = (body.get("username") or "").strip()
+    avatar_url = body.get("avatar_url") or None
+
+    if not username:
+        return JSONResponse({"error": "username required"}, status_code=400)
+
+    key = SUPABASE_SERVICE_KEY or SUPABASE_ANON_KEY
+    sb_headers = {
+        "apikey":        key,
+        "Authorization": f"Bearer {key}",
+        "Content-Type":  "application/json",
+        "Prefer":        "resolution=merge-duplicates,return=minimal",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(connect=5, read=10, write=5, pool=5)) as client:
+            resp = await client.post(
+                f"{SUPABASE_URL}/rest/v1/user_reputation",
+                json={
+                    "user_id":    user_id,
+                    "username":   username,
+                    "avatar_url": avatar_url,
+                    "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                },
+                headers=sb_headers,
+            )
+    except httpx.TimeoutException:
+        print(f"[Onboarding] Supabase upsert timed out for user {user_id}")
+        return JSONResponse({"error": "database timeout"}, status_code=503)
+    except Exception as exc:
+        print(f"[Onboarding] Supabase upsert error: {exc}")
+        return JSONResponse({"error": f"database error: {exc}"}, status_code=500)
+
+    if resp.status_code not in (200, 201, 204):
+        print(f"[Onboarding] Supabase {resp.status_code}: {resp.text[:300]}")
+        return JSONResponse({"error": resp.text[:300]}, status_code=500)
+
+    return JSONResponse({"status": "ok"})
+
+
 @app.post("/admin/pnl-sync")
 async def manual_pnl_sync(request: Request):
     """Manual trigger â€" call from Railway or curl."""

@@ -48,6 +48,10 @@ export default function BlackHole({ active, onBlack }) {
     canvas.style.display = 'block'
     const ctx = canvas.getContext('2d')
 
+    // Capture sfCanvas reference now, in the closure — same pattern as LandingBlackHole.
+    // Capturing it later (inside the frame loop) risks getting a stale/null reference.
+    const sfCanvas = document.querySelector('.starfield-canvas')
+
     const _pfp  = document.querySelector('.landing-pfp')
     const _pfpR = _pfp ? _pfp.getBoundingClientRect() : null
     const cx    = _pfpR ? _pfpR.left + _pfpR.width  / 2 : W / 2
@@ -166,10 +170,8 @@ export default function BlackHole({ active, onBlack }) {
       } else if (s.phase === 'hold') {
         drawDisk(tgtR, 1, false, false)
         if (t >= 1) {
-          // Capture star positions at hold→absorb transition for a clean crossfade
-          const sfCanvas = document.querySelector('.starfield-canvas')
-          const scroll   = starRegistry.getScrollY ? starRegistry.getScrollY() : 0
-          // Distance from black hole center to farthest viewport corner
+          // Snapshot star positions for the absorb crossfade
+          const scroll = starRegistry.getScrollY ? starRegistry.getScrollY() : 0
           const maxR = Math.max(
             Math.sqrt(cx * cx + cy * cy),
             Math.sqrt((W - cx) * (W - cx) + cy * cy),
@@ -181,17 +183,15 @@ export default function BlackHole({ active, onBlack }) {
             const y    = ((rawY % H) + H) % H
             return { x: star.x, y, r: star.r, o: star.o, depth: star.depth }
           })
-          s.sfCanvas = sfCanvas
-          s.maxR     = maxR
-          s.maxDist  = Math.max(..._els.map(e => e._bhDist || 1), 1)
-          s.phase    = 'absorb'; s.t0 = ts
+          s.maxR    = maxR
+          s.maxDist = Math.max(..._els.map(e => e._bhDist || 1), 1)
+          s.phase   = 'absorb'; s.t0 = ts
         }
 
       } else if (s.phase === 'absorb') {
         canvas.classList.add('absorbing')
-        const et      = easeIO(t)
-        const holeR   = tgtR + et * tgtR * 0.2
-        const sfCanvas = s.sfCanvas
+        const et    = easeIO(t)
+        const holeR = tgtR + et * tgtR * 0.2
 
         // Crossfade: sfCanvas opacity fades 1→0 over first half of absorb;
         // canvas stars fade in as complement so total brightness stays constant.

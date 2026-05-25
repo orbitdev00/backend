@@ -75,75 +75,74 @@ export default function Onboarding() {
     setSaving(true)
     setError('')
 
-    try {
-      // 1. Upload avatar if provided
-      setSavingLabel('Uploading photo…')
-      let avatarUrl = null
+    const log = (msg) => {
+      console.log('[Onboarding]', msg)
+      setSavingLabel(msg)
+    }
 
+    try {
+      log('Step 1: checking session...')
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData?.session?.access_token
+      if (!accessToken) throw new Error('No session — sign out and sign back in.')
+      log('Step 2: session ok, user=' + user.id.slice(0,8))
+
+      let avatarUrl = null
       if (pfpFile) {
+        log('Step 3: resizing avatar...')
         const bitmap = await createImageBitmap(pfpFile)
-        const size   = Math.min(bitmap.width, bitmap.height, 256)
+        const size = Math.min(bitmap.width, bitmap.height, 256)
         const canvas = document.createElement('canvas')
         canvas.width = size; canvas.height = size
-        const ctx    = canvas.getContext('2d')
-        const scale  = size / Math.min(bitmap.width, bitmap.height)
+        const ctx = canvas.getContext('2d')
+        const scale = size / Math.min(bitmap.width, bitmap.height)
         const w = bitmap.width * scale, h = bitmap.height * scale
         ctx.drawImage(bitmap, (size - w) / 2, (size - h) / 2, w, h)
         const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85))
+        log('Step 4: uploading avatar...')
         const path = `${user.id}/avatar.jpg`
         const { error: uploadErr } = await supabase.storage.from('avatars')
           .upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
         if (uploadErr) {
-          console.warn('Avatar upload failed:', uploadErr)
+          log('Avatar upload failed: ' + uploadErr.message + ' — continuing without photo')
         } else {
           const { data } = supabase.storage.from('avatars').getPublicUrl(path)
           avatarUrl = data.publicUrl + '?t=' + Date.now()
+          log('Step 5: avatar uploaded ok')
         }
+      } else {
+        log('Step 3: no avatar, skipping')
       }
 
-      // 2. Save via backend using service key (bypasses RLS entirely)
-      setSavingLabel('Saving profile…')
-
-      const { data: sessionData } = await supabase.auth.getSession()
-      const accessToken = sessionData?.session?.access_token
-      if (!accessToken) throw new Error('No session — please sign out and sign back in.')
-
+      log('Step 6: calling backend...')
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), 10000)
-
       let resp
       try {
-        resp = await fetch(`${BACKEND}/onboarding/save`, {
+        resp = await fetch('https://backend-production-a427a.up.railway.app/onboarding/complete', {
           method: 'POST',
           signal: controller.signal,
-          headers: {
-            'Content-Type':  'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            user_id:    user.id,
-            username:   username.trim(),
-            avatar_url: avatarUrl,
-            email:      user.email,
-          }),
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+          body: JSON.stringify({ username: username.trim(), avatar_url: avatarUrl }),
         })
       } catch (fetchErr) {
-        if (fetchErr.name === 'AbortError') throw new Error('Request timed out. Please try again.')
-        throw new Error('Could not reach server: ' + fetchErr.message)
-      } finally {
         clearTimeout(timer)
+        if (fetchErr.name === 'AbortError') throw new Error('Backend timed out after 10s — step 6 hung')
+        throw new Error('Fetch failed at step 6: ' + fetchErr.message)
       }
+      clearTimeout(timer)
 
-      if (!resp.ok) {
-        const body = await resp.json().catch(() => ({}))
-        throw new Error(body.error || `Server error ${resp.status}`)
-      }
+      log('Step 7: status=' + resp.status)
+      const respBody = await resp.json().catch(() => ({}))
+      log('Step 8: body=' + JSON.stringify(respBody))
+      if (!resp.ok) throw new Error('Backend error ' + resp.status + ': ' + JSON.stringify(respBody))
 
+      log('Done! Redirecting...')
       window.location.href = '/'
 
     } catch (e) {
-      console.error('Onboarding save failed:', e)
-      setError(e.message || 'Something went wrong. Please try again.')
+      console.error('[Onboarding] failed:', e)
+      setError(e.message)
       setSaving(false)
       setSavingLabel('Setting up…')
     }
@@ -268,6 +267,7 @@ export default function Onboarding() {
               <p className="ob-sub">You're all set. Time to find your edge.</p>
 
               {error && <div className="ob-error">{error}</div>}
+              {saving && <div style={{fontSize:11,color:'#888',fontFamily:'monospace',marginTop:8,textAlign:'center'}}>{savingLabel}</div>}
 
               <button className="ob-btn ob-btn--launch" onClick={advance} disabled={saving}>
                 {saving ? savingLabel : 'Start Analyzing →'}

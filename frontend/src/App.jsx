@@ -744,9 +744,13 @@ export default function App() {
                       <div className="coin-name-center">
                         <span className="coin-title-name">{(snapshot || partials?.market)?.name}</span>
                         <span className="coin-title-symbol">{(snapshot || partials?.market)?.symbol}</span>
-                        {(snapshot || partials?.market)?.chain === 'ethereum'
-                          ? <span className="badge badge-eth">ETH</span>
-                          : <span className="badge badge-sol">SOL</span>}
+                        {(() => {
+                          const chain = (snapshot || partials?.market)?.chain
+                          if (!chain) return null
+                          return chain === 'ethereum'
+                            ? <span className="badge badge-eth">ETH</span>
+                            : <span className="badge badge-sol">SOL</span>
+                        })()}
                         {(snapshot || partials?.market)?.is_migrated && <span className="badge badge-blue">Migrated</span>}
                         {snapshot?.king_of_the_hill && <span className="badge badge-yellow">👑 KOTH</span>}
                       </div>

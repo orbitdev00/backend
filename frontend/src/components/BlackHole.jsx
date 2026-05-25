@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { starRegistry } from './StarField'
 import './BlackHole.css'
 
 const PHASES = { pfp: 800, hold: 1000, absorb: 1400, implode: 700 }
@@ -183,20 +184,22 @@ export default function BlackHole({ active, onBlack }) {
         const et    = easeIO(t)
         const holeR = tgtR + et * tgtR * 0.2
 
-        // Hide the real starfield — we take over drawing stars individually
-        const sfCanvas = document.querySelector('.starfield-canvas')
-        if (sfCanvas) sfCanvas.style.display = 'none'
-
-        // Snapshot viewport stars for the absorption animation
+        // On first absorb frame: stop StarField loop and capture its exact star positions
         if (!s.stars) {
-          s.stars = Array.from({ length: 320 }, () => {
-            const x    = Math.random() * W
-            const y    = Math.random() * H
-            const dist = Math.sqrt((x - cx)**2 + (y - cy)**2)
+          if (starRegistry.cancelDraw) starRegistry.cancelDraw()
+          const sfCanvas = document.querySelector('.starfield-canvas')
+          if (sfCanvas) sfCanvas.style.display = 'none'
+
+          const scroll = starRegistry.getScrollY ? starRegistry.getScrollY() : 0
+          s.stars = (starRegistry.stars.length ? starRegistry.stars : []).map(star => {
+            const rawY = star.y - scroll * star.parallax
+            const y    = ((rawY % H) + H) % H
+            const dist = Math.sqrt((star.x - cx)**2 + (y - cy)**2)
             return {
-              x, y,
-              size:     Math.random() * 1.2 + 0.2,
-              opacity:  Math.random() * 0.5 + 0.15,
+              x:        star.x,
+              y,
+              size:     star.r,
+              opacity:  star.o,
               dist,
               normDist: dist / (Math.sqrt(W*W + H*H) / 2),
             }

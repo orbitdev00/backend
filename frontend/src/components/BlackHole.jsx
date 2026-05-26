@@ -205,10 +205,10 @@ export default function BlackHole({ active, onBlack }) {
           s.maxR    = maxR
           s.maxDist = Math.max(..._els.map(e => e._bhDist || 1), 1)
 
-          // Hide the starfield canvas in this same frame and immediately paint
-          // the snapshotted stars onto the BlackHole canvas at their exact positions.
-          // The browser renders both changes atomically — no visible gap.
-          if (sfCanvas) sfCanvas.style.display = 'none'
+          // Cancel StarField's rAF loop then blank its canvas so no further
+          // frames bleed through, then paint the snapshot onto BlackHole canvas.
+          if (starRegistry.cancelDraw) starRegistry.cancelDraw()
+          if (sfCanvas) sfCanvas.getContext('2d').clearRect(0, 0, sfCanvas.width, sfCanvas.height)
           paintStarsAtRest(s.stars)
 
           s.phase = 'absorb'; s.t0 = ts

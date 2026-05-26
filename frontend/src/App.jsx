@@ -296,6 +296,14 @@ export default function App() {
       setPhase('revealing')
       streamRefresh(activeMint).then(result => {
         if (result?.trialUsed) { setPhase('idle'); setTrialBlocked(true) }
+        // Count refresh as an analysis for free users
+        if (user && tier === 'free' && !result?.trialUsed) {
+          const key = `orbit_usage_${user.id}_${new Date().toISOString().slice(0,10)}`
+          const used = parseInt(localStorage.getItem(key) || '0')
+          const next = used + 1
+          localStorage.setItem(key, String(next))
+          setUsageCount(next)
+        }
       })
     }, 50)
   }, [user, isTrial, activeMint, streamRefresh])
@@ -348,6 +356,13 @@ export default function App() {
       if (!user) { localStorage.setItem('orbit_guest_analyzed', '1'); setGuestBlocked(true) }
       if (result?.trialUsed) { setPhase('idle'); setTrialBlocked(true) }
       if (result?.trialConsumed) setIsTrial(true)
+      if (user && tier === 'free' && !result?.trialUsed) {
+        const key = `orbit_usage_${user.id}_${new Date().toISOString().slice(0,10)}`
+        const used = parseInt(localStorage.getItem(key) || '0')
+        const next = used + 1
+        localStorage.setItem(key, String(next))
+        setUsageCount(next)
+      }
       setTimeout(() => checkNewBadges(), 3000)
     })
   }, [])

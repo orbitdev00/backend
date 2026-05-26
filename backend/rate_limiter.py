@@ -142,6 +142,7 @@ async def get_usage_async(user_id: str) -> dict:
         count = row.get("daily_analysis_count", 0) or 0
         if str(row.get("daily_reset_date", "")) != today:
             count = 0
+            await _update_count(user_id, 0, today)
         return {
             "count": count,
             "limit": FREE_DAILY_LIMIT,

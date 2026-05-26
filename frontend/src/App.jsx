@@ -226,8 +226,11 @@ export default function App() {
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data?.count !== undefined) {
-          localStorage.setItem(key, String(data.count))
-          setUsageCount(data.count)
+          const localVal = parseInt(localStorage.getItem(key) || '0')
+          if (data.count > localVal) {
+            localStorage.setItem(key, String(data.count))
+            setUsageCount(data.count)
+          }
         }
       })
       .catch(() => {})

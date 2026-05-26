@@ -56,7 +56,7 @@ async def build_snapshot(mint: str, ws_broadcast=None) -> dict:
         try:
             eth_holders, gop = await asyncio.gather(
                 fetch_moralis_holders(mint),
-                _safe_goplus(mint),
+                _safe_goplus(mint, chain="ethereum"),
             )
             print(f"[ETH] eth_holders keys: {list(eth_holders.keys()) if eth_holders else 'empty'}")
         except Exception as e:
@@ -332,9 +332,9 @@ def _migration_countdown(dex: dict, pump: dict, age_seconds: int) -> dict:
     }
 
 
-async def _safe_goplus(mint: str) -> dict:
+async def _safe_goplus(mint: str, chain: str = "solana") -> dict:
     try:
-        return await fetch_goplus(mint)
+        return await fetch_goplus(mint, chain=chain)
     except Exception as e:
         print(f"[GoPlus] error: {e}")
         return {}

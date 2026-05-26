@@ -5,18 +5,23 @@ GOPLUS_API = "https://api.gopluslabs.io/api/v1"
 GOPLUS_TTL = 60  # cache for 60 seconds
 
 
-async def fetch_goplus(mint: str) -> dict:
+async def fetch_goplus(mint: str, chain: str = "solana") -> dict:
     """
     GoPlus Security API — free, no key required.
     Results cached for 60 seconds.
-    Returns: honeypot detection, bundle %, sniper count, 
+    Returns: honeypot detection, bundle %, sniper count,
     blacklist/whitelist, mint authority, freeze authority.
+    chain: "solana" or "ethereum"
     """
-    cached = cache_get(f"goplus:{mint}", GOPLUS_TTL)
+    cached = cache_get(f"goplus:{chain}:{mint}", GOPLUS_TTL)
     if cached:
         return cached
 
-    url = f"{GOPLUS_API}/solana/token_security"
+    if chain == "ethereum":
+        # GoPlus ETH endpoint uses chain_id=1
+        url = f"{GOPLUS_API}/token_security/1"
+    else:
+        url = f"{GOPLUS_API}/solana/token_security"
     params = {"contract_addresses": mint}
 
     async with httpx.AsyncClient(timeout=10) as client:
@@ -85,7 +90,7 @@ async def fetch_goplus(mint: str) -> dict:
         "sniper_count":       sniper_count,
         "goplus_flags":       flags,
     }
-    cache_set(f"goplus:{mint}", result)
+    cache_set(f"goplus:{chain}:{mint}", result)
     return result
 
 

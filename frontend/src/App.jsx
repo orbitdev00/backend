@@ -19,7 +19,7 @@ import Login from './pages/Login'
 import SignUp from './pages/SignUp'
 import ForgotPassword from './pages/ForgotPassword'
 import AuthCallback from './pages/AuthCallback'
-import BlackHole from './components/BlackHole'
+import LandingBlackHole from './components/LandingBlackHole'
 import StreamReveal from './components/StreamReveal'
 import './App.css'
 
@@ -171,6 +171,7 @@ export default function App() {
     const key = `orbit_usage_${user?.id}_${new Date().toISOString().slice(0,10)}`
     return parseInt(localStorage.getItem(key) || '0')
   })
+  const [bhOrigin, setBhOrigin] = useState(null)
 
   const {
     status, statusMsg, snapshot, prediction, preview, partials,
@@ -251,6 +252,7 @@ export default function App() {
     }
     // All checks passed — now start the animation and API call
     setActiveMint(mintAddress.trim())
+    setBhOrigin({ x: window.innerWidth / 2, y: window.innerHeight / 2 })
     setPhase('animating')
     streamAnalyze(mintAddress).then(result => {
       if (result?.trialUsed) { setPhase('idle'); setTrialBlocked(true) }
@@ -332,6 +334,7 @@ export default function App() {
     window.history.replaceState({}, '', '/analyze')
     setMint(mintParam)
     setActiveMint(mintParam)
+    setBhOrigin({ x: window.innerWidth / 2, y: window.innerHeight / 2 })
     setPhase('animating')
     streamAnalyze(mintParam).then(result => {
       if (!user) { localStorage.setItem('orbit_guest_analyzed', '1'); setGuestBlocked(true) }
@@ -595,9 +598,10 @@ export default function App() {
     <div className={`app ${phase === "revealing" ? "phase-revealing" : ""}`}>
       {(phase === 'idle' || phase === 'animating') && <StarField />}
 
-      <BlackHole
+      <LandingBlackHole
         active={phase === 'animating'}
-        onBlack={() => { setTimeout(() => setPhase('revealing'), 80) }}
+        origin={bhOrigin}
+        onDone={() => { setTimeout(() => setPhase('revealing'), 80) }}
       />
 
       <NavBar

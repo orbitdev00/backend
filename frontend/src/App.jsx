@@ -123,6 +123,14 @@ function CyclingQuote({ quotes, interval = 5000 }) {
   )
 }
 
+function isValidMint(addr) {
+  if (!addr?.trim()) return false
+  const s = addr.trim()
+  if (/^0x[0-9a-fA-F]{40}$/.test(s)) return true   // Ethereum
+  if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s)) return true  // Solana Base58
+  return false
+}
+
 const fmtUSD = (n) => {
   if (!n && n !== 0) return '—'
   if (n >= 1_000_000) return `$${(n/1_000_000).toFixed(2)}M`
@@ -156,6 +164,7 @@ export default function App() {
   const [rateLimitMsg, setRateLimitMsg]     = useState('')    // inline rate limit notice
   const [collapsed, setCollapsed]       = useState({})
   const [mint, setMint]                 = useState('')
+  const [mintError, setMintError]       = useState('')
   const [activeMint, setActiveMint]     = useState('')
   const [copied, setCopied]             = useState(false)
   const [sharecopied, setShareCopied]   = useState(false)
@@ -238,8 +247,18 @@ export default function App() {
 
   const togglePanel = (panel) => setCollapsed(prev => ({...prev, [panel]: !prev[panel]}))
 
+  const handleMintChange = useCallback((val) => {
+    setMint(val)
+    if (mintError) setMintError('')
+  }, [mintError])
+
   const analyze = useCallback(async (mintAddress) => {
     if (!mintAddress?.trim()) return
+    if (!isValidMint(mintAddress)) {
+      setMintError('Invalid token address')
+      return
+    }
+    setMintError('')
 
     // ── Block BEFORE any API call ────────────────────────────────────────
     // Guest: already used their 1 free analysis
@@ -678,8 +697,8 @@ export default function App() {
           <div className="landing" id="landing-screen">
             <img src={kikoPfp} alt="ORBIT" className="landing-pfp" />
             <div className="landing-input-wrap">
-              <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } analyze(mint) }}
-                onRefresh={handleRefresh} loading={false} hasData={false} />
+              <CoinInput value={mint} onChange={handleMintChange} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } analyze(mint) }}
+                onRefresh={handleRefresh} loading={false} hasData={false} error={mintError} />
             </div>
             <CyclingQuote quotes={IDLE_QUOTES} interval={6000} />
           </div>
@@ -690,8 +709,8 @@ export default function App() {
           <div className="landing">
             <img src={kikoPfp} alt="ORBIT" className="landing-pfp loading-pfp" />
             <div className="landing-input-wrap">
-              <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } analyze(mint) }}
-                onRefresh={handleRefresh} loading={true} hasData={false} />
+              <CoinInput value={mint} onChange={handleMintChange} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } analyze(mint) }}
+                onRefresh={handleRefresh} loading={true} hasData={false} error={mintError} />
             </div>
             <CyclingQuote quotes={ANALYZING_QUOTES} interval={5000} />
           </div>
@@ -702,8 +721,8 @@ export default function App() {
           <div className="landing" id="landing-screen">
             <img src={kikoPfp} alt="ORBIT" className="landing-pfp" />
             <div className="landing-input-wrap">
-              <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } analyze(mint) }}
-                onRefresh={handleRefresh} loading={false} hasData={false} />
+              <CoinInput value={mint} onChange={handleMintChange} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } analyze(mint) }}
+                onRefresh={handleRefresh} loading={false} hasData={false} error={mintError} />
             </div>
             <div className="error-inline">⚠ {statusMsg}</div>
           </div>
@@ -836,8 +855,8 @@ export default function App() {
               <div className="dash-col dash-col-4">
                 <StreamReveal show={phase === "revealing"} delay={600}>
                 <div className="panel center-input-panel">
-                  <CoinInput value={mint} onChange={setMint} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } mint.trim() === activeMint ? handleRefresh() : analyze(mint) }}
-                    onRefresh={null} loading={status === 'loading'} hasData={false} />
+                  <CoinInput value={mint} onChange={handleMintChange} onSubmit={() => { if (!user && localStorage.getItem('orbit_guest_analyzed') === '1') { setGuestBlocked(true); return; } mint.trim() === activeMint ? handleRefresh() : analyze(mint) }}
+                    onRefresh={null} loading={status === 'loading'} hasData={false} error={mintError} />
                   {rateLimitMsg && (
                     <div style={{marginTop:8,padding:'6px 10px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.3)',borderRadius:4,fontSize:11,color:'#ef4444',fontFamily:'var(--mono)',display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
                       <span>⚠ {rateLimitMsg}</span>

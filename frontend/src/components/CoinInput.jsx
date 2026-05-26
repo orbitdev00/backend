@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import './CoinInput.css'
 
-export default function CoinInput({ value, onChange, onSubmit, onRefresh, loading, hasData }) {
+export default function CoinInput({ value, onChange, onSubmit, onRefresh, loading, hasData, error }) {
   const inputRef = useRef(null)
 
   const handlePaste = () => {
@@ -31,6 +31,7 @@ export default function CoinInput({ value, onChange, onSubmit, onRefresh, loadin
 
   return (
     <div className="coin-input-wrap">
+      {error && <div className="coin-input-error">{error}</div>}
       <div className="coin-input-row">
         <button className="btn-paste" onClick={handlePaste} title="Paste from clipboard">⎘</button>
         <input

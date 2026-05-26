@@ -135,8 +135,7 @@ async def build_snapshot(mint: str, ws_broadcast=None) -> dict:
     # Dev supply — try from helius first, fallback to solscan top holders
     dev_holding_pct = sol.get("dev_holding_pct", 0)
     if dev_holding_pct == 0 and dev_wallet:
-        # Check if dev appears anywhere in raw holders list
-        for h in raw_holders:
+        for h in top_holders:
             if h.get("address", "").lower() == dev_wallet.lower():
                 dev_holding_pct = h.get("pct", 0)
                 break

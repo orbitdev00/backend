@@ -134,7 +134,7 @@ export function useStreamAnalysis() {
           ws.close()
           if (!settled) { setStatus('error'); setStatusMsg('Request timed out'); settle({ error: 'timeout' }) }
         }
-      }, 30000)
+      }, 90000)
     })
 
     async function httpFallback(mint, loggedIn, settle) {

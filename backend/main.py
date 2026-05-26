@@ -516,8 +516,8 @@ async def stream_analysis(websocket: WebSocket, mint: str, user_id: str = ""):
     async def send(msg_type: str, source: str, data: dict):
         try:
             await websocket.send_json({"type": msg_type, "source": source, "data": data})
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[WS] send failed ({msg_type}/{source}): {e}")
 
     if not is_valid_mint(mint):
         await send("error", "system", {"message": "Invalid mint address", "error": "invalid_mint"})

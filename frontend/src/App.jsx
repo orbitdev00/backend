@@ -172,6 +172,14 @@ export default function App() {
     return parseInt(localStorage.getItem(key) || '0')
   })
 
+  // Re-sync from localStorage when user resolves (useState initializer only runs once,
+  // so if user was null at mount the initial value is 0)
+  useEffect(() => {
+    if (!user?.id) return
+    const key = `orbit_usage_${user.id}_${new Date().toISOString().slice(0,10)}`
+    setUsageCount(parseInt(localStorage.getItem(key) || '0'))
+  }, [user?.id])
+
   const {
     status, statusMsg, snapshot, prediction, preview, partials,
     lastUpdated, rateLimit, analyze: streamAnalyze, refresh: streamRefresh, disconnect,

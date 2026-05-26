@@ -267,8 +267,9 @@ export default function BlackHole({ active, onBlack }) {
 
         if (t >= 1 && !s.called) {
           s.called = true
-          restoreElements()
-          // Fill solid black so nothing bleeds through while React re-renders
+          // Elements stay at opacity:0 (set at end of absorb) — restoreElements()
+          // must NOT run here because the canvas is z-index:0 and restored elements
+          // would paint above it, causing a flash. Cleanup happens in active=false branch.
           ctx.fillStyle = '#000'
           ctx.fillRect(0, 0, W, H)
           // Stop this rAF loop BEFORE calling onBlack so the dashboard

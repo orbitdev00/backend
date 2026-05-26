@@ -285,7 +285,7 @@ export default function App() {
       }
       setTimeout(() => checkNewBadges(), 3000)
     })
-  }, [streamAnalyze])
+  }, [streamAnalyze, user, tier])
 
   const handleRefresh = useCallback(async () => {
     if (!user && isTrial) { setTrialBlocked(true); return }

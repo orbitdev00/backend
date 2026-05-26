@@ -166,6 +166,11 @@ export default function App() {
   // Animation state machine: idle → animating → black → revealing → done
   const [phase, setPhase] = useState('idle')
   // phase: idle | animating | black | revealing
+  const [usageCount, setUsageCount] = useState(() => {
+    if (!user?.id) return 0
+    const key = `orbit_usage_${user?.id}_${new Date().toISOString().slice(0,10)}`
+    return parseInt(localStorage.getItem(key) || '0')
+  })
 
   const {
     status, statusMsg, snapshot, prediction, preview, partials,
@@ -258,7 +263,9 @@ export default function App() {
       if (user && tier === 'free') {
         const key = `orbit_usage_${user.id}_${new Date().toISOString().slice(0,10)}`
         const used = parseInt(localStorage.getItem(key) || '0')
-        localStorage.setItem(key, String(used + 1))
+        const next = used + 1
+        localStorage.setItem(key, String(next))
+        setUsageCount(next)
       }
       // Rate limit exceeded for free users
       if (result?.rateLimitExceeded) {
@@ -589,7 +596,7 @@ export default function App() {
 
       <BlackHole
         active={phase === 'animating'}
-        onBlack={() => { setPhase('revealing') }}
+        onBlack={() => { setTimeout(() => setPhase('revealing'), 120) }}
       />
 
       <NavBar
@@ -769,7 +776,7 @@ export default function App() {
                           <span style={{fontSize:11,color:'#a78bfa',fontFamily:'var(--mono)',opacity:0.7}}>∞</span>
                         ) : user && tier === 'free' ? (
                           <span style={{fontSize:11,color:'#64748b',fontFamily:'var(--mono)'}}>
-                            ({Math.min(parseInt(localStorage.getItem(`orbit_usage_${user.id}_${new Date().toISOString().slice(0,10)}`) || '0'), 5)}/5)
+                            ({Math.min(usageCount, 5)}/5)
                           </span>
                         ) : null}
                       </span>

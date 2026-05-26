@@ -247,9 +247,12 @@ export default function App() {
       setGuestBlocked(true)
       return  // never touches backend
     }
-    // Free user: check client-side usage count (backend enforces too, but this avoids the call)
+    // Free user: check usage count BEFORE touching the API
     if (user && tier === 'free') {
-      const used = parseInt(localStorage.getItem(`orbit_usage_${user.id}_${new Date().toISOString().slice(0,10)}`) || '0')
+      // Read from state (reactive) — fallback to localStorage in case state isn't synced yet
+      const stateCount = usageCount
+      const lsCount = parseInt(localStorage.getItem(`orbit_usage_${user.id}_${new Date().toISOString().slice(0,10)}`) || '0')
+      const used = Math.max(stateCount, lsCount)
       if (used >= 5) {
         setUpgradePrompt({
           title: 'Daily limit reached',
@@ -257,7 +260,7 @@ export default function App() {
           cta: 'Upgrade to Degen',
           ctaPath: '/pricing',
         })
-        return  // never touches backend
+        return  // never touches backend — Claude API never called
       }
     }
     // All checks passed — now start the animation and API call
@@ -290,6 +293,20 @@ export default function App() {
   const handleRefresh = useCallback(async () => {
     if (!user && isTrial) { setTrialBlocked(true); return }
     if (!activeMint) return
+    // Block free users at limit from refreshing too
+    if (user && tier === 'free') {
+      const lsCount = parseInt(localStorage.getItem(`orbit_usage_${user.id}_${new Date().toISOString().slice(0,10)}`) || '0')
+      const used = Math.max(usageCount, lsCount)
+      if (used >= 5) {
+        setUpgradePrompt({
+          title: 'Daily limit reached',
+          message: 'You have used all 5 free analyses for today. Upgrade to Degen for unlimited analyses.',
+          cta: 'Upgrade to Degen',
+          ctaPath: '/pricing',
+        })
+        return
+      }
+    }
     // Brief fade out then back in
     setPhase('idle')
     setTimeout(() => {
@@ -800,10 +817,10 @@ export default function App() {
                       <span style={{display:'flex',alignItems:'center',gap:8}}>
                         Orbit Analysis
                         {user && tier !== 'free' ? (
-                          <span style={{fontSize:11,color:'#a78bfa',fontFamily:'var(--mono)',opacity:0.7}}>∞</span>
+                          <span style={{fontSize:11,color:'#a78bfa',fontFamily:'var(--mono)',opacity:0.7}}>♾️/♾️</span>
                         ) : user && tier === 'free' ? (
-                          <span style={{fontSize:11,color:'#64748b',fontFamily:'var(--mono)'}}>
-                            ({Math.min(usageCount, 5)}/5)
+                          <span style={{fontSize:11,color: usageCount >= 5 ? '#ef4444' : '#64748b',fontFamily:'var(--mono)',fontWeight: usageCount >= 5 ? 700 : 400}}>
+                            ({Math.min(usageCount, 5)}/5{usageCount >= 5 ? ' · limit reached' : ''})
                           </span>
                         ) : null}
                       </span>

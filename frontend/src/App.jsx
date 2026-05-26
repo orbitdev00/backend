@@ -761,7 +761,20 @@ export default function App() {
                   </StreamReveal>
                 )}
                 <StreamReveal show={phase === "revealing"} delay={0}>
-                  <CollapsiblePanel title="Orbit Analysis" id="analysis" collapsed={collapsed} toggle={togglePanel}>
+                  <CollapsiblePanel
+                    title={
+                      <span style={{display:'flex',alignItems:'center',gap:8}}>
+                        Orbit Analysis
+                        {user && tier !== 'free' ? (
+                          <span style={{fontSize:11,color:'#a78bfa',fontFamily:'var(--mono)',opacity:0.7}}>∞</span>
+                        ) : user && tier === 'free' ? (
+                          <span style={{fontSize:11,color:'#64748b',fontFamily:'var(--mono)'}}>
+                            ({Math.min(parseInt(localStorage.getItem(`orbit_usage_${user.id}_${new Date().toISOString().slice(0,10)}`) || '0'), 5)}/5)
+                          </span>
+                        ) : null}
+                      </span>
+                    }
+                    id="analysis" collapsed={collapsed} toggle={togglePanel}>
                     <PredictionPanel prediction={prediction} snapshot={snapshot} />
                   </CollapsiblePanel>
                 </StreamReveal>

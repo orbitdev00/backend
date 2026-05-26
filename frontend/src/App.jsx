@@ -219,6 +219,7 @@ export default function App() {
       .then(data => {
         if (data?.count !== undefined) {
           localStorage.setItem(key, String(data.count))
+          setUsageCount(data.count)
         }
       })
       .catch(() => {})
@@ -596,7 +597,7 @@ export default function App() {
 
       <BlackHole
         active={phase === 'animating'}
-        onBlack={() => { setTimeout(() => setPhase('revealing'), 120) }}
+        onBlack={() => { setTimeout(() => setPhase('revealing'), 80) }}
       />
 
       <NavBar

@@ -596,37 +596,54 @@ async def stream_analysis(websocket: WebSocket, mint: str, user_id: str = ""):
         total_supply = pump.get("total_supply") or 1_000_000_000
         pair_address = dex.get("pair_address") or ""
 
+        from engine.snapshot import detect_chain
+        chain = detect_chain(mint)
+
         await send("status", "aggregators", {"message": "Analyzing on-chain data..."})
 
-        # Stage 2: All remaining aggregators in parallel
-        from aggregator.solscan import fetch_solscan
-        from aggregator.helius import fetch_helius
+        # Stage 2: chain-gated aggregators in parallel
         from aggregator.goplus import fetch_goplus
-        from aggregator.devhistory import fetch_dev_history
 
-        sol_task     = asyncio.create_task(fetch_solscan(mint, dev_wallet, total_supply, pair_address))
-        hel_task     = asyncio.create_task(fetch_helius(mint, dev_wallet))
-        gop_task     = asyncio.create_task(fetch_goplus(mint))
-        devhist_task = asyncio.create_task(fetch_dev_history(dev_wallet) if dev_wallet else asyncio.sleep(0))
-
-        # Push each result as it arrives
-        for coro in asyncio.as_completed([sol_task, hel_task, gop_task, devhist_task]):
-            result = await coro
-            if result is None:
-                continue
-            if "top_holders" in result:
-                await send("partial", "holders", result)
-            elif "bundle_detected" in result:
-                await send("partial", "security", result)
-            elif "is_honeypot" in result:
-                await send("partial", "goplus", result)
-            elif "dev_history_summary" in result:
-                await send("partial", "devhistory", result)
-
-        sol     = await sol_task
-        hel     = await hel_task
-        gop     = await gop_task
-        devhist = await devhist_task or {}
+        if chain == "ethereum":
+            from aggregator.moralis import fetch_moralis_holders
+            eth_task = asyncio.create_task(fetch_moralis_holders(mint))
+            gop_task = asyncio.create_task(fetch_goplus(mint, chain="ethereum"))
+            for coro in asyncio.as_completed([eth_task, gop_task]):
+                result = await coro
+                if result is None:
+                    continue
+                if "top_holders" in result:
+                    await send("partial", "holders", result)
+                elif "is_honeypot" in result:
+                    await send("partial", "goplus", result)
+            sol     = await eth_task
+            hel     = {}
+            gop     = await gop_task
+            devhist = {}
+        else:
+            from aggregator.solscan import fetch_solscan
+            from aggregator.helius import fetch_helius
+            from aggregator.devhistory import fetch_dev_history
+            sol_task     = asyncio.create_task(fetch_solscan(mint, dev_wallet, total_supply, pair_address))
+            hel_task     = asyncio.create_task(fetch_helius(mint, dev_wallet))
+            gop_task     = asyncio.create_task(fetch_goplus(mint))
+            devhist_task = asyncio.create_task(fetch_dev_history(dev_wallet) if dev_wallet else asyncio.sleep(0))
+            for coro in asyncio.as_completed([sol_task, hel_task, gop_task, devhist_task]):
+                result = await coro
+                if result is None:
+                    continue
+                if "top_holders" in result:
+                    await send("partial", "holders", result)
+                elif "bundle_detected" in result:
+                    await send("partial", "security", result)
+                elif "is_honeypot" in result:
+                    await send("partial", "goplus", result)
+                elif "dev_history_summary" in result:
+                    await send("partial", "devhistory", result)
+            sol     = await sol_task
+            hel     = await hel_task
+            gop     = await gop_task
+            devhist = await devhist_task or {}
 
         await send("status", "predicting", {"message": "Running prediction..."})
 

@@ -268,10 +268,17 @@ export default function BlackHole({ active, onBlack }) {
         if (t >= 1 && !s.called) {
           s.called = true
           restoreElements()
+          // Fill solid black so nothing bleeds through while React re-renders
+          ctx.fillStyle = '#000'
+          ctx.fillRect(0, 0, W, H)
+          // Stop this rAF loop BEFORE calling onBlack so the dashboard
+          // never renders with a transparent canvas on top of it
+          if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
           setTimeout(() => {
             restoreStarfield()
             if (onBlack) onBlack()
           }, 50)
+          return  // do not re-queue
         }
       }
 

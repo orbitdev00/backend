@@ -2,6 +2,7 @@
 // Import this in App.jsx or any page that awards badges
 
 import { useState, useCallback, useRef } from "react";
+import { supabase } from "../lib/supabase";
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || "https://backend-production-a427a.up.railway.app";
 
@@ -93,10 +94,31 @@ export async function fetchEquippedBadges(userId) {
   return data.equipped || [];
 }
 
+async function _getToken() {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token || "";
+}
+
 export async function grantBadge(granterId, targetUserId, badgeId, granterRole) {
+  const token = await _getToken();
   const res = await fetch(`${BACKEND}/badges/grant`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+    body: JSON.stringify({
+      granter_id: granterId,
+      target_user_id: targetUserId,
+      badge_id: badgeId,
+      granter_role: granterRole,
+    }),
+  });
+  return res.json();
+}
+
+export async function revokeBadge(granterId, targetUserId, badgeId, granterRole) {
+  const token = await _getToken();
+  const res = await fetch(`${BACKEND}/badges/revoke`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
     body: JSON.stringify({
       granter_id: granterId,
       target_user_id: targetUserId,

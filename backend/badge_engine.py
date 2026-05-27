@@ -255,6 +255,35 @@ async def grant_badge_manual(granter_id: str, target_user_id: str, badge_id: str
     return {"awarded": awarded, "badge_id": badge_id}
 
 
+async def revoke_badge_manual(granter_id: str, target_user_id: str, badge_id: str, granter_role: str) -> dict:
+    """Manual badge revoke for owner/mod."""
+    MOD_REVOKABLE = {"special"}
+
+    if granter_role == "mod" and badge_id not in MOD_REVOKABLE:
+        return {"error": "Mods can only revoke the Special badge"}
+    if granter_role not in ("mod", "owner", "admin"):
+        return {"error": "Unauthorized"}
+
+    rows = await _get("user_reputation", {"user_id": f"eq.{granter_id}", "select": "role,email"})
+    if not rows:
+        return {"error": "Granter not found"}
+    actual_role = rows[0].get("role")
+    actual_email = rows[0].get("email", "")
+    is_owner = actual_role == "owner" or actual_email == "orbitdev00@gmail.com"
+    if not is_owner and actual_role not in ("mod", "admin"):
+        return {"error": "Unauthorized"}
+    if actual_role == "mod" and badge_id not in MOD_REVOKABLE:
+        return {"error": "Mods can only revoke the Special badge"}
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.delete(
+            f"{SUPABASE_URL}/rest/v1/user_badges",
+            params={"user_id": f"eq.{target_user_id}", "badge_id": f"eq.{badge_id}"},
+            headers=HEADERS_MINIMAL,
+        )
+    return {"revoked": resp.status_code in (200, 204), "badge_id": badge_id}
+
+
 async def equip_badge_fn(user_id: str, badge_id: str, tier: str) -> dict:
     limit = EQUIP_LIMITS.get(tier, 1)
 

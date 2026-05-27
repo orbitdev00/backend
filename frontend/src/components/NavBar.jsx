@@ -81,7 +81,16 @@ export default function NavBar({ active, onLogoClick }) {
     .then(data => {
       const row = Array.isArray(data) ? data[0] : data
       if (!row) return
-      if (row.username) setUsername(row.username)
+      if (row.username) {
+        setUsername(row.username)
+      } else {
+        const words = ['swift','lunar','pixel','storm','apex','neon','wild','iron','bolt','orbit','crypt','delta','echo','flux','glitch']
+        const w = words[Math.floor(Math.random() * words.length)]
+        const n = Math.floor(Math.random() * 9000) + 1000
+        const placeholder = `${w}${n}`
+        setUsername(placeholder)
+        supabase.from('user_reputation').update({ username: placeholder }).eq('user_id', user.id)
+      }
       if (row.bio) setBio(row.bio)
       if (row.avatar_url) setPfpUrl(row.avatar_url)
       if (row.wallet_address) setWallet(row.wallet_address)

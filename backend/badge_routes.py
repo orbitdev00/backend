@@ -4,10 +4,10 @@ badge_routes.py — Badge API Routes
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
+from typing import Optional
 from badges import BADGES, EQUIP_LIMITS
-from badge_engine import grant_badge_manual, equip_badge_fn, unequip_badge_fn
+from badge_engine import grant_badge_manual, revoke_badge_manual, equip_badge_fn, unequip_badge_fn
 from config import SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_ANON_KEY
-from security import admin_ok
 import httpx
 
 badge_router = APIRouter(prefix="/badges", tags=["badges"])
@@ -25,6 +25,26 @@ async def _get(path: str, params: dict = None) -> list:
     async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.get(f"{SUPABASE_URL}/rest/v1/{path}", params=params, headers=HEADERS)
         return resp.json() if resp.status_code == 200 else []
+
+
+async def _auth_user(request: Request) -> Optional[dict]:
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return None
+    token = auth[7:]
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            resp = await client.get(
+                f"{SUPABASE_URL}/auth/v1/user",
+                headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {token}"},
+            )
+            if resp.status_code != 200:
+                return None
+            data = resp.json()
+            uid = data.get("id")
+            return {"id": uid, "email": data.get("email", "")} if uid else None
+    except Exception:
+        return None
 
 
 @badge_router.get("/all")
@@ -82,9 +102,21 @@ class GrantRequest(BaseModel):
 
 @badge_router.post("/grant")
 async def grant(req: GrantRequest, request: Request):
-    if not admin_ok(request):
-        raise HTTPException(status_code=403, detail="unauthorized")
-    result = await grant_badge_manual(req.granter_id, req.target_user_id, req.badge_id, req.granter_role)
+    user = await _auth_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="unauthorized")
+    result = await grant_badge_manual(user["id"], req.target_user_id, req.badge_id, req.granter_role)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+
+@badge_router.post("/revoke")
+async def revoke(req: GrantRequest, request: Request):
+    user = await _auth_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="unauthorized")
+    result = await revoke_badge_manual(user["id"], req.target_user_id, req.badge_id, req.granter_role)
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
     return result

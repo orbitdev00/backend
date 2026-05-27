@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { filterContent } from '../lib/contentFilter'
 import NavBar from '../components/NavBar'
-import { grantBadge } from '../hooks/useBadges'
+import { grantBadge, revokeBadge } from '../hooks/useBadges'
 import './Forum.css'
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
@@ -50,6 +50,7 @@ export default function ForumThread() {
   const [userRole, setUserRole]   = useState('member')
   const [cooldown, setCooldown]   = useState(0)
   const [grantedBadges, setGrantedBadges] = useState({})
+  const viewedRef = useRef(false)
 
   useEffect(() => { loadThread() }, [id])
 
@@ -63,7 +64,12 @@ export default function ForumThread() {
     const { data: t } = await supabase.from('forum_threads').select('*').eq('id', id).single()
     if (!t) { nav('/forum'); return }
     setThread(t)
-    supabase.from('forum_threads').update({ view_count: (t.view_count || 0) + 1 }).eq('id', id)
+
+    // Increment view count once per mount via backend (bypasses RLS)
+    if (!viewedRef.current) {
+      viewedRef.current = true
+      fetch(`${BACKEND}/forum/view/${id}`, { method: 'POST' })
+    }
 
     const { data: cat } = await supabase.from('forum_categories').select('*').eq('id', t.category_id).single()
     setCategory(cat)
@@ -78,7 +84,6 @@ export default function ForumThread() {
       const vmap = {}
       v?.forEach(vote => { vmap[`${vote.target_type}_${vote.target_id}`] = vote.value })
       setVotes(vmap)
-      // check reply cooldown
       const last = localStorage.getItem(`orbit_reply_cd_${user.id}`)
       if (last) {
         const elapsed = Date.now() - parseInt(last)
@@ -96,9 +101,18 @@ export default function ForumThread() {
     }
     setUserBadges(badgeMap)
     setUserNames(nameMap)
+
+    // Seed grantedBadges from already-owned special badges
+    const initial = {}
+    for (const post of (p || [])) {
+      if (badgeMap[post.user_id]?.some(b => b?.slug === 'special')) {
+        initial[post.id] = 'exists'
+      }
+    }
+    setGrantedBadges(initial)
   }
 
-  const canModerate = userRole === 'mod' || userRole === 'admin'
+  const canModerate = userRole === 'mod' || userRole === 'admin' || userRole === 'owner'
 
   const deleteThread = async () => {
     if (!confirm('Delete this thread and all replies?')) return
@@ -117,15 +131,26 @@ export default function ForumThread() {
   const handleVote = async (type, targetId, value) => {
     if (!user) return
     const key = `${type}_${targetId}`
-    const existing = votes[key]
-    if (existing === value) {
-      await supabase.from('forum_votes').delete().eq('user_id', user.id).eq('target_type', type).eq('target_id', targetId)
-      setVotes(prev => { const n = {...prev}; delete n[key]; return n })
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    const res = await fetch(`${BACKEND}/forum/vote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ target_type: type, target_id: targetId, value }),
+    })
+    if (!res.ok) return
+    const data = await res.json()
+    setVotes(prev => {
+      const n = { ...prev }
+      if (data.user_vote === null) delete n[key]
+      else n[key] = data.user_vote
+      return n
+    })
+    if (type === 'thread') {
+      setThread(prev => ({ ...prev, vote_score: data.vote_score }))
     } else {
-      await supabase.from('forum_votes').upsert({ user_id: user.id, target_type: type, target_id: targetId, value })
-      setVotes(prev => ({ ...prev, [key]: value }))
+      setPosts(prev => prev.map(p => p.id === targetId ? { ...p, vote_score: data.vote_score } : p))
     }
-    loadThread()
   }
 
   const submitReply = async () => {
@@ -200,13 +225,17 @@ export default function ForumThread() {
                   className="fpost-delete"
                   style={{color: grantedBadges[post.id] ? '#4ade80' : '#a78bfa'}}
                   onClick={async () => {
-                    if (grantedBadges[post.id]) return
-                    const res = await grantBadge(user.id, post.user_id, 'special', userRole)
-                    setGrantedBadges(prev => ({ ...prev, [post.id]: res.awarded ? 'granted' : 'exists' }))
+                    if (grantedBadges[post.id]) {
+                      const res = await revokeBadge(user.id, post.user_id, 'special', userRole)
+                      if (res.revoked) setGrantedBadges(prev => { const n = {...prev}; delete n[post.id]; return n })
+                    } else {
+                      const res = await grantBadge(user.id, post.user_id, 'special', userRole)
+                      setGrantedBadges(prev => ({ ...prev, [post.id]: res.awarded ? 'granted' : 'exists' }))
+                    }
                   }}
-                  title="Grant Special badge"
+                  title={grantedBadges[post.id] ? 'Revoke Special badge' : 'Grant Special badge'}
                 >
-                  {grantedBadges[post.id] === 'granted' ? '⭐ Granted' : grantedBadges[post.id] === 'exists' ? '⭐ Has it' : '⭐ Special'}
+                  {grantedBadges[post.id] ? '⭐ Revoke' : '⭐ Special'}
                 </button>
               )}
               <div className="fpost-votes">

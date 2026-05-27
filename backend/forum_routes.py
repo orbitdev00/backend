@@ -181,3 +181,104 @@ async def create_post(request: Request):
         )
 
     return JSONResponse({"ok": True})
+
+
+@forum_router.post("/vote")
+async def vote(request: Request):
+    user = await _auth_user(request)
+    if not user:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+    try:
+        raw = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    target_type = raw.get("target_type")
+    target_id   = raw.get("target_id")
+    value       = raw.get("value")
+
+    if target_type not in ("thread", "post"):
+        return JSONResponse({"error": "invalid target_type"}, status_code=400)
+    if not isinstance(target_id, int):
+        return JSONResponse({"error": "invalid target_id"}, status_code=400)
+    if value not in (1, -1):
+        return JSONResponse({"error": "invalid value"}, status_code=400)
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        # Fetch existing vote
+        ev_resp = await client.get(
+            f"{SUPABASE_URL}/rest/v1/forum_votes",
+            params={"user_id": f"eq.{user['id']}", "target_type": f"eq.{target_type}", "target_id": f"eq.{target_id}", "select": "id,value"},
+            headers=_HEADERS,
+        )
+        existing = ev_resp.json() if ev_resp.status_code == 200 else []
+        existing_vote = existing[0] if existing else None
+
+        if existing_vote and existing_vote["value"] == value:
+            # Same vote again — toggle off
+            await client.delete(
+                f"{SUPABASE_URL}/rest/v1/forum_votes",
+                params={"user_id": f"eq.{user['id']}", "target_type": f"eq.{target_type}", "target_id": f"eq.{target_id}"},
+                headers={**_HEADERS, "Prefer": "return=minimal"},
+            )
+            new_vote = None
+        elif existing_vote:
+            # Switch vote direction
+            await client.patch(
+                f"{SUPABASE_URL}/rest/v1/forum_votes",
+                params={"user_id": f"eq.{user['id']}", "target_type": f"eq.{target_type}", "target_id": f"eq.{target_id}"},
+                json={"value": value},
+                headers={**_HEADERS, "Prefer": "return=minimal"},
+            )
+            new_vote = value
+        else:
+            # New vote
+            await client.post(
+                f"{SUPABASE_URL}/rest/v1/forum_votes",
+                json={"user_id": user["id"], "target_type": target_type, "target_id": target_id, "value": value},
+                headers={**_HEADERS, "Prefer": "return=minimal"},
+            )
+            new_vote = value
+
+        # Recalculate vote_score
+        all_resp = await client.get(
+            f"{SUPABASE_URL}/rest/v1/forum_votes",
+            params={"target_type": f"eq.{target_type}", "target_id": f"eq.{target_id}", "select": "value"},
+            headers=_HEADERS,
+        )
+        all_votes = all_resp.json() if all_resp.status_code == 200 else []
+        vote_score = sum(v["value"] for v in all_votes)
+
+        table = "forum_threads" if target_type == "thread" else "forum_posts"
+        await client.patch(
+            f"{SUPABASE_URL}/rest/v1/{table}",
+            params={"id": f"eq.{target_id}"},
+            json={"vote_score": vote_score},
+            headers={**_HEADERS, "Prefer": "return=minimal"},
+        )
+
+    return JSONResponse({"ok": True, "vote_score": vote_score, "user_vote": new_vote})
+
+
+@forum_router.post("/view/{thread_id}")
+async def increment_view(thread_id: int):
+    async with httpx.AsyncClient(timeout=10) as client:
+        cur_resp = await client.get(
+            f"{SUPABASE_URL}/rest/v1/forum_threads",
+            params={"id": f"eq.{thread_id}", "select": "view_count"},
+            headers=_HEADERS,
+        )
+        current = 0
+        if cur_resp.status_code == 200:
+            rows = cur_resp.json()
+            if rows:
+                current = rows[0].get("view_count") or 0
+
+        await client.patch(
+            f"{SUPABASE_URL}/rest/v1/forum_threads",
+            params={"id": f"eq.{thread_id}"},
+            json={"view_count": current + 1},
+            headers={**_HEADERS, "Prefer": "return=minimal"},
+        )
+    return JSONResponse({"ok": True})

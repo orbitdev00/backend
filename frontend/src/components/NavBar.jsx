@@ -78,24 +78,27 @@ export default function NavBar({ active, onLogoClick }) {
       }
     })
     .then(r => r.json())
-    .then(data => {
+    .then(async data => {
       const row = Array.isArray(data) ? data[0] : data
-      if (!row) return
-      if (row.username) {
+      if (row?.username) {
         setUsername(row.username)
       } else {
+        // No row or no username — generate placeholder and upsert so Profile page can find it
         const words = ['swift','lunar','pixel','storm','apex','neon','wild','iron','bolt','orbit','crypt','delta','echo','flux','glitch']
         const w = words[Math.floor(Math.random() * words.length)]
         const n = Math.floor(Math.random() * 9000) + 1000
         const placeholder = `${w}${n}`
         setUsername(placeholder)
-        supabase.from('user_reputation').update({ username: placeholder }).eq('user_id', user.id)
+        await supabase.from('user_reputation').upsert(
+          { user_id: user.id, username: placeholder },
+          { onConflict: 'user_id' }
+        )
       }
-      if (row.bio) setBio(row.bio)
-      if (row.avatar_url) setPfpUrl(row.avatar_url)
-      if (row.wallet_address) setWallet(row.wallet_address)
-      if (row.role) setUserRole(row.role)
-      setHasStripeAccount(!!row.stripe_customer_id)
+      if (row?.bio) setBio(row.bio)
+      if (row?.avatar_url) setPfpUrl(row.avatar_url)
+      if (row?.wallet_address) setWallet(row.wallet_address)
+      if (row?.role) setUserRole(row.role)
+      setHasStripeAccount(!!row?.stripe_customer_id)
     })
     .catch(e => console.warn('NavBar profile fetch failed:', e))
   }, [user])
@@ -216,7 +219,7 @@ export default function NavBar({ active, onLogoClick }) {
                       ⚡ Upgrade to Omega
                     </button>
                   )}
-                  <button className="nb-menu-btn" onClick={() => { nav(`/profile/${username}`); setShowMenu(false) }}>
+                  <button className="nb-menu-btn" onClick={() => { nav(`/profile/${username || user?.id}`); setShowMenu(false) }}>
                     My Profile
                   </button>
                   <div className="nb-divider" />
@@ -257,7 +260,7 @@ export default function NavBar({ active, onLogoClick }) {
             </button>
           )}
           {user && (
-            <button className="nb-mobile-link" onClick={() => { nav(`/profile/${username}`); setShowMobile(false) }}>
+            <button className="nb-mobile-link" onClick={() => { nav(`/profile/${username || user?.id}`); setShowMobile(false) }}>
               👤 My Profile
             </button>
           )}

@@ -326,7 +326,15 @@ export default function Profile() {
   const displayName = profile?.username || profile?.email?.split('@')[0]
 
   if (loading) return <div className="profile-screen"><NavBar /><div className="profile-loading">Loading...</div></div>
-  if (!profile) return null
+  if (!profile) return (
+    <div className="profile-screen">
+      <NavBar />
+      <div className="profile-loading" style={{flexDirection:'column',gap:12}}>
+        <div>Profile not found.</div>
+        {user && <button className="btn-primary" style={{marginTop:8}} onClick={() => nav('/edit-profile')}>Set up your profile</button>}
+      </div>
+    </div>
+  )
 
   return (
     <div className="profile-screen">

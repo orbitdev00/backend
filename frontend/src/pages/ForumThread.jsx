@@ -10,6 +10,7 @@ import './Forum.css'
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
 
 const REPLY_COOLDOWN = 15 * 1000
+const OWNER_EMAIL = 'orbitdev00@gmail.com'
 
 function timeAgo(ts) {
   if (!ts) return '—'
@@ -96,8 +97,8 @@ export default function ForumThread() {
     for (const uid of userIds) {
       const { data: ub } = await supabase.from('user_badges').select('forum_badges(slug,name,icon,color)').eq('user_id', uid)
       badgeMap[uid] = ub?.map(x => x.forum_badges) || []
-      const { data: repData } = await supabase.from('user_reputation').select('username,avatar_url,tier').eq('user_id', uid).single()
-      nameMap[uid] = { username: repData?.username, avatar_url: repData?.avatar_url, tier: repData?.tier }
+      const { data: repData } = await supabase.from('user_reputation').select('username,avatar_url,tier,role,email').eq('user_id', uid).single()
+      nameMap[uid] = { username: repData?.username, avatar_url: repData?.avatar_url, tier: repData?.tier, role: repData?.role, email: repData?.email }
     }
     setUserBadges(badgeMap)
     setUserNames(nameMap)
@@ -186,7 +187,8 @@ export default function ForumThread() {
     const voteKey = isOP ? `thread_${thread.id}` : `post_${post.id}`
     const displayName = userNames[post.user_id]?.username || post.author_email?.split('@')[0]
     const avatarUrl = userNames[post.user_id]?.avatar_url
-    const canDelete = canModerate || post.user_id === user?.id
+    const postAuthorIsOwner = userNames[post.user_id]?.role === 'owner' || userNames[post.user_id]?.email === OWNER_EMAIL
+    const canDelete = (canModerate && !postAuthorIsOwner) || post.user_id === user?.id
     return (
       <div key={isOP ? 'op' : post.id} className={`fpost ${isOP ? 'fpost-op' : ''}`}>
         <div className="fpost-author">
@@ -220,7 +222,7 @@ export default function ForumThread() {
               {!isOP && canDelete && (
                 <button className="fpost-delete" onClick={() => deletePost(post.id)}>🗑 Delete</button>
               )}
-              {!isOP && canModerate && post.user_id !== user?.id && (
+              {!isOP && canModerate && post.user_id !== user?.id && !postAuthorIsOwner && (
                 <button
                   className="fpost-delete"
                   style={{color: grantedBadges[post.id] ? '#4ade80' : '#a78bfa'}}
@@ -274,9 +276,12 @@ export default function ForumThread() {
 
           <div className="fthread-header">
             <h2>{thread.pinned && '📌 '}{thread.locked && '🔒 '}{thread.title}</h2>
-            {(canModerate || thread.user_id === user?.id) && (
-              <button className="fthread-delete-btn" onClick={deleteThread}>🗑 Delete Thread</button>
-            )}
+            {(() => {
+              const threadAuthorIsOwner = userNames[thread.user_id]?.role === 'owner' || userNames[thread.user_id]?.email === OWNER_EMAIL
+              return ((canModerate && !threadAuthorIsOwner) || thread.user_id === user?.id) && (
+                <button className="fthread-delete-btn" onClick={deleteThread}>🗑 Delete Thread</button>
+              )
+            })()}
           </div>
 
           {renderPost({ id: thread.id, user_id: thread.user_id, author_email: thread.author_email, body: thread.body, created_at: thread.created_at, vote_score: thread.vote_score }, true)}

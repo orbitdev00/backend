@@ -87,17 +87,20 @@ async def create_thread(request: Request):
             if cats and cats[0].get("slug") == "announcements":
                 role_resp = await client.get(
                     f"{SUPABASE_URL}/rest/v1/user_reputation",
-                    params={"user_id": f"eq.{user['id']}", "select": "role"},
+                    params={"user_id": f"eq.{user['id']}", "select": "role,email"},
                     headers=_HEADERS,
                 )
                 role = "member"
+                email = user.get("email", "")
                 if role_resp.status_code == 200:
                     rows = role_resp.json()
                     if rows:
                         role = rows[0].get("role") or "member"
-                if role not in ("mod", "admin", "owner"):
+                        email = rows[0].get("email") or email
+                is_owner = role == "owner" or email == "orbitdev00@gmail.com"
+                if not is_owner and role not in ("mod", "admin"):
                     return JSONResponse(
-                        {"error": "Only moderators and admins can post in Announcements."},
+                        {"error": "Only admins and the owner can post in Announcements."},
                         status_code=403,
                     )
 
@@ -205,7 +208,23 @@ async def vote(request: Request):
     if value not in (1, -1):
         return JSONResponse({"error": "invalid value"}, status_code=400)
 
+    table = "forum_threads" if target_type == "thread" else "forum_posts"
+    MILESTONES = [5, 25, 100]
+
     async with httpx.AsyncClient(timeout=10) as client:
+        # Snapshot old score and author before applying the vote
+        snap_resp = await client.get(
+            f"{SUPABASE_URL}/rest/v1/{table}",
+            params={"id": f"eq.{target_id}", "select": "vote_score,user_id"},
+            headers=_HEADERS,
+        )
+        old_score = 0
+        author_id = None
+        if snap_resp.status_code == 200 and snap_resp.json():
+            snap = snap_resp.json()[0]
+            old_score = snap.get("vote_score") or 0
+            author_id = snap.get("user_id")
+
         # Fetch existing vote
         ev_resp = await client.get(
             f"{SUPABASE_URL}/rest/v1/forum_votes",
@@ -250,13 +269,26 @@ async def vote(request: Request):
         all_votes = all_resp.json() if all_resp.status_code == 200 else []
         vote_score = sum(v["value"] for v in all_votes)
 
-        table = "forum_threads" if target_type == "thread" else "forum_posts"
         await client.patch(
             f"{SUPABASE_URL}/rest/v1/{table}",
             params={"id": f"eq.{target_id}"},
             json={"vote_score": vote_score},
             headers={**_HEADERS, "Prefer": "return=minimal"},
         )
+
+        # Milestone notifications — only upward crossings, never self-votes
+        if author_id and author_id != user["id"]:
+            content = "thread" if target_type == "thread" else "reply"
+            emojis = {5: "🎉", 25: "🔥", 100: "🏆"}
+            for milestone in MILESTONES:
+                if old_score < milestone <= vote_score:
+                    body = f"{emojis[milestone]} Your {content} just hit {milestone} upvotes!"
+                    await client.post(
+                        f"{SUPABASE_URL}/rest/v1/direct_messages",
+                        json={"sender_id": author_id, "receiver_id": author_id, "body": body, "read": False},
+                        headers=_HEADERS,
+                    )
+                    break  # one notification per vote action
 
     return JSONResponse({"ok": True, "vote_score": vote_score, "user_vote": new_vote})
 

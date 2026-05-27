@@ -76,7 +76,7 @@ export default function ForumCategory() {
               <h2 className="forum-heading">{category?.icon} {category?.name}</h2>
               <p className="forum-subheading">{category?.description}</p>
             </div>
-            {user && (slug !== 'announcements' || ['admin', 'owner'].includes(userRole)) && (
+            {user && (slug !== 'announcements' || ['admin', 'owner'].includes(userRole) || user?.email === 'orbitdev00@gmail.com') && (
               <button className="forum-new-btn" onClick={() => nav(`/forum/new?cat=${slug}`)}>
                 + New Thread
               </button>
@@ -131,7 +131,7 @@ export default function ForumCategory() {
         </div>
 
         <div className="forum-sidebar">
-          {user && (slug !== 'announcements' || ['admin', 'owner'].includes(userRole)) && (
+          {user && (slug !== 'announcements' || ['admin', 'owner'].includes(userRole) || user?.email === 'orbitdev00@gmail.com') && (
             <button className="forum-new-btn-side" onClick={() => nav(`/forum/new?cat=${slug}`)}>
               + Post Thread
             </button>

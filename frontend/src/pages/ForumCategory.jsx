@@ -22,9 +22,15 @@ export default function ForumCategory() {
   const [threads, setThreads] = useState([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
+  const [userRole, setUserRole] = useState('member')
   const PAGE_SIZE = 30
 
   useEffect(() => { loadCategory() }, [slug, page])
+  useEffect(() => {
+    if (!user) return
+    supabase.from('user_reputation').select('role').eq('user_id', user.id).single()
+      .then(({ data }) => { if (data?.role) setUserRole(data.role) })
+  }, [user])
 
   const loadCategory = async () => {
     setLoading(true)
@@ -70,7 +76,7 @@ export default function ForumCategory() {
               <h2 className="forum-heading">{category?.icon} {category?.name}</h2>
               <p className="forum-subheading">{category?.description}</p>
             </div>
-            {user && (
+            {user && (slug !== 'announcements' || ['admin', 'owner'].includes(userRole)) && (
               <button className="forum-new-btn" onClick={() => nav(`/forum/new?cat=${slug}`)}>
                 + New Thread
               </button>
@@ -125,7 +131,7 @@ export default function ForumCategory() {
         </div>
 
         <div className="forum-sidebar">
-          {user && (
+          {user && (slug !== 'announcements' || ['admin', 'owner'].includes(userRole)) && (
             <button className="forum-new-btn-side" onClick={() => nav(`/forum/new?cat=${slug}`)}>
               + Post Thread
             </button>

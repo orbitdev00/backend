@@ -56,12 +56,8 @@
   user-select: none;
 }
 
-/* Tooltip */
+/* Tooltip — rendered via portal so position/transform are set inline */
 .badge-tooltip {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
   background: #0f1117;
   border: 1px solid color-mix(in srgb, var(--badge-color) 50%, transparent);
   border-radius: 10px;

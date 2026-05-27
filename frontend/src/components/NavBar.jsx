@@ -73,7 +73,19 @@ export default function NavBar({ active, onLogoClick }) {
       const interval = setInterval(fetchUnread, 30000)
 
       const loadBellNotifs = async () => {
-        const lastRead = parseInt(localStorage.getItem(`orbit_bell_ts_${user.id}`) || '0')
+        // Resolve lastRead from localStorage and DB — use whichever is newer
+        let lastRead = parseInt(localStorage.getItem(`orbit_bell_ts_${user.id}`) || '0')
+        try {
+          const { data: rep } = await supabase
+            .from('user_reputation').select('bell_read_at').eq('user_id', user.id).single()
+          if (rep?.bell_read_at) {
+            const dbTs = new Date(rep.bell_read_at).getTime()
+            if (dbTs > lastRead) {
+              lastRead = dbTs
+              localStorage.setItem(`orbit_bell_ts_${user.id}`, String(dbTs))
+            }
+          }
+        } catch(_) {}
         const lastReadIso = new Date(lastRead || 0).toISOString()
         const notifs = []
 
@@ -287,8 +299,15 @@ export default function NavBar({ active, onLogoClick }) {
                   <div className="nb-bell-header">
                     <span>Notifications</span>
                     {bellNotifs.length > 0 && (
-                      <button className="nb-bell-clear" onClick={() => {
-                        localStorage.setItem(`orbit_bell_ts_${user.id}`, String(Date.now()))
+                      <button className="nb-bell-clear" onClick={async () => {
+                        const now = Date.now()
+                        localStorage.setItem(`orbit_bell_ts_${user.id}`, String(now))
+                        try {
+                          await supabase.from('user_reputation').upsert(
+                            { user_id: user.id, bell_read_at: new Date(now).toISOString() },
+                            { onConflict: 'user_id' }
+                          )
+                        } catch(_) {}
                         setBellNotifs([])
                         setShowBell(false)
                       }}>Mark all read</button>

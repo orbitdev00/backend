@@ -353,7 +353,7 @@ export default function Profile() {
             {profile.bio && <div className="profile-bio">{profile.bio}</div>}
             <div className="profile-badges">
               {badges.map(b => (
-                <span key={b?.id} className="profile-badge" style={{background: b?.color + '22', color: b?.color, border: `1px solid ${b?.color}44`}} title={b?.description}>
+                <span key={b?.id} className="profile-badge" style={{background: b?.color + '22', color: b?.color, border: `1px solid ${b?.color}44`}} data-tooltip={b?.description}>
                   {b?.emoji} {b?.name}
                 </span>
               ))}
@@ -366,7 +366,7 @@ export default function Profile() {
               <div><span>{profile.follower_count || 0}</span><span>Followers</span></div>
               <div><span>{profile.following_count || 0}</span><span>Following</span></div>
               <div><span>{threads.length + replies.length}</span><span>Posts</span></div>
-              {(profile.show_pnl !== false || isOwnProfile) && profile.total_pnl_pct !== null && profile.total_pnl_pct !== undefined && (
+              {profile.show_pnl !== false && profile.total_pnl_pct !== null && profile.total_pnl_pct !== undefined && (
                 <div>
                   <span style={{color: profile.total_pnl_pct > 0 ? 'var(--green)' : 'var(--red)'}}>
                     {profile.total_pnl_pct > 0 ? '+' : ''}{Number(profile.total_pnl_pct).toFixed(4)}

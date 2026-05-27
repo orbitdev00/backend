@@ -115,18 +115,23 @@ export default function NavBar({ active, onLogoClick }) {
         } catch(_) {}
 
         try {
-          const { data: follows } = await supabase.from('user_follows').select('following_id').eq('follower_id', user.id)
+          const { data: follows } = await supabase.from('user_follows')
+            .select('following_id,created_at').eq('follower_id', user.id)
           if (follows?.length) {
             const followingIds = follows.map(f => f.following_id)
-            const { data: threads } = await supabase.from('forum_threads')
-              .select('id,title,user_id,created_at').in('user_id', followingIds)
-              .gt('created_at', lastReadIso).order('created_at', { ascending: false }).limit(10)
-            if (threads?.length) {
-              const authorIds = [...new Set(threads.map(t => t.user_id))]
-              const { data: reps } = await supabase.from('user_reputation').select('user_id,username').in('user_id', authorIds)
-              const repMap = {}
-              reps?.forEach(r => { repMap[r.user_id] = r.username })
-              for (const t of threads) {
+            const { data: reps } = await supabase.from('user_reputation').select('user_id,username').in('user_id', followingIds)
+            const repMap = {}
+            reps?.forEach(r => { repMap[r.user_id] = r.username })
+            for (const follow of follows) {
+              // Only show threads posted AFTER this follow was created
+              const notBefore = new Date(Math.max(
+                new Date(follow.created_at || 0).getTime(),
+                lastRead
+              )).toISOString()
+              const { data: threads } = await supabase.from('forum_threads')
+                .select('id,title,user_id,created_at').eq('user_id', follow.following_id)
+                .gt('created_at', notBefore).order('created_at', { ascending: false }).limit(5)
+              for (const t of (threads || [])) {
                 notifs.push({ id: `thread_${t.id}`, type: 'post', text: `${repMap[t.user_id] || t.user_id?.slice(0,8)} posted "${t.title}"`, ts: t.created_at, link: `/forum/thread/${t.id}` })
               }
             }

@@ -495,11 +495,10 @@
   padding: 4px 8px;
   white-space: nowrap;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s;
+  visibility: hidden;
   z-index: 200;
 }
-.fpost-badge:hover::after { opacity: 1; }
+.fpost-badge:hover::after { visibility: visible; }
 
 .fpost-content { padding: 14px; }
 .fpost-body {

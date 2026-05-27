@@ -36,13 +36,11 @@ export default function Forum() {
   const [searching, setSearching]         = useState(false)
   const [suggestions, setSuggestions]     = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [notifications, setNotifications] = useState([])
-  const [showNotifs, setShowNotifs]       = useState(false)
   const [loading, setLoading]             = useState(true)
   const [followingFeed, setFollowingFeed] = useState([])
 
   useEffect(() => { loadForum() }, [])
-  useEffect(() => { if (user) { loadNotifications(); loadFollowingFeed() } }, [user])
+  useEffect(() => { if (user) { loadFollowingFeed() } }, [user])
 
   const loadForum = async () => {
     const { data: cats } = await supabase
@@ -102,20 +100,6 @@ export default function Forum() {
       username: repMap[t.user_id]?.username || t.user_id?.slice(0,8),
       avatar_url: repMap[t.user_id]?.avatar_url,
     })))
-  }
-
-  const loadNotifications = async () => {
-    const { data: userThreads } = await supabase.from('forum_threads').select('id').eq('user_id', user.id)
-    if (!userThreads?.length) return
-    const threadIds = userThreads.map(t => t.id)
-    const { data: replies } = await supabase.from('forum_posts')
-      .select('id,thread_id,author_email,created_at,forum_threads(title)')
-      .in('thread_id', threadIds)
-      .neq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(10)
-    const readIds = new Set(JSON.parse(localStorage.getItem(`orbit_read_notifs_${user.id}`) || '[]'))
-    setNotifications((replies || []).filter(r => !readIds.has(r.id)))
   }
 
   const fetchSuggestions = async (q) => {
@@ -243,49 +227,6 @@ export default function Forum() {
                 <button className="forum-new-btn" onClick={() => nav('/forum/new')}>
                   + Post Thread
                 </button>
-              )}
-              {user && (
-                <div className="forum-notif-wrap">
-                  <button className="forum-notif-btn" onClick={() => setShowNotifs(p => !p)}>
-                    🔔{notifications.length > 0 && <span className="forum-notif-count">{notifications.length}</span>}
-                  </button>
-                  {showNotifs && (
-                    <div className="forum-notif-dropdown">
-                      <div className="forum-notif-title">
-                        Notifications
-                        {notifications.length > 0 && (
-                          <button className="forum-notif-clear" onClick={() => {
-                            const key = `orbit_read_notifs_${user.id}`
-                            const existing = JSON.parse(localStorage.getItem(key) || '[]')
-                            const merged = [...new Set([...existing, ...notifications.map(n => n.id)])]
-                            localStorage.setItem(key, JSON.stringify(merged))
-                            setNotifications([]); setShowNotifs(false)
-                          }}>
-                            Mark all read
-                          </button>
-                        )}
-                      </div>
-                      {notifications.length === 0
-                        ? <div className="forum-notif-empty">No notifications</div>
-                        : notifications.map(n => (
-                          <div key={n.id} className="forum-notif-item" onClick={() => {
-                            const key = `orbit_read_notifs_${user.id}`
-                            const readIds = JSON.parse(localStorage.getItem(key) || '[]')
-                            if (!readIds.includes(n.id)) { readIds.push(n.id); localStorage.setItem(key, JSON.stringify(readIds)) }
-                            setNotifications(prev => prev.filter(x => x.id !== n.id))
-                            nav(`/forum/thread/${n.thread_id}`)
-                            setShowNotifs(false)
-                          }}>
-                            <div className="forum-notif-text">
-                              <b>{n.author_email?.split('@')[0]}</b> replied to <b>{n.forum_threads?.title}</b>
-                            </div>
-                            <div className="forum-notif-time">{timeAgo(n.created_at)}</div>
-                          </div>
-                        ))
-                      }
-                    </div>
-                  )}
-                </div>
               )}
             </div>
           </div>

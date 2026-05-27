@@ -9,6 +9,15 @@ import PricingPanel from './PricingPanel'
 import { getUserTier, openBillingPortal } from '../lib/stripe'
 import { grantBadge } from '../hooks/useBadges'
 
+function timeAgo(ts) {
+  if (!ts) return '—'
+  const s = Math.floor((Date.now() - new Date(ts)) / 1000)
+  if (s < 60) return `${s}s ago`
+  if (s < 3600) return `${Math.floor(s/60)}m ago`
+  if (s < 86400) return `${Math.floor(s/3600)}h ago`
+  return `${Math.floor(s/86400)}d ago`
+}
+
 export default function NavBar({ active, onLogoClick }) {
   const nav = useNavigate()
   const { user, signOut } = useAuth()
@@ -35,6 +44,8 @@ export default function NavBar({ active, onLogoClick }) {
   const [selfGranting, setSelfGranting]   = useState(false)
   const [userRole, setUserRole]           = useState('member')
   const [unreadDMs, setUnreadDMs]         = useState(0)
+  const [bellNotifs, setBellNotifs]       = useState([])
+  const [showBell, setShowBell]           = useState(false)
   const fileRef = useRef(null)
 
   useEffect(() => {
@@ -60,7 +71,74 @@ export default function NavBar({ active, onLogoClick }) {
       }
       fetchUnread()
       const interval = setInterval(fetchUnread, 30000)
-      return () => clearInterval(interval)
+
+      const loadBellNotifs = async () => {
+        const lastRead = parseInt(localStorage.getItem(`orbit_bell_ts_${user.id}`) || '0')
+        const lastReadIso = new Date(lastRead || 0).toISOString()
+        const notifs = []
+
+        try {
+          const { data: userThreads } = await supabase.from('forum_threads').select('id,title').eq('user_id', user.id)
+          if (userThreads?.length) {
+            const threadIds = userThreads.map(t => t.id)
+            const threadMap = {}
+            userThreads.forEach(t => { threadMap[t.id] = t.title })
+            const { data: replies } = await supabase.from('forum_posts')
+              .select('id,thread_id,user_id,created_at,author_email').in('thread_id', threadIds)
+              .neq('user_id', user.id).gt('created_at', lastReadIso)
+              .order('created_at', { ascending: false }).limit(10)
+            const repIds = [...new Set((replies || []).map(r => r.user_id).filter(Boolean))]
+            const repMap = {}
+            if (repIds.length) {
+              const { data: reps } = await supabase.from('user_reputation').select('user_id,username').in('user_id', repIds)
+              reps?.forEach(r => { repMap[r.user_id] = r.username })
+            }
+            for (const r of (replies || [])) {
+              notifs.push({ id: `reply_${r.id}`, type: 'reply', text: `${repMap[r.user_id] || r.author_email?.split('@')[0]} replied to "${threadMap[r.thread_id]}"`, ts: r.created_at, link: `/forum/thread/${r.thread_id}` })
+            }
+          }
+        } catch(_) {}
+
+        try {
+          const { data: newFollowers } = await supabase.from('user_follows')
+            .select('follower_id,created_at').eq('following_id', user.id)
+            .gt('created_at', lastReadIso).order('created_at', { ascending: false }).limit(10)
+          if (newFollowers?.length) {
+            const followerIds = [...new Set(newFollowers.map(f => f.follower_id))]
+            const { data: reps } = await supabase.from('user_reputation').select('user_id,username').in('user_id', followerIds)
+            const repMap = {}
+            reps?.forEach(r => { repMap[r.user_id] = r.username })
+            for (const f of newFollowers) {
+              notifs.push({ id: `follow_${f.follower_id}`, type: 'follow', text: `${repMap[f.follower_id] || f.follower_id?.slice(0,8)} started following you`, ts: f.created_at, link: `/profile/${repMap[f.follower_id] || f.follower_id}` })
+            }
+          }
+        } catch(_) {}
+
+        try {
+          const { data: follows } = await supabase.from('user_follows').select('following_id').eq('follower_id', user.id)
+          if (follows?.length) {
+            const followingIds = follows.map(f => f.following_id)
+            const { data: threads } = await supabase.from('forum_threads')
+              .select('id,title,user_id,created_at').in('user_id', followingIds)
+              .gt('created_at', lastReadIso).order('created_at', { ascending: false }).limit(10)
+            if (threads?.length) {
+              const authorIds = [...new Set(threads.map(t => t.user_id))]
+              const { data: reps } = await supabase.from('user_reputation').select('user_id,username').in('user_id', authorIds)
+              const repMap = {}
+              reps?.forEach(r => { repMap[r.user_id] = r.username })
+              for (const t of threads) {
+                notifs.push({ id: `thread_${t.id}`, type: 'post', text: `${repMap[t.user_id] || t.user_id?.slice(0,8)} posted "${t.title}"`, ts: t.created_at, link: `/forum/thread/${t.id}` })
+              }
+            }
+          }
+        } catch(_) {}
+
+        notifs.sort((a, b) => new Date(b.ts) - new Date(a.ts))
+        setBellNotifs(notifs.slice(0, 15))
+      }
+      loadBellNotifs()
+      const bellInterval = setInterval(loadBellNotifs, 120000)
+      return () => { clearInterval(interval); clearInterval(bellInterval) }
     }
   }, [user])
 
@@ -191,6 +269,43 @@ export default function NavBar({ active, onLogoClick }) {
                 <span className="nb-inbox-badge">{unreadDMs > 9 ? '9+' : unreadDMs}</span>
               )}
             </button>
+          )}
+
+          {user && (
+            <div className="nb-bell-wrap nb-desktop">
+              <button className="nb-bell-btn" onClick={() => setShowBell(p => !p)} style={{position:'relative'}}>
+                🔔
+                {bellNotifs.length > 0 && <span className="nb-bell-badge">{bellNotifs.length > 9 ? '9+' : bellNotifs.length}</span>}
+              </button>
+              {showBell && (
+                <div className="nb-bell-dropdown">
+                  <div className="nb-bell-header">
+                    <span>Notifications</span>
+                    {bellNotifs.length > 0 && (
+                      <button className="nb-bell-clear" onClick={() => {
+                        localStorage.setItem(`orbit_bell_ts_${user.id}`, String(Date.now()))
+                        setBellNotifs([])
+                        setShowBell(false)
+                      }}>Mark all read</button>
+                    )}
+                  </div>
+                  {bellNotifs.length === 0
+                    ? <div className="nb-bell-empty">No new notifications</div>
+                    : bellNotifs.map(n => (
+                      <div key={n.id} className="nb-bell-item" onClick={() => { nav(n.link); setShowBell(false) }}>
+                        <div className="nb-bell-item-icon">
+                          {n.type === 'reply' ? '💬' : n.type === 'follow' ? '👤' : '📝'}
+                        </div>
+                        <div className="nb-bell-item-body">
+                          <div className="nb-bell-item-text">{n.text}</div>
+                          <div className="nb-bell-item-time">{timeAgo(n.ts)}</div>
+                        </div>
+                      </div>
+                    ))
+                  }
+                </div>
+              )}
+            </div>
           )}
 
           {user && (

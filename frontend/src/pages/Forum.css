@@ -476,7 +476,30 @@
   border-radius: 3px; padding: 1px 5px;
 }
 .fpost-badges { display: flex; gap: 4px; margin-left: 2px; }
-.fpost-badge { font-size: 14px; cursor: default; }
+.fpost-badge {
+  font-size: 14px; cursor: default;
+  position: relative;
+}
+.fpost-badge::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #ccc;
+  font-size: 11px;
+  font-family: var(--mono);
+  padding: 4px 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 200;
+}
+.fpost-badge:hover::after { opacity: 1; }
 
 .fpost-content { padding: 14px; }
 .fpost-body {

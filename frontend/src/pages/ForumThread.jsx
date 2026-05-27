@@ -210,7 +210,7 @@ export default function ForumThread() {
           {isOP && <span className="fpost-op-tag">OP</span>}
           <div className="fpost-badges">
             {(userBadges[post.user_id] || []).map(b => (
-              <span key={b?.slug} className="fpost-badge" style={{color: b?.color}} title={b?.name}>{b?.icon}</span>
+              <span key={b?.slug} className="fpost-badge" style={{color: b?.color}} data-tooltip={b?.name}>{b?.icon}</span>
             ))}
           </div>
         </div>

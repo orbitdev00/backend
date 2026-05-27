@@ -31,7 +31,7 @@ export default function EditProfile() {
     const token = sbData?.access_token
     if (!token) return
 
-    fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_reputation?user_id=eq.${user.id}&select=username,bio,wallet_address,avatar_url`, {
+    fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_reputation?user_id=eq.${user.id}&select=username,bio,wallet_address,avatar_url,show_pnl`, {
       headers: {
         'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${token}`,
@@ -45,6 +45,7 @@ export default function EditProfile() {
       if (row.bio) setBio(row.bio)
       if (row.wallet_address) setWallet(row.wallet_address)
       if (row.avatar_url) setPfpUrl(row.avatar_url)
+      if (row.show_pnl !== undefined) setShowPnl(row.show_pnl !== false)
     })
     .catch(e => console.warn('Profile fetch failed:', e))
   }, [user])

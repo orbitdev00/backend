@@ -35,7 +35,7 @@ export default function Inbox() {
   }, [user])
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    bottomRef.current?.scrollIntoView({ behavior: 'instant' })
   }, [messages])
 
   const loadConversations = async () => {

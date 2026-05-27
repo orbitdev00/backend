@@ -1,5 +1,14 @@
 /* BadgeIcon.css */
 
+/* Wrapper sits outside the dimmed/opacity layer so the tooltip is never affected */
+.badge-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .badge-icon {
   position: relative;
   display: inline-flex;

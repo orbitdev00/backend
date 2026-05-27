@@ -284,6 +284,69 @@ export default function Landing({ onSwitch }) {
         </Reveal>
       </section>
 
+      {/* ── BUILT BY ── */}
+      <section className="lp-section lp-built-by">
+        <div style={{
+          maxWidth: 680,
+          margin: '0 auto',
+          padding: '48px 24px',
+          textAlign: 'center',
+          borderTop: '1px solid var(--line)',
+          borderBottom: '1px solid var(--line)',
+        }}>
+          <div style={{
+            fontSize: 11,
+            letterSpacing: 3,
+            color: '#a78bfa',
+            fontFamily: 'var(--mono)',
+            marginBottom: 16,
+            textTransform: 'uppercase',
+          }}>
+            About
+          </div>
+          <p style={{
+            fontSize: 20,
+            fontWeight: 700,
+            color: '#f1f5f9',
+            lineHeight: 1.5,
+            marginBottom: 16,
+          }}>
+            Built by a Cybersecurity Analyst and Blockchain Professional.{' '}
+            <span style={{ color: '#64748b', fontWeight: 400 }}>
+              Not a marketing team, a vibecoder, or an X account created 10 minutes ago.
+            </span>
+          </p>
+          <p style={{
+            fontSize: 14,
+            color: '#64748b',
+            lineHeight: 1.8,
+            marginBottom: 28,
+          }}>
+            Orbit analyzes any Solana or ETH token in seconds — rug probability, holder distribution,
+            fake chart scoring, AI narrative. Every signal we surface is one we use ourselves.
+            No unrealistic hype, no fluff. Just on-chain truth.
+          </p>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+          }}>
+            {['⚙ Active Security Practitioner', '🔗 Solana & ETH On-Chain Forensics', '🤖 Anthropic-Contracted AI Evaluator'].map(tag => (
+              <span key={tag} style={{
+                fontSize: 11,
+                fontFamily: 'var(--mono)',
+                color: '#a78bfa',
+                border: '1px solid rgba(167,139,250,0.25)',
+                borderRadius: 4,
+                padding: '5px 12px',
+                background: 'rgba(167,139,250,0.06)',
+              }}>{tag}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── DATA STRIP ── */}
       <div className="lp-data-strip">
         <div className="lp-data-strip-inner">

@@ -226,9 +226,12 @@ export default function Landing({ onSwitch }) {
         <Reveal delay={220}>
           <p className="lp-hero-sub">
             Orbit analyzes any Solana or ETH token in seconds. Rug probability, holder distribution,
-            fake chart scoring, AI narrative. It was built by an expert Cybersecurity Analyst and Blockchain
-            Professional, not a marketing team, vibe-coder, or an X account created 10 minutes ago.
-            Every signal we surface is one we use ourselves. No unrealistic hype, no fluff, just on-chain truth.
+            and fake chart detection.{' '}
+            <br /><br />
+            It was built by an expert Cybersecurity Analyst and Blockchain Professional, not a marketing
+            team or a vibe-coder who created their X account 10 minutes ago.{' '}
+            <br /><br />
+            Every signal we surface is one we use ourselves. No unrealistic hype, just on-chain truth.
           </p>
         </Reveal>
         <Reveal delay={340} className="lp-hero-cta-wrap">

@@ -160,7 +160,7 @@ export default function NavBar({ active, onLogoClick }) {
     setUploading(false)
   }
 
-  const initials = user?.email?.slice(0, 2).toUpperCase()
+  const initials = (username || user?.email || '').slice(0, 2).toUpperCase()
 
   return (
     <>

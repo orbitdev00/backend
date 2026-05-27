@@ -228,8 +228,8 @@ export default function Landing({ onSwitch }) {
             Orbit analyzes any Solana or ETH token in seconds. Rug probability, holder distribution,
             and fake chart detection.{' '}
             <br /><br />
-            It was built by an expert Cybersecurity Analyst and Blockchain Professional, not a marketing
-            team or a vibe-coder who created their X account 10 minutes ago.{' '}
+            It was built by an expert Cybersecurity Analyst and a Blockchain Professional, not a marketing
+            team or a vibe-coder who created their X account 10 min ago.{' '}
             <br /><br />
             Every signal we surface is one we use ourselves. No unrealistic hype, just on-chain truth.
           </p>

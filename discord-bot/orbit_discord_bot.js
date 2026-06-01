@@ -7,7 +7,8 @@ require('dotenv').config()
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN
 const ORBIT_BACKEND = process.env.ORBIT_BACKEND || 'https://backend-production-a427a.up.railway.app'
-const DEXSCREENER_BASE = 'https://api.dexscreener.com/latest/dex'
+const DEXSCREENER_BASE  = 'https://api.dexscreener.com/latest/dex'
+const DEXSCREENER_V1    = 'https://api.dexscreener.com/tokens/v1'
 const POLL_MS       = 5_000
 
 const client = new Client({
@@ -17,7 +18,14 @@ const client = new Client({
 const trackers = new Map()
 
 // ── Formatters ────────────────────────────────────────────────────────────────
-const fmtMC  = n => !n ? '$0' : n >= 1e6 ? `$${(n/1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n/1e3).toFixed(1)}K` : `$${n.toFixed(0)}`
+const fmtMC    = n => !n ? '$0' : n >= 1e6 ? `$${(n/1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n/1e3).toFixed(1)}K` : `$${n.toFixed(0)}`
+const fmtPrice = n => {
+  if (!n || n === 0) return '$0'
+  if (n >= 1)        return `$${n.toFixed(4)}`
+  if (n >= 0.001)    return `$${n.toFixed(6)}`
+  if (n >= 0.00001)  return `$${n.toFixed(8)}`
+  return `$${n.toExponential(3)}`
+}
 const fmtAge = s => { if (!s) return '?'; if (s < 60) return `${s}s`; if (s < 3600) return `${Math.floor(s/60)}m`; return `${(s/3600).toFixed(1)}h` }
 const pct    = n => n != null ? `${Math.round(n)}%` : '?%'
 const sign   = n => n > 0 ? `+${n.toFixed(1)}%` : `${n.toFixed(1)}%`
@@ -40,24 +48,41 @@ function detectChain(mint) {
 // ── Fetch data ────────────────────────────────────────────────────────────────
 async function fetchDex(mint) {
   const chain = detectChain(mint)
-  const res  = await fetch(`${DEXSCREENER_BASE}/tokens/${mint}`)
+
+  // Use v1 endpoint for Solana (returns array directly, chain-scoped).
+  // Fall back to the legacy cross-chain endpoint for EVM addresses.
+  const url = chain === 'solana'
+    ? `${DEXSCREENER_V1}/solana/${mint}`
+    : `${DEXSCREENER_BASE}/tokens/${mint}`
+
+  const res = await fetch(url, { signal: AbortSignal.timeout(10_000) })
+  if (!res.ok) {
+    console.error(`[DexScreener] HTTP ${res.status} for ${mint} (${url})`)
+    return null
+  }
   const data = await res.json()
-  let pairs = (data.pairs || []).filter(p => p.chainId === chain)
-  if (!pairs.length) pairs = data.pairs || []
+
+  // v1 returns an array; legacy returns { pairs: [...] }
+  let pairs = Array.isArray(data) ? data : (data.pairs || [])
+  if (!Array.isArray(data)) {
+    // Legacy endpoint: filter to matching chain, fall back to all if none match
+    const filtered = pairs.filter(p => p.chainId === chain)
+    pairs = filtered.length ? filtered : pairs
+  }
   if (!pairs.length) return null
 
   const isBonding = p => {
     const dex = (p.dexId || '').toLowerCase()
-    return dex === 'pump.fun' || (p.labels && p.labels.includes('v1'))
+    return dex === 'pumpfun' || dex === 'pump.fun' || (p.labels && p.labels.includes('v1'))
   }
-  // Prefer migrated pairs over bonding curve, then sort by liquidity
+  // Prefer migrated pairs over bonding curve, then sort by liquidity desc
   pairs.sort((a, b) => {
     const diff = (isBonding(a) ? 0 : 1) - (isBonding(b) ? 0 : 1)
     if (diff !== 0) return -diff
     return (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0)
   })
 
-  // Walk pairs until we find one with a non-zero market cap
+  // Walk pairs to find one with a non-zero market cap / FDV
   for (const p of pairs) {
     if (parseFloat(p.marketCap || p.fdv || 0) > 0) return p
   }
@@ -134,7 +159,7 @@ async function buildMessage(mint) {
   lines.push(`**${name}** \\[${symbol}\\] ${isMig ? '✅ Migrated' : '🔵 Bonding'}`)
   lines.push(`\`${mint}\``)
   lines.push('')
-  lines.push(`💰 **FDV:** ${fmtMC(mc)}　💧 **Liq:** ${fmtMC(liq)} [${liqRatio}x]`)
+  lines.push(`💲 **Price:** ${fmtPrice(price)}　💰 **FDV:** ${fmtMC(mc)}　💧 **Liq:** ${fmtMC(liq)} [${liqRatio}x]`)
   lines.push(`📊 **Vol:** 1h ${fmtMC(vol1h)} · 24h ${fmtMC(vol24)}　⏱ **Age:** ${fmtAge(created)}`)
   lines.push(`📈 **1H:** ${sign(ch1h)} · **24H:** ${sign(ch24)}　🔵 ${buys1h} 🔴 ${sells1h}`)
   lines.push('')

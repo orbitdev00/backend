@@ -9,7 +9,7 @@ const DISCORD_TOKEN = process.env.DISCORD_TOKEN
 const ORBIT_BACKEND = process.env.ORBIT_BACKEND || 'https://backend-production-a427a.up.railway.app'
 const DEXSCREENER_SOL = 'https://api.dexscreener.com/tokens/v1/solana'
 const DEXSCREENER_ETH = 'https://api.dexscreener.com/tokens/v1/ethereum'
-const POLL_MS       = 15_000
+const POLL_MS       = 5_000
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
@@ -217,12 +217,12 @@ setInterval(async () => {
       const mc = parseFloat(pair.marketCap || pair.fdv || 0)
       const hit = (t.direction === 'above' && mc >= t.targetMC) || (t.direction === 'below' && mc <= t.targetMC)
       if (hit) {
-        t.triggered = true
+        trackers.delete(mint)
         const ch = await client.channels.fetch(t.channelId)
         const payload = await buildMessage(mint)
         await ch.send({ content: `🔔 **Alert!** \`${short(mint)}\` hit ${fmtMC(mc)} (target: ${t.direction} ${fmtMC(t.targetMC)})`, ...payload })
       }
-    } catch {}
+    } catch (e) { console.error(`[Tracker] ${mint}:`, e.message) }
   }
 }, POLL_MS)
 

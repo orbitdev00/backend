@@ -6,8 +6,35 @@ import NavBar from '../components/NavBar'
 import StarField from '../components/StarField'
 import './Tracker.css'
 
-const DEXSCREENER = 'https://api.dexscreener.com/latest/dex/tokens'
+const DEX_V1      = 'https://api.dexscreener.com/tokens/v1'
+const DEX_LEGACY  = 'https://api.dexscreener.com/latest/dex/tokens'
 const POLL_MS = 5_000
+
+function detectChain(mint) {
+  return /^0x[0-9a-fA-F]{40}$/.test(mint) ? 'ethereum' : 'solana'
+}
+
+async function fetchMC(mint) {
+  try {
+    const chain = detectChain(mint)
+    const url   = chain === 'solana'
+      ? `${DEX_V1}/solana/${mint}`
+      : `${DEX_LEGACY}/${mint}`
+    const r = await fetch(url, { cache: 'no-store' })
+    if (!r.ok) return 0
+    const data  = await r.json()
+    let pairs   = Array.isArray(data) ? data : (data.pairs || [])
+    if (!Array.isArray(data)) {
+      const filtered = pairs.filter(p => p.chainId === chain)
+      if (filtered.length) pairs = filtered
+    }
+    for (const p of pairs) {
+      const mc = parseFloat(p.marketCap || p.fdv || 0)
+      if (mc > 0) return mc
+    }
+    return 0
+  } catch { return 0 }
+}
 
 function fmtMC(n) {
   if (!n) return '$0'
@@ -61,21 +88,15 @@ export default function Tracker() {
   useEffect(() => {
     if (tracked.length === 0) { clearInterval(pollRef.current); return }
     const poll = async () => {
-      const mints = tracked.map(t => t.mint).join(',')
-      if (!mints) return
-      try {
-        const res   = await fetch(`${DEXSCREENER}/${mints}?t=${Date.now()}`, { cache: 'no-store' })
-        const data  = await res.json()
-        const pairs = Array.isArray(data) ? data : (data.pairs || [])
-        setTracked(prev => prev.map(t => {
-          const pair = pairs.find(p => p.baseToken?.address === t.mint)
-          if (!pair) return t
-          const mc = parseFloat(pair.marketCap || pair.fdv || 0)
-          const hit = (t.direction === 'above' && mc >= t.targetMC) || (t.direction === 'below' && mc <= t.targetMC)
-          if (hit && !t.triggered) { playSound(t.sound); return { ...t, lastMC: mc, triggered: true } }
-          return { ...t, lastMC: mc }
-        }))
-      } catch {}
+      const mints   = tracked.map(t => t.mint)
+      const results = await Promise.all(mints.map(fetchMC))
+      const mcMap   = Object.fromEntries(mints.map((m, i) => [m, results[i]]))
+      setTracked(prev => prev.map(t => {
+        const mc  = mcMap[t.mint] ?? t.lastMC
+        const hit = (t.direction === 'above' && mc >= t.targetMC) || (t.direction === 'below' && mc <= t.targetMC)
+        if (hit && !t.triggered) { playSound(t.sound); return { ...t, lastMC: mc, triggered: true } }
+        return { ...t, lastMC: mc }
+      }))
     }
     poll()
     pollRef.current = setInterval(poll, POLL_MS)
@@ -86,18 +107,10 @@ export default function Tracker() {
   useEffect(() => {
     if (watchlist.length === 0) return
     const poll = async () => {
-      const mints = watchlist.map(w => w.mint).join(',')
-      if (!mints) return
-      try {
-        const res   = await fetch(`${DEXSCREENER}/${mints}?t=${Date.now()}`, { cache: 'no-store' })
-        const data  = await res.json()
-        const pairs = Array.isArray(data) ? data : (data.pairs || [])
-        setWatchlist(prev => prev.map(w => {
-          const pair = pairs.find(p => p.baseToken?.address === w.mint)
-          if (!pair) return w
-          return { ...w, lastMC: parseFloat(pair.marketCap || pair.fdv || 0) }
-        }))
-      } catch {}
+      const mints   = watchlist.map(w => w.mint)
+      const results = await Promise.all(mints.map(fetchMC))
+      const mcMap   = Object.fromEntries(mints.map((m, i) => [m, results[i]]))
+      setWatchlist(prev => prev.map(w => ({ ...w, lastMC: mcMap[w.mint] ?? w.lastMC })))
     }
     poll()
     const id = setInterval(poll, 15_000)
@@ -133,7 +146,12 @@ export default function Tracker() {
 
   const fetchName = async (mintAddr) => {
     try {
-      const res   = await fetch(`${DEXSCREENER}/${mintAddr}`)
+      const chain = detectChain(mintAddr)
+      const url   = chain === 'solana'
+        ? `${DEX_V1}/solana/${mintAddr}`
+        : `${DEX_LEGACY}/${mintAddr}`
+      const res   = await fetch(url)
+      if (!res.ok) return mintAddr.slice(0, 8) + '...'
       const data  = await res.json()
       const pairs = Array.isArray(data) ? data : (data.pairs || [])
       return pairs[0]?.baseToken?.name || mintAddr.slice(0, 8) + '...'

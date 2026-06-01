@@ -6,33 +6,15 @@ import NavBar from '../components/NavBar'
 import StarField from '../components/StarField'
 import './Tracker.css'
 
-const DEX_V1      = 'https://api.dexscreener.com/tokens/v1'
-const DEX_LEGACY  = 'https://api.dexscreener.com/latest/dex/tokens'
+const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
 const POLL_MS = 5_000
-
-function detectChain(mint) {
-  return /^0x[0-9a-fA-F]{40}$/.test(mint) ? 'ethereum' : 'solana'
-}
 
 async function fetchMC(mint) {
   try {
-    const chain = detectChain(mint)
-    const url   = chain === 'solana'
-      ? `${DEX_V1}/solana/${mint}`
-      : `${DEX_LEGACY}/${mint}`
-    const r = await fetch(url, { cache: 'no-store' })
+    const r = await fetch(`${BACKEND}/mc/${mint}`, { cache: 'no-store' })
     if (!r.ok) return 0
-    const data  = await r.json()
-    let pairs   = Array.isArray(data) ? data : (data.pairs || [])
-    if (!Array.isArray(data)) {
-      const filtered = pairs.filter(p => p.chainId === chain)
-      if (filtered.length) pairs = filtered
-    }
-    for (const p of pairs) {
-      const mc = parseFloat(p.marketCap || p.fdv || 0)
-      if (mc > 0) return mc
-    }
-    return 0
+    const d = await r.json()
+    return d.mc || 0
   } catch { return 0 }
 }
 
@@ -146,15 +128,10 @@ export default function Tracker() {
 
   const fetchName = async (mintAddr) => {
     try {
-      const chain = detectChain(mintAddr)
-      const url   = chain === 'solana'
-        ? `${DEX_V1}/solana/${mintAddr}`
-        : `${DEX_LEGACY}/${mintAddr}`
-      const res   = await fetch(url)
-      if (!res.ok) return mintAddr.slice(0, 8) + '...'
-      const data  = await res.json()
-      const pairs = Array.isArray(data) ? data : (data.pairs || [])
-      return pairs[0]?.baseToken?.name || mintAddr.slice(0, 8) + '...'
+      const r = await fetch(`${BACKEND}/mc/${mintAddr}`)
+      if (!r.ok) return mintAddr.slice(0, 8) + '...'
+      const d = await r.json()
+      return d.name || mintAddr.slice(0, 8) + '...'
     } catch { return mintAddr.slice(0, 8) + '...' }
   }
 

@@ -916,3 +916,18 @@ async def debug_dex(mint: str, request: Request):
         "raw_info": info,
     }
 
+
+@app.get("/mc/{mint}")
+async def get_mc(mint: str, request: Request):
+    """Lightweight market-cap proxy for the frontend tracker.
+    Avoids browser-to-DexScreener CORS / rate-limit issues."""
+    if not is_valid_mint(mint):
+        return JSONResponse({"error": "Invalid mint"}, status_code=400)
+    from aggregator.dexscreener import fetch_dexscreener
+    dex = await fetch_dexscreener(mint)
+    return {
+        "mc":    dex.get("market_cap_usd", 0),
+        "price": dex.get("price_usd", 0),
+        "name":  dex.get("name", ""),
+    }
+

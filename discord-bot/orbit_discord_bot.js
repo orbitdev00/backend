@@ -7,8 +7,7 @@ require('dotenv').config()
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN
 const ORBIT_BACKEND = process.env.ORBIT_BACKEND || 'https://backend-production-a427a.up.railway.app'
-const DEXSCREENER_SOL = 'https://api.dexscreener.com/tokens/v1/solana'
-const DEXSCREENER_ETH = 'https://api.dexscreener.com/tokens/v1/ethereum'
+const DEXSCREENER_BASE = 'https://api.dexscreener.com/latest/dex'
 const POLL_MS       = 5_000
 
 const client = new Client({
@@ -41,13 +40,28 @@ function detectChain(mint) {
 // ── Fetch data ────────────────────────────────────────────────────────────────
 async function fetchDex(mint) {
   const chain = detectChain(mint)
-  const url = chain === 'ethereum' ? `${DEXSCREENER_ETH}/${mint}` : `${DEXSCREENER_SOL}/${mint}`
-  const res  = await fetch(url)
+  const res  = await fetch(`${DEXSCREENER_BASE}/tokens/${mint}`)
   const data = await res.json()
-  const pairs = Array.isArray(data) ? data : (data.pairs || [])
-  const filtered = pairs.filter(p => p.chainId === chain)
-  filtered.sort((a,b) => ((b.liquidity?.usd||0) - (a.liquidity?.usd||0)))
-  return filtered[0] || null
+  let pairs = (data.pairs || []).filter(p => p.chainId === chain)
+  if (!pairs.length) pairs = data.pairs || []
+  if (!pairs.length) return null
+
+  const isBonding = p => {
+    const dex = (p.dexId || '').toLowerCase()
+    return dex === 'pump.fun' || (p.labels && p.labels.includes('v1'))
+  }
+  // Prefer migrated pairs over bonding curve, then sort by liquidity
+  pairs.sort((a, b) => {
+    const diff = (isBonding(a) ? 0 : 1) - (isBonding(b) ? 0 : 1)
+    if (diff !== 0) return -diff
+    return (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0)
+  })
+
+  // Walk pairs until we find one with a non-zero market cap
+  for (const p of pairs) {
+    if (parseFloat(p.marketCap || p.fdv || 0) > 0) return p
+  }
+  return pairs[0]
 }
 
 async function fetchSnapshot(mint) {

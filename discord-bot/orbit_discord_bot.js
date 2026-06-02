@@ -95,7 +95,8 @@ async function fetchPumpMC(mint) {
     const res = await fetch(`${PUMPFUN_API}/${mint}`, { signal: AbortSignal.timeout(5_000) })
     if (!res.ok) return null
     const data = await res.json()
-    return typeof data.usd_market_cap === 'number' ? data.usd_market_cap : null
+    const mc = data.usd_market_cap
+    return (typeof mc === 'number' && mc > 0) ? mc : null
   } catch { return null }
 }
 
@@ -230,7 +231,7 @@ client.on('messageCreate', async msg => {
     const [, mint, mcStr, dir = 'above'] = args
     if (!mint || !mcStr) return msg.reply('Usage: `!track <CA> <MC in K> above|below`')
     const targetMC = parseFloat(mcStr) * 1000
-    trackers.set(mint, { mint, targetMC, direction: dir, channelId: msg.channelId, triggered: false })
+    trackers.set(mint, { mint, targetMC, direction: dir, channelId: msg.channelId, lastAbove: null })
     const watchBtn = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId('watching').setLabel('Watching').setStyle(ButtonStyle.Success).setDisabled(true)
     )
@@ -271,16 +272,29 @@ client.on('messageCreate', async msg => {
   }
 })
 
-// ── 5s tracker poll (parallel) ────────────────────────────────────────────────
+// ── 5s tracker poll (parallel, edge-crossing) ────────────────────────────────
 setInterval(() => {
-  const active = [...trackers.entries()].filter(([, t]) => !t.triggered)
-  Promise.allSettled(active.map(async ([mint, t]) => {
+  Promise.allSettled([...trackers.entries()].map(async ([mint, t]) => {
     try {
       const mc = await fetchTrackerMC(mint)
-      if (mc === null) return
-      const hit = (t.direction === 'above' && mc >= t.targetMC) || (t.direction === 'below' && mc <= t.targetMC)
-      if (hit) {
-        trackers.delete(mint)
+      if (!mc) return  // skip 0 and null — bad reads must not affect state
+
+      const isAbove = mc >= t.targetMC
+
+      if (t.lastAbove === null) {
+        // First valid reading — establish baseline, don't alert
+        t.lastAbove = isAbove
+        return
+      }
+
+      // Detect a threshold crossing since the last valid reading
+      const crossed = t.direction === 'above'
+        ? (!t.lastAbove && isAbove)   // was below, now crossed above
+        : (t.lastAbove && !isAbove)   // was above, now crossed below
+
+      t.lastAbove = isAbove
+
+      if (crossed) {
         const ch = await client.channels.fetch(t.channelId)
         const payload = await buildMessage(mint)
         await ch.send({ content: `🔔 **Alert!** \`${short(mint)}\` hit ${fmtMC(mc)} (target: ${t.direction} ${fmtMC(t.targetMC)})`, ...payload })

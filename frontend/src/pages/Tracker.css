@@ -137,7 +137,12 @@
 
 .tr-status { min-width: 80px; text-align: center; font-size: 10px; font-family: var(--mono); letter-spacing: 0.5px; }
 .tr-triggered { color: var(--green); font-weight: 700; }
-.tr-watching { color: #444; }
+.tr-watching { color: var(--green); animation: watchPulse 2s ease-in-out infinite; }
+
+@keyframes watchPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
 
 .tr-actions { display: flex; gap: 6px; }
 .tr-btn {

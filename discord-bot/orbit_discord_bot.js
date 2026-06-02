@@ -2,14 +2,15 @@
  * Orbit Discord Bot — Rick-style token analysis
  * Commands: !a <CA>, !track <CA> <MC> above|below, !untrack <CA>, !trackers, !orbit
  */
-const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js')
+const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js')
 require('dotenv').config()
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN
 const ORBIT_BACKEND = process.env.ORBIT_BACKEND || 'https://backend-production-a427a.up.railway.app'
 const DEXSCREENER_BASE  = 'https://api.dexscreener.com/latest/dex'
 const DEXSCREENER_V1    = 'https://api.dexscreener.com/tokens/v1'
-const POLL_MS       = 5_000
+const PUMPFUN_API       = 'https://frontend-api.pump.fun/coins'
+const POLL_MS           = 5_000
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
@@ -87,6 +88,26 @@ async function fetchDex(mint) {
     if (parseFloat(p.marketCap || p.fdv || 0) > 0) return p
   }
   return pairs[0]
+}
+
+async function fetchPumpMC(mint) {
+  try {
+    const res = await fetch(`${PUMPFUN_API}/${mint}`, { signal: AbortSignal.timeout(5_000) })
+    if (!res.ok) return null
+    const data = await res.json()
+    return typeof data.usd_market_cap === 'number' ? data.usd_market_cap : null
+  } catch { return null }
+}
+
+// For the tracker: use pump.fun for SOL (much fresher data), DexScreener for ETH
+async function fetchTrackerMC(mint) {
+  if (detectChain(mint) === 'solana') {
+    const mc = await fetchPumpMC(mint)
+    if (mc !== null) return mc
+  }
+  const pair = await fetchDex(mint)
+  if (!pair) return null
+  return parseFloat(pair.marketCap || pair.fdv || 0) || null
 }
 
 async function fetchSnapshot(mint) {
@@ -208,8 +229,12 @@ client.on('messageCreate', async msg => {
   if (cmd === '!track' || cmd === '!t') {
     const [, mint, mcStr, dir = 'above'] = args
     if (!mint || !mcStr) return msg.reply('Usage: `!track <CA> <MC in K> above|below`')
-    trackers.set(mint, { mint, targetMC: parseFloat(mcStr) * 1000, direction: dir, channelId: msg.channelId, triggered: false })
-    return msg.reply(`✅ Tracking \`${short(mint)}\` — alert when **${dir}** ${fmtMC(parseFloat(mcStr)*1000)}`)
+    const targetMC = parseFloat(mcStr) * 1000
+    trackers.set(mint, { mint, targetMC, direction: dir, channelId: msg.channelId, triggered: false })
+    const watchBtn = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('watching').setLabel('Watching').setStyle(ButtonStyle.Success).setDisabled(true)
+    )
+    return msg.reply({ content: `Tracking \`${short(mint)}\` — alert when **${dir}** ${fmtMC(targetMC)}`, components: [watchBtn] })
   }
 
   if (cmd === '!untrack') {
@@ -246,14 +271,13 @@ client.on('messageCreate', async msg => {
   }
 })
 
-// ── 15s tracker poll ──────────────────────────────────────────────────────────
-setInterval(async () => {
-  for (const [mint, t] of trackers.entries()) {
-    if (t.triggered) continue
+// ── 5s tracker poll (parallel) ────────────────────────────────────────────────
+setInterval(() => {
+  const active = [...trackers.entries()].filter(([, t]) => !t.triggered)
+  Promise.allSettled(active.map(async ([mint, t]) => {
     try {
-      const pair = await fetchDex(mint)
-      if (!pair) continue
-      const mc = parseFloat(pair.marketCap || pair.fdv || 0)
+      const mc = await fetchTrackerMC(mint)
+      if (mc === null) return
       const hit = (t.direction === 'above' && mc >= t.targetMC) || (t.direction === 'below' && mc <= t.targetMC)
       if (hit) {
         trackers.delete(mint)
@@ -262,7 +286,7 @@ setInterval(async () => {
         await ch.send({ content: `🔔 **Alert!** \`${short(mint)}\` hit ${fmtMC(mc)} (target: ${t.direction} ${fmtMC(t.targetMC)})`, ...payload })
       }
     } catch (e) { console.error(`[Tracker] ${mint}:`, e.message) }
-  }
+  }))
 }, POLL_MS)
 
 process.on('unhandledRejection', err => console.error('[Bot] Unhandled rejection:', err))

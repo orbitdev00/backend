@@ -275,6 +275,7 @@ export default function Tracker() {
                   </button>
                 </div>
                 <div className="add-hint">Watchlist is saved to your account and syncs across devices.</div>
+                <div className="add-hint" style={{marginTop:4,color:'#3a3a4a'}}>DexScreener has a delay on their API, so market caps may load a few seconds late.</div>
               </div>
             )}
 

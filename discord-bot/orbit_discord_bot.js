@@ -18,6 +18,11 @@ const client = new Client({
 
 const trackers = new Map()
 
+function isPaidUser(member) {
+  if (!member?.roles?.cache) return false
+  return member.roles.cache.some(r => ['degen', 'omega'].includes(r.name.toLowerCase()))
+}
+
 // ── Formatters ────────────────────────────────────────────────────────────────
 const fmtMC    = n => !n ? '$0' : n >= 1e6 ? `$${(n/1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n/1e3).toFixed(1)}K` : `$${n.toFixed(0)}`
 const fmtPrice = n => {
@@ -230,10 +235,14 @@ client.on('messageCreate', async msg => {
   if (cmd === '!track' || cmd === '!t') {
     const [, mint, mcStr, dir = 'above'] = args
     if (!mint || !mcStr) return msg.reply('Usage: `!track <CA> <MC in K> above|below`')
+    if (!isPaidUser(msg.member)) {
+      const userCount = [...trackers.values()].filter(t => t.userId === msg.author.id).length
+      if (userCount >= 1) return msg.reply('❌ Free accounts can only track 1 coin at a time. Upgrade to **Degen** or **Omega** for unlimited trackers.')
+    }
     const targetMC = parseFloat(mcStr) * 1000
-    trackers.set(mint, { mint, targetMC, direction: dir, channelId: msg.channelId, lastAbove: null })
+    trackers.set(mint, { mint, targetMC, direction: dir, channelId: msg.channelId, lastAbove: null, userId: msg.author.id })
     const watchBtn = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('watching').setLabel('Watching').setStyle(ButtonStyle.Success).setDisabled(true)
+      new ButtonBuilder().setCustomId('watching').setLabel('● Watching').setStyle(ButtonStyle.Success)
     )
     return msg.reply({ content: `Tracking \`${short(mint)}\` — alert when **${dir}** ${fmtMC(targetMC)}\n-# Data may lag slightly. Free accounts can only track 1 coin — upgrade to Degen or Omega for unlimited trackers.`, components: [watchBtn] })
   }
@@ -269,6 +278,14 @@ client.on('messageCreate', async msg => {
 
   if (cmd === '!orbit' || cmd === '!help') {
     return msg.reply('**Orbit Bot**\n`!a <CA>` — analyze (SOL or ETH)\n`!pnl <wallet>` — monthly PnL\n`!track <CA> <MC> above|below` — price alert\n`!untrack <CA>` — remove\n`!trackers` — list\norbit-app.xyz')
+  }
+})
+
+// ── Button interactions ───────────────────────────────────────────────────────
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isButton()) return
+  if (interaction.customId === 'watching') {
+    await interaction.reply({ content: '🟢 Tracker is active and watching for your target.', ephemeral: true })
   }
 })
 

@@ -235,7 +235,7 @@ client.on('messageCreate', async msg => {
     const watchBtn = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId('watching').setLabel('Watching').setStyle(ButtonStyle.Success).setDisabled(true)
     )
-    return msg.reply({ content: `Tracking \`${short(mint)}\` — alert when **${dir}** ${fmtMC(targetMC)}`, components: [watchBtn] })
+    return msg.reply({ content: `Tracking \`${short(mint)}\` — alert when **${dir}** ${fmtMC(targetMC)}\n-# Data may lag slightly. Free accounts can only track 1 coin — upgrade to Degen or Omega for unlimited trackers.`, components: [watchBtn] })
   }
 
   if (cmd === '!untrack') {

@@ -3,6 +3,7 @@ badge_routes.py — Badge API Routes
 """
 
 from fastapi import APIRouter, HTTPException, Query, Request
+from security import ip_rate_ok, is_valid_uuid
 from pydantic import BaseModel
 from typing import Optional
 from badges import BADGES, EQUIP_LIMITS
@@ -81,7 +82,13 @@ class EquipRequest(BaseModel):
 
 
 @badge_router.post("/equip")
-async def equip(req: EquipRequest):
+async def equip(req: EquipRequest, request: Request):
+    ip = request.client.host if request.client else "unknown"
+    if not ip_rate_ok(ip, limit=20, window=60):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+    user = await _auth_user(request)
+    if not user or user["id"] != req.user_id:
+        raise HTTPException(status_code=401, detail="unauthorized")
     result = await equip_badge_fn(req.user_id, req.badge_id, req.tier)
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
@@ -89,7 +96,13 @@ async def equip(req: EquipRequest):
 
 
 @badge_router.post("/unequip")
-async def unequip(req: EquipRequest):
+async def unequip(req: EquipRequest, request: Request):
+    ip = request.client.host if request.client else "unknown"
+    if not ip_rate_ok(ip, limit=20, window=60):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+    user = await _auth_user(request)
+    if not user or user["id"] != req.user_id:
+        raise HTTPException(status_code=401, detail="unauthorized")
     return await unequip_badge_fn(req.user_id, req.badge_id)
 
 

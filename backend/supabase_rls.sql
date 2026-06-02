@@ -65,3 +65,74 @@ CREATE POLICY "public read user_badges"
   USING (true);
 
 -- Only service key can insert/update badges (no client policy = denied for anon/authed)
+
+
+-- ─── watchlist ───────────────────────────────────────────────────────────────
+ALTER TABLE watchlist ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "own read watchlist"
+  ON watchlist FOR SELECT
+  USING (auth.uid()::text = user_id);
+
+CREATE POLICY "own insert watchlist"
+  ON watchlist FOR INSERT
+  WITH CHECK (auth.uid()::text = user_id);
+
+CREATE POLICY "own delete watchlist"
+  ON watchlist FOR DELETE
+  USING (auth.uid()::text = user_id);
+
+
+-- ─── direct_messages ─────────────────────────────────────────────────────────
+ALTER TABLE direct_messages ENABLE ROW LEVEL SECURITY;
+
+-- Users can read messages they sent or received
+CREATE POLICY "own read direct_messages"
+  ON direct_messages FOR SELECT
+  USING (auth.uid()::text = sender_id OR auth.uid()::text = receiver_id);
+
+-- Only service key can insert (all DMs go through backend)
+
+
+-- ─── forum_threads ───────────────────────────────────────────────────────────
+ALTER TABLE forum_threads ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can read threads
+CREATE POLICY "public read forum_threads"
+  ON forum_threads FOR SELECT
+  USING (true);
+
+-- Only service key can insert/update/delete (all writes go through backend)
+
+
+-- ─── forum_posts ─────────────────────────────────────────────────────────────
+ALTER TABLE forum_posts ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can read posts
+CREATE POLICY "public read forum_posts"
+  ON forum_posts FOR SELECT
+  USING (true);
+
+-- Only service key can insert/update/delete (all writes go through backend)
+
+
+-- ─── forum_votes ─────────────────────────────────────────────────────────────
+ALTER TABLE forum_votes ENABLE ROW LEVEL SECURITY;
+
+-- Users can only read their own votes
+CREATE POLICY "own read forum_votes"
+  ON forum_votes FOR SELECT
+  USING (auth.uid()::text = user_id);
+
+-- Only service key can insert/update/delete votes (all writes go through backend)
+
+
+-- ─── user_follows ────────────────────────────────────────────────────────────
+ALTER TABLE user_follows ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can read follow relationships (public social graph)
+CREATE POLICY "public read user_follows"
+  ON user_follows FOR SELECT
+  USING (true);
+
+-- Only service key can insert/delete (all writes go through backend)

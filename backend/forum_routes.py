@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
-from security import sanitize_text, is_valid_uuid
+from security import sanitize_text, is_valid_uuid, ip_rate_ok
 from config import SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_ANON_KEY
 
 forum_router = APIRouter(prefix="/forum", tags=["forum"])
@@ -55,6 +55,9 @@ async def _auth_user(request: Request) -> Optional[dict]:
 @forum_router.post("/threads")
 async def create_thread(request: Request):
     """Create a forum thread. Sanitizes title and body before writing."""
+    ip = request.client.host if request.client else "unknown"
+    if not ip_rate_ok(ip, limit=5, window=60):
+        return JSONResponse({"error": "Rate limit exceeded"}, status_code=429)
     user = await _auth_user(request)
     if not user:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
@@ -128,6 +131,9 @@ async def create_thread(request: Request):
 @forum_router.post("/posts")
 async def create_post(request: Request):
     """Create a forum reply. Sanitizes body before writing and updates thread metadata."""
+    ip = request.client.host if request.client else "unknown"
+    if not ip_rate_ok(ip, limit=15, window=60):
+        return JSONResponse({"error": "Rate limit exceeded"}, status_code=429)
     user = await _auth_user(request)
     if not user:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
@@ -188,6 +194,9 @@ async def create_post(request: Request):
 
 @forum_router.post("/vote")
 async def vote(request: Request):
+    ip = request.client.host if request.client else "unknown"
+    if not ip_rate_ok(ip, limit=30, window=60):
+        return JSONResponse({"error": "Rate limit exceeded"}, status_code=429)
     user = await _auth_user(request)
     if not user:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
@@ -294,7 +303,10 @@ async def vote(request: Request):
 
 
 @forum_router.post("/view/{thread_id}")
-async def increment_view(thread_id: int):
+async def increment_view(thread_id: int, request: Request):
+    ip = request.client.host if request.client else "unknown"
+    if not ip_rate_ok(ip, limit=60, window=60):
+        return JSONResponse({"error": "Rate limit exceeded"}, status_code=429)
     async with httpx.AsyncClient(timeout=10) as client:
         cur_resp = await client.get(
             f"{SUPABASE_URL}/rest/v1/forum_threads",

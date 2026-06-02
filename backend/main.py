@@ -709,18 +709,24 @@ async def stream_analysis(websocket: WebSocket, mint: str, user_id: str = ""):
 
 @app.post("/stripe/billing-portal")
 async def stripe_portal(request: Request):
+    ip = request.client.host if request.client else "unknown"
+    if not ip_rate_ok(ip, limit=10, window=60):
+        return JSONResponse({"error": "Rate limit exceeded"}, status_code=429)
     body       = await request.json()
     user_id    = body.get("user_id", "")
     return_url = body.get("return_url", "https://orbit-app.xyz")
-    if not user_id:
+    if not user_id or not is_valid_uuid(user_id):
         return JSONResponse({"error": "user_id required"}, status_code=400)
     return await create_billing_portal(user_id, return_url)
 
 
 @app.get("/tier")
-async def get_user_tier(user_id: str = ""):
-    if not user_id:
+async def get_user_tier(request: Request, user_id: str = ""):
+    if not user_id or not is_valid_uuid(user_id):
         return JSONResponse({"error": "user_id required"}, status_code=400)
+    ip = request.client.host if request.client else "unknown"
+    if not ip_rate_ok(ip, limit=30, window=60):
+        return JSONResponse({"error": "Rate limit exceeded"}, status_code=429)
     tier = await get_tier(user_id)
     from tier_check import get_limits
     return JSONResponse({"tier": tier, "limits": get_limits(tier)})

@@ -19,6 +19,8 @@ _USER_TABLES = [
     "predictions",
     "user_badges",
     "user_calls",
+    "watchlist",
+    "forum_votes",
     "direct_messages",
     "forum_posts",
     "forum_threads",

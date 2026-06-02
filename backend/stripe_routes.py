@@ -5,8 +5,10 @@ Handles:
   - POST /stripe/webhook          — handle Stripe events
   - POST /stripe/portal           — customer portal session
 """
+import os
 import stripe
 import httpx
+from datetime import datetime, timezone
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from config import (
@@ -18,7 +20,6 @@ from config import (
 stripe.api_key = STRIPE_SECRET_KEY
 
 router = APIRouter()
-import os
 ORBIT_BOT_ID = "orbit-system-bot-0000-000000000000"
 
 
@@ -57,11 +58,16 @@ SUPA_HEADERS = {
 }
 
 
-async def _set_tier(user_id: str, tier: str, stripe_customer_id: str = None):
-    """Update user_reputation.tier in Supabase."""
+async def _set_tier(user_id: str, tier: str, stripe_customer_id: str = None,
+                    stripe_subscription_id: str = None, expires_at: str = None):
+    """Update user_reputation.tier (and Stripe fields) in Supabase."""
     payload = {"tier": tier}
     if stripe_customer_id:
         payload["stripe_customer_id"] = stripe_customer_id
+    if stripe_subscription_id:
+        payload["stripe_subscription_id"] = stripe_subscription_id
+    if expires_at:
+        payload["subscription_expires_at"] = expires_at
     async with httpx.AsyncClient(timeout=10) as client:
         r = await client.patch(
             f"{SUPABASE_URL}/rest/v1/user_reputation",
@@ -111,16 +117,33 @@ async def create_checkout(request: Request):
         if not price_id:
             return JSONResponse({"error": "Invalid tier"}, status_code=400)
 
-        session = stripe.checkout.Session.create(
+        # Re-use existing Stripe customer if they have one
+        existing_customer = None
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(
+                f"{SUPABASE_URL}/rest/v1/user_reputation",
+                params={"user_id": f"eq.{user_id}", "select": "stripe_customer_id", "limit": "1"},
+                headers=SUPA_HEADERS,
+            )
+            rows = r.json()
+            existing_customer = rows[0].get("stripe_customer_id") if rows else None
+
+        session_params = dict(
             payment_method_types=["card"],
             mode="subscription",
             line_items=[{"price": price_id, "quantity": 1}],
             success_url=f"{origin}/pricing?success=1&tier={tier}",
             cancel_url=f"{origin}/pricing?cancelled=1",
-            customer_email=email,
             metadata={"user_id": user_id, "tier": tier},
             subscription_data={"metadata": {"user_id": user_id, "tier": tier}},
+            allow_promotion_codes=True,
         )
+        if existing_customer:
+            session_params["customer"] = existing_customer
+        else:
+            session_params["customer_email"] = email
+
+        session = stripe.checkout.Session.create(**session_params)
         return JSONResponse({"url": session.url})
     except Exception as e:
         print(f"[Stripe] Checkout error: {e}")
@@ -148,42 +171,62 @@ async def stripe_webhook(request: Request):
     # ── Checkout completed → upgrade tier ─────────────────────
     if event_type == "checkout.session.completed":
         session = event["data"]["object"]
-        user_id = session.get("metadata", {}).get("user_id")
-        tier    = session.get("metadata", {}).get("tier")
+        user_id     = session.get("metadata", {}).get("user_id")
+        tier        = session.get("metadata", {}).get("tier")
         customer_id = session.get("customer")
-        email   = session.get("customer_email") or session.get("customer_details", {}).get("email")
+        sub_id      = session.get("subscription")
+        email       = session.get("customer_email") or session.get("customer_details", {}).get("email")
 
         if not user_id and email:
             user_id = await _get_user_by_email(email)
 
         if user_id and tier:
-            await _set_tier(user_id, tier, customer_id)
+            expires_at = None
+            if sub_id:
+                sub = stripe.Subscription.retrieve(sub_id)
+                expires_ts = sub.get("current_period_end")
+                if expires_ts:
+                    expires_at = datetime.fromtimestamp(expires_ts, tz=timezone.utc).isoformat()
+                # Resolve tier from actual price in case metadata was stale
+                items = sub.get("items", {}).get("data", [])
+                if items:
+                    tier = _price_map().get(items[0]["price"]["id"], tier)
+
+            await _set_tier(user_id, tier, customer_id, sub_id, expires_at)
             await _send_system_dm(
                 user_id,
-                f"Welcome to Orbit {tier.upper()}. Your subscription is now active. "
+                f"Welcome to Orbit {tier.upper()}! Your subscription is now active. "
                 f"Head to /analyze to get started."
             )
+            try:
+                from badge_engine import check_subscription_badges
+                await check_subscription_badges(user_id, tier)
+            except Exception as e:
+                print(f"[Badges] subscription check error: {e}")
         else:
             print(f"[Stripe] checkout.session.completed — missing user_id or tier. meta={session.get('metadata')}")
 
-    # ── Subscription updated (plan change) ────────────────────
+    # ── Subscription updated (plan change or renewal) ─────────
     elif event_type == "customer.subscription.updated":
         sub = event["data"]["object"]
         customer_id = sub.get("customer")
-        user_id = sub.get("metadata", {}).get("user_id") or await _get_user_by_customer(customer_id)
+        sub_id      = sub.get("id")
+        user_id     = sub.get("metadata", {}).get("user_id") or await _get_user_by_customer(customer_id)
 
         if user_id:
-            items = sub.get("items", {}).get("data", [])
+            items    = sub.get("items", {}).get("data", [])
             price_id = items[0]["price"]["id"] if items else None
-            tier = _price_map().get(price_id)
-            status = sub.get("status")
+            tier     = _price_map().get(price_id)
+            status   = sub.get("status")
+            expires_ts = sub.get("current_period_end")
+            expires_at = datetime.fromtimestamp(expires_ts, tz=timezone.utc).isoformat() if expires_ts else None
 
             if status in ("active", "trialing") and tier:
-                await _set_tier(user_id, tier, customer_id)
+                await _set_tier(user_id, tier, customer_id, sub_id, expires_at)
             elif status in ("canceled", "unpaid", "past_due"):
-                await _set_tier(user_id, "free", customer_id)
+                await _set_tier(user_id, "free", customer_id, expires_at=expires_at)
 
-    # ── Subscription deleted (cancelled) ──────────────────────
+    # ── Subscription deleted (fully cancelled) ────────────────
     elif event_type == "customer.subscription.deleted":
         sub = event["data"]["object"]
         customer_id = sub.get("customer")

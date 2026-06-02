@@ -64,12 +64,21 @@ const TIERS = [
 
 export default function Pricing() {
   const nav = useNavigate()
-  const { profile } = useAuth()
+  const { profile, refreshProfile } = useAuth()
   const currentTier = profile?.tier || 'free'
   const [loading, setLoading] = useState(null)
   const [visible, setVisible] = useState(false)
 
   useEffect(() => { setTimeout(() => setVisible(true), 50) }, [])
+
+  // Refresh tier immediately when Stripe redirects back after payment
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('success') === '1') {
+      refreshProfile()
+      window.history.replaceState({}, '', '/pricing')
+    }
+  }, [])
 
   const handleUpgrade = async (tierId) => {
     setLoading(tierId)

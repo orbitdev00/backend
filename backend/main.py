@@ -31,7 +31,7 @@ from badge_engine import (
     check_subscription_badges,
 )
 from rate_limiter import check_rate_limit, consume_rate_limit, get_usage, get_usage_async
-from stripe_handler import create_checkout_session, create_billing_portal, handle_webhook
+from stripe_handler import create_billing_portal
 from tier_check import get_tier, invalidate as invalidate_tier_cache
 from ml.predictor import predict_xgboost  # XGBoost â€" background signals
 from config import REFRESH_INTERVAL, MAX_AUTO_REFRESHES
@@ -705,34 +705,6 @@ async def stream_analysis(websocket: WebSocket, mint: str, user_id: str = ""):
             pass
 
 
-
-@app.post("/stripe/webhook")
-async def stripe_webhook(request: Request):
-    result = await handle_webhook(request)
-    # Fire subscription badge check if tier changed
-    try:
-        body = result.body if hasattr(result, 'body') else None
-        if body:
-            import json as _json
-            data = _json.loads(body)
-            if data.get("user_id") and data.get("tier"):
-                await check_subscription_badges(data["user_id"], data["tier"])
-    except Exception as e:
-        print(f"[Badges] subscription check error: {e}")
-    return result
-
-
-@app.post("/stripe/create-checkout")
-async def stripe_checkout(request: Request):
-    body        = await request.json()
-    user_id     = body.get("user_id", "")
-    email       = body.get("email", "")
-    tier        = body.get("tier", "degen")
-    success_url = body.get("success_url", "https://orbit-app.xyz")
-    cancel_url  = body.get("cancel_url", "https://orbit-app.xyz")
-    if not user_id or not email:
-        return JSONResponse({"error": "user_id and email required"}, status_code=400)
-    return await create_checkout_session(user_id, email, tier, success_url, cancel_url)
 
 
 @app.post("/stripe/billing-portal")

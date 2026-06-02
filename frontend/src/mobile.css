@@ -7,6 +7,19 @@
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 
+/* Safe area insets for iPhone notch / home bar */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .tracker-body,
+  .forum-body,
+  .home-body,
+  .history-body,
+  .profile-body,
+  .inbox-body,
+  .pricing-body,
+  .lb-body { padding-bottom: calc(60px + env(safe-area-inset-bottom)) !important; }
+  .navbar { padding-top: max(14px, env(safe-area-inset-top)); }
+}
+
 /* ── App.jsx / Analyzer ──────────────────────────────── */
 @media (max-width: 768px) {
   .app-container {
@@ -38,13 +51,30 @@ html { -webkit-text-size-adjust: 100%; }
 
 /* ── NavBar ───────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .navbar { padding: 10px 14px !important; gap: 10px !important; }
+  .navbar { padding: 10px 14px !important; gap: 10px !important; height: 48px !important; }
   .nb-title { font-size: 11px !important; letter-spacing: 2px !important; }
   .nb-version { display: none !important; }
   .nb-desktop { display: none !important; }
   .nb-mobile  { display: flex !important; }
+
+  /* Full-width dropdown anchored exactly below the 48px navbar */
+  .nb-mobile-menu {
+    position: fixed !important;
+    top: 48px !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    z-index: 999 !important;
+    border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.7) !important;
+  }
+  .nb-mobile-link { padding: 16px 20px !important; font-size: 13px !important; }
+
   /* Modal full-width on phone */
   .nb-modal { width: calc(100vw - 24px) !important; }
+
+  /* Bell/inbox dropdowns: full-width on mobile */
+  .nb-bell-dropdown { width: calc(100vw - 24px) !important; right: -40px !important; }
 }
 
 /* ── Forum ────────────────────────────────────────────── */
@@ -96,13 +126,21 @@ html { -webkit-text-size-adjust: 100%; }
   .fpost-content { padding: 10px !important; }
   .fpost-body { font-size: 12px !important; }
 
-  /* Reply box */
-  .freply-box { padding: 10px !important; }
-  .freply-input { font-size: 12px !important; }
+  /* Reply box — sticky at bottom so keyboard doesn't cover it */
+  .freply-box {
+    padding: 10px !important;
+    position: sticky !important;
+    bottom: 0 !important;
+    background: #08080f !important;
+    border-top: 1px solid #1a1a1a !important;
+    z-index: 10 !important;
+  }
+  .freply-input { font-size: 16px !important; } /* 16px prevents iOS auto-zoom */
 
   /* New thread */
   .fnew-form { padding: 14px !important; }
-  .fnew-input, .fnew-select, .fnew-textarea { font-size: 12px !important; }
+  .fnew-input, .fnew-select { font-size: 16px !important; }
+  .fnew-textarea { font-size: 15px !important; }
 
   /* Notif dropdown */
   .forum-notif-dropdown { width: calc(100vw - 28px) !important; right: -60px !important; }
@@ -197,8 +235,9 @@ html { -webkit-text-size-adjust: 100%; }
   .tracker-row { flex-wrap: wrap !important; gap: 8px !important; padding: 12px !important; }
   .tr-info { width: 100% !important; }
   .tr-mc { min-width: 70px !important; flex: 1 !important; }
-  .tr-status { flex: 1 !important; text-align: left !important; }
-  .tr-actions { margin-left: auto !important; }
+  .tr-status { flex: 1 !important; text-align: left !important; min-width: 80px !important; }
+  .tr-actions { margin-left: auto !important; display: flex !important; align-items: center !important; }
+  .add-input, .add-select, .add-btn { font-size: 16px !important; } /* prevent iOS zoom */
 }
 
 /* ── History ──────────────────────────────────────────── */
@@ -255,6 +294,14 @@ html { -webkit-text-size-adjust: 100%; }
     width: 56px !important;
     height: 56px !important;
   }
+  /* Keep black hole canvas properly sized and centered on mobile */
+  canvas.blackhole-canvas,
+  canvas[style*="position: fixed"] {
+    width: 100vw !important;
+    height: 100dvh !important;
+    top: 0 !important;
+    left: 0 !important;
+  }
 }
 
 /* ── Fix 4: Mobile analyzer panel order ──────────────── */
@@ -280,17 +327,7 @@ html { -webkit-text-size-adjust: 100%; }
   .pricing-body { height: auto !important; overflow: visible !important; padding-bottom: 60px !important; }
 }
 
-/* ── Fix 10: Mobile dropdown align right ─────────────── */
-@media (max-width: 640px) {
-  .nb-mobile-menu {
-    position: absolute !important;
-    right: 0 !important;
-    left: auto !important;
-    top: 56px !important;
-    width: 220px !important;
-    z-index: 200 !important;
-  }
-}
+/* nb-mobile-menu positioning handled in the NavBar section above */
 
 /* ── NavBar mobile upgrade button ───────────────────── */
 .nb-mobile-upgrade {

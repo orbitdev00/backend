@@ -18,6 +18,7 @@ export default function LandingBlackHole({ active, origin, onDone }) {
     const H = canvas.height = window.innerHeight
     canvas.style.display = 'block'
     const ctx = canvas.getContext('2d')
+    const isMobile = W < 640
 
     const cx = origin.x
     const cy = origin.y
@@ -30,8 +31,8 @@ export default function LandingBlackHole({ active, origin, onDone }) {
 
     const sfCanvas = document.querySelector('.starfield-canvas')
 
-    // Accretion disk particles
-    const NPARTS = 300
+    // Accretion disk particles — fewer on mobile for performance
+    const NPARTS = isMobile ? 120 : 300
     const parts = Array.from({ length: NPARTS }, (_, i) => ({
       angle:  (i / NPARTS) * Math.PI * 2 + Math.random() * 0.1,
       rMult:  1.05 + Math.random() * 0.8,

@@ -231,6 +231,7 @@ export default function Tracker() {
                 <button className="add-btn" onClick={addTracker} disabled={adding}>{adding ? '...' : 'Add Alert'}</button>
               </div>
               <div className="add-hint">Target MC is in thousands — enter 100 for $100K</div>
+              <div className="add-hint" style={{marginTop:4}}>DexScreener has a delay on their API, so results may load late. Free accounts can track 1 coin — Degen &amp; Omega are unlimited.</div>
             </div>
 
             {tracked.length === 0
@@ -275,7 +276,7 @@ export default function Tracker() {
                   </button>
                 </div>
                 <div className="add-hint">Watchlist is saved to your account and syncs across devices.</div>
-                <div className="add-hint" style={{marginTop:4,color:'#3a3a4a'}}>DexScreener has a delay on their API, so market caps may load a few seconds late.</div>
+                <div className="add-hint" style={{marginTop:4}}>DexScreener has a delay on their API, so market caps may load a few seconds late.</div>
               </div>
             )}
 

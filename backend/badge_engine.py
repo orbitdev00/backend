@@ -116,10 +116,10 @@ async def check_analysis_badges(user_id: str, snapshot: dict, coin_age_seconds: 
         if len(days) >= 7:
             await award_badge(user_id, "grinder")
 
-        # Purity seeker — 10 analyses with purity_score > 80
+        # Purity seeker — 10 analyses where rug_probability <= 20 (purity >= 80)
         purity_rows = await _get("predictions", {
             "user_id": f"eq.{user_id}",
-            "purity_score": "gte.80",
+            "rug_probability": "lte.20",
             "select": "id",
         })
         if len(purity_rows) >= 10:

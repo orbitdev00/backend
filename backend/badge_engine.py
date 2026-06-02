@@ -134,6 +134,14 @@ async def check_outcome_badges(user_id: str, mint: str, actual_peak_mc: float, w
     try:
         if was_rug:
             await award_badge(user_id, "rug_survivor")
+            # Unlucky — 5+ rugged outcomes recorded for this user
+            rug_rows = await _get("predictions", {
+                "user_id": f"eq.{user_id}",
+                "actual_peak_mc": "lt.1000",
+                "select": "id",
+            })
+            if len(rug_rows) >= 5:
+                await award_badge(user_id, "unlucky")
         if actual_peak_mc >= 1_000_000:
             await award_badge(user_id, "lucky")
     except Exception as e:
@@ -150,21 +158,23 @@ async def check_community_badges(user_id: str):
         if len(followers) >= 50:
             await award_badge(user_id, "influencer")
 
-        # Upvotes across posts
-        posts = await _get("forum_posts", {"author_id": f"eq.{user_id}", "select": "upvotes"})
-        total_upvotes = sum(r.get("upvotes", 0) for r in posts)
+        # Upvotes via vote_score on forum_posts (column is user_id, score is vote_score)
+        posts = await _get("forum_posts", {"user_id": f"eq.{user_id}", "select": "vote_score"})
+        total_upvotes = sum(max(r.get("vote_score", 0), 0) for r in posts)
         if total_upvotes >= 50:
             await award_badge(user_id, "helpful")
         if total_upvotes >= 200:
             await award_badge(user_id, "forum_legend")
 
-        # Thread count
-        threads = await _get("forum_threads", {"author_id": f"eq.{user_id}", "select": "id"})
+        # Thread count (column is user_id not author_id)
+        threads = await _get("forum_threads", {"user_id": f"eq.{user_id}", "select": "id"})
+        if len(threads) >= 1:
+            await award_badge(user_id, "first_post")
         if len(threads) >= 10:
             await award_badge(user_id, "thread_starter")
 
-        # Reply count
-        replies = await _get("forum_posts", {"author_id": f"eq.{user_id}", "select": "id"})
+        # Reply count (column is user_id not author_id)
+        replies = await _get("forum_posts", {"user_id": f"eq.{user_id}", "select": "id"})
         if len(replies) >= 25:
             await award_badge(user_id, "conversationalist")
 
@@ -172,9 +182,15 @@ async def check_community_badges(user_id: str):
         print(f"[Badges] check_community_badges error: {e}")
 
 
-async def check_account_badges(user_id: str, created_at: str):
-    """Called on login or profile load."""
+async def check_account_badges(user_id: str, created_at: str = None):
+    """Called on login or profile load. Fetches created_at if not provided."""
     try:
+        if not created_at:
+            rows = await _get("user_reputation", {"user_id": f"eq.{user_id}", "select": "created_at"})
+            if not rows or not rows[0].get("created_at"):
+                return
+            created_at = rows[0]["created_at"]
+
         created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
         now = datetime.now(timezone.utc)
         if (now - created).days >= 30:

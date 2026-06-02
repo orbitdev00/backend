@@ -729,6 +729,8 @@ async def get_user_tier(request: Request, user_id: str = ""):
         return JSONResponse({"error": "Rate limit exceeded"}, status_code=429)
     tier = await get_tier(user_id)
     from tier_check import get_limits
+    from badge_engine import check_account_badges
+    asyncio.create_task(check_account_badges(user_id))
     return JSONResponse({"tier": tier, "limits": get_limits(tier)})
 
 

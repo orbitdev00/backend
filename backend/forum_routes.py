@@ -6,6 +6,7 @@ Supabase directly from the frontend. sanitize_text() strips all HTML tags and
 decodes entities before content is stored.
 """
 
+import asyncio
 import httpx
 from datetime import datetime, timezone
 from typing import Optional
@@ -13,6 +14,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from security import sanitize_text, is_valid_uuid, ip_rate_ok
 from config import SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_ANON_KEY
+from badge_engine import check_community_badges
 
 forum_router = APIRouter(prefix="/forum", tags=["forum"])
 
@@ -125,6 +127,8 @@ async def create_thread(request: Request):
     data = resp.json()
     if isinstance(data, list):
         data = data[0] if data else {}
+
+    asyncio.create_task(check_community_badges(user["id"]))
     return JSONResponse(data)
 
 
@@ -166,6 +170,8 @@ async def create_post(request: Request):
 
         if post_resp.status_code not in (200, 201):
             return JSONResponse({"error": "Failed to create post"}, status_code=500)
+
+        asyncio.create_task(check_community_badges(user["id"]))
 
         # Fetch current reply_count then increment — avoids race on concurrent replies
         thread_resp = await client.get(
@@ -298,6 +304,11 @@ async def vote(request: Request):
                         headers=_HEADERS,
                     )
                     break  # one notification per vote action
+
+    # Check community badges for voter and post/thread author
+    asyncio.create_task(check_community_badges(user["id"]))
+    if author_id and author_id != user["id"]:
+        asyncio.create_task(check_community_badges(author_id))
 
     return JSONResponse({"ok": True, "vote_score": vote_score, "user_vote": new_vote})
 

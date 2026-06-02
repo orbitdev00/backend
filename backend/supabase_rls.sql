@@ -67,7 +67,17 @@ CREATE POLICY "public read user_badges"
 -- Only service key can insert/update badges (no client policy = denied for anon/authed)
 
 
--- ---- watchlist ----------------------------------------------------------------
+-- ---- watchlist (coin watchlist saved to account) -----------------------------
+-- Run this block once to create the table, then the policies below.
+-- CREATE TABLE IF NOT EXISTS watchlist (
+--   id         UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+--   user_id    TEXT        NOT NULL,
+--   mint       TEXT        NOT NULL,
+--   name       TEXT,
+--   note       TEXT,
+--   created_at TIMESTAMPTZ DEFAULT NOW()
+-- );
+
 ALTER TABLE watchlist ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "own read watchlist"   ON watchlist;

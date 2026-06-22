@@ -1,7 +1,7 @@
 """
 Labelbox Automation Script
 
-Launches Firefox via Playwright using your existing profile (so you're already logged in),
+Launches Chrome via Playwright using your existing profile (so you're already logged in),
 then automates labeling workflow:
 1. Scrapes image, question, and model answer from current row
 2. Calls Claude API for correction
@@ -10,7 +10,7 @@ then automates labeling workflow:
 5. Clicks Submit and moves to next row
 
 SETUP:
-- Just run this script - it will launch Firefox with your profile automatically
+- Just run this script - it will launch Chrome with your profile automatically
 - Navigate to editor.labelbox.com if not already there
 """
 
@@ -30,10 +30,10 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 if not ANTHROPIC_API_KEY:
     raise ValueError("ANTHROPIC_API_KEY not found in .env file")
 
-# Firefox profile path - using default-release profile
-FIREFOX_PROFILE = os.getenv(
-    "FIREFOX_PROFILE",
-    r"C:\Users\Alexander\AppData\Roaming\Mozilla\Firefox\Profiles\ru2fvb43.default-release"
+# Chrome user data directory - using Default profile
+CHROME_USER_DATA = os.getenv(
+    "CHROME_USER_DATA",
+    r"C:\Users\Alexander\AppData\Local\Google\Chrome\User Data"
 )
 
 
@@ -328,27 +328,24 @@ async def main():
     Main automation loop.
     """
     print("Starting Labelbox automation...")
-    print(f"Using Firefox profile: {FIREFOX_PROFILE}")
+    print(f"Using Chrome profile: {CHROME_USER_DATA}")
 
     # Verify profile exists
-    if not Path(FIREFOX_PROFILE).exists():
-        print(f"ERROR: Firefox profile not found at {FIREFOX_PROFILE}")
-        print("\nAvailable profiles:")
-        profiles_dir = Path(r"C:\Users\Alexander\AppData\Roaming\Mozilla\Firefox\Profiles")
-        for profile in profiles_dir.iterdir():
-            print(f"  - {profile.name}")
+    if not Path(CHROME_USER_DATA).exists():
+        print(f"ERROR: Chrome user data directory not found at {CHROME_USER_DATA}")
         return
 
     async with async_playwright() as p:
         try:
-            # Launch Firefox with your existing profile using persistent context
-            print("Launching Firefox with your profile (cookies/sessions preserved)...")
-            context = await p.firefox.launch_persistent_context(
-                user_data_dir=FIREFOX_PROFILE,
-                headless=False
+            # Launch Chrome with your existing profile using persistent context
+            print("Launching Chrome with your profile (cookies/sessions preserved)...")
+            context = await p.chromium.launch_persistent_context(
+                user_data_dir=CHROME_USER_DATA,
+                headless=False,
+                channel="chrome"  # Use system Chrome, not Playwright's bundled Chromium
             )
 
-            print("✓ Firefox launched")
+            print("✓ Chrome launched")
 
             # Create a new page
             page = await context.new_page()
@@ -428,10 +425,10 @@ async def main():
             import traceback
             traceback.print_exc()
             print("\nTroubleshooting tips:")
-            print("1. Make sure you have Playwright's Firefox installed:")
-            print("   playwright install firefox")
-            print("2. Check that you're on editor.labelbox.com")
-            print("3. Verify ANTHROPIC_API_KEY is set in .env file")
+            print("1. Make sure Chrome is installed on your system")
+            print("2. Close any running Chrome instances before running this script")
+            print("3. Check that you're on editor.labelbox.com")
+            print("4. Verify ANTHROPIC_API_KEY is set in .env file")
 
 
 if __name__ == "__main__":

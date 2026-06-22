@@ -17,7 +17,9 @@ import os
 import base64
 import time
 from dotenv import load_dotenv
-from marionette_driver import Marionette, By, Wait
+from marionette_driver.marionette import Marionette
+from marionette_driver.by import By
+from marionette_driver.wait import Wait
 from marionette_driver.errors import NoSuchElementException, TimeoutException
 import anthropic
 

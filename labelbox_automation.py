@@ -341,21 +341,17 @@ async def main():
 
     async with async_playwright() as p:
         try:
-            # Launch Firefox with your existing profile
+            # Launch Firefox with your existing profile using persistent context
             print("Launching Firefox with your profile (cookies/sessions preserved)...")
-            browser = await p.firefox.launch(
-                headless=False,
-                args=[
-                    '-profile',
-                    FIREFOX_PROFILE
-                ]
+            context = await p.firefox.launch_persistent_context(
+                user_data_dir=FIREFOX_PROFILE,
+                headless=False
             )
 
-            # Create a new context and page
-            context = browser.contexts[0] if browser.contexts else await browser.new_context()
-            page = await context.new_page() if not context.pages else context.pages[0]
-
             print("✓ Firefox launched")
+
+            # Create a new page
+            page = await context.new_page()
 
             # Navigate to Labelbox if not already there
             current_url = page.url
@@ -425,7 +421,7 @@ async def main():
             print("\nPress Enter to close Firefox...")
             input()
 
-            await browser.close()
+            await context.close()
 
         except Exception as e:
             print(f"\nError in main loop: {e}")

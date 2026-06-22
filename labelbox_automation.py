@@ -109,7 +109,11 @@ async def scrape_current_row(page):
     """
     try:
         # Wait for the page to be ready
-        await page.wait_for_load_state("networkidle")
+        try:
+            await page.wait_for_load_state("networkidle", timeout=10000)
+        except:
+            # If networkidle times out, try domcontentloaded
+            await page.wait_for_load_state("domcontentloaded")
 
         # These are example selectors - adjust based on actual Labelbox structure
         # You can use browser DevTools to find the correct selectors
@@ -311,10 +315,18 @@ async def submit_correction(page, correction: str):
                 if await page.locator(selector).count() > 0:
                     await page.locator(selector).first.click()
                     print("✓ Clicked Submit")
-                    # Wait a bit for the next row to load
+
+                    # Wait for navigation/page load after submit
+                    try:
+                        await page.wait_for_load_state("domcontentloaded", timeout=5000)
+                    except:
+                        pass  # Page might not navigate, just continue
+
+                    # Additional wait for next row to load
                     await asyncio.sleep(2)
                     return True
-            except:
+            except Exception as e:
+                print(f"Error with selector '{selector}': {e}")
                 continue
 
         print("⚠ Warning: Could not find Submit button")
@@ -425,47 +437,69 @@ async def main():
                 print(f"Processing row #{iteration}")
                 print(f"{'='*60}")
 
-                # Check if Submit button is still visible
-                submit_visible = await page.locator("button:has-text('Submit')").count() > 0
-                if not submit_visible:
-                    print("✓ Submit button no longer visible. Automation complete!")
-                    break
+                try:
+                    # Wait for page to be ready
+                    await page.wait_for_load_state("domcontentloaded")
 
-                # 1. Scrape current row
-                row_data = await scrape_current_row(page)
-                if not row_data:
-                    print("⚠ Could not scrape row data. Retrying in 5 seconds...")
+                    # Check if Submit button is still visible
+                    try:
+                        submit_visible = await page.locator("button:has-text('Submit')").count() > 0
+                        if not submit_visible:
+                            print("✓ Submit button no longer visible. Automation complete!")
+                            break
+                    except Exception as e:
+                        print(f"⚠ Error checking for Submit button: {e}")
+                        print("Retrying in 5 seconds...")
+                        await asyncio.sleep(5)
+                        continue
+
+                    # 1. Scrape current row
+                    row_data = await scrape_current_row(page)
+                    if not row_data:
+                        print("⚠ Could not scrape row data. Retrying in 5 seconds...")
+                        await asyncio.sleep(5)
+                        continue
+
+                    print(f"\nScraped data:")
+                    print(f"  - Image: {'✓' if row_data.get('image') else '✗'}")
+                    print(f"  - Question: {row_data.get('question', '')[:50]}...")
+                    print(f"  - Model Answer: {row_data.get('model_answer', '')[:50]}...")
+
+                    # 2. Call Claude API
+                    correction = await call_claude_api(
+                        row_data.get("image"),
+                        row_data.get("question", ""),
+                        row_data.get("model_answer", "")
+                    )
+
+                    if not correction:
+                        print("⚠ No correction received from Claude API. Skipping this row.")
+                        # Try to click Submit anyway to move to next
+                        try:
+                            await page.locator("button:has-text('Submit')").first.click()
+                            await page.wait_for_load_state("domcontentloaded")
+                            await asyncio.sleep(2)
+                        except Exception as e:
+                            print(f"⚠ Error clicking Submit: {e}")
+                        continue
+
+                    # 3. Submit correction
+                    success = await submit_correction(page, correction)
+
+                    if not success:
+                        print("⚠ Failed to submit. Waiting 5 seconds before next attempt...")
+                        await asyncio.sleep(5)
+
+                    # Small delay between iterations
+                    await asyncio.sleep(1)
+
+                except Exception as row_error:
+                    print(f"\n⚠ ERROR processing row #{iteration}: {row_error}")
+                    import traceback
+                    traceback.print_exc()
+                    print("\nContinuing to next row in 5 seconds...")
                     await asyncio.sleep(5)
                     continue
-
-                print(f"\nScraped data:")
-                print(f"  - Image: {'✓' if row_data.get('image') else '✗'}")
-                print(f"  - Question: {row_data.get('question', '')[:50]}...")
-                print(f"  - Model Answer: {row_data.get('model_answer', '')[:50]}...")
-
-                # 2. Call Claude API
-                correction = await call_claude_api(
-                    row_data.get("image"),
-                    row_data.get("question", ""),
-                    row_data.get("model_answer", "")
-                )
-
-                if not correction:
-                    print("⚠ No correction received from Claude API. Skipping this row.")
-                    # Try to click Submit anyway to move to next
-                    await page.locator("button:has-text('Submit')").first.click()
-                    await asyncio.sleep(2)
-                    continue
-
-                # 3. Submit correction
-                success = await submit_correction(page, correction)
-
-                if not success:
-                    print("⚠ Failed to submit. Waiting 5 seconds before next attempt...")
-                    await asyncio.sleep(5)
-
-                # Small delay between iterations
-                await asyncio.sleep(1)
 
             print("\n" + "="*60)
             print("Automation completed successfully!")

@@ -1,6 +1,15 @@
 # Labelbox Automation Script
 
-Automates the Labelbox labeling workflow by launching Chrome with your existing profile (preserving cookies/sessions), scraping row data, calling Claude API for corrections, and submitting the results.
+Automates the Labelbox labeling workflow by launching Chrome with a dedicated profile, scraping row data, calling Claude API for corrections, and submitting the results.
+
+## How It Works
+
+The script:
+1. Launches Chrome via subprocess with remote debugging enabled
+2. Uses a dedicated profile at `C:\Users\Alexander\chrome-labelbox-profile`
+3. Connects to Chrome via CDP (Chrome DevTools Protocol)
+4. **First run:** You log into Labelbox manually, session is saved in the profile
+5. **Subsequent runs:** You're already logged in, automation starts immediately
 
 ## Setup
 
@@ -26,20 +35,21 @@ ANTHROPIC_API_KEY=sk-ant-api03-...
 
 Get your API key from: https://console.anthropic.com/
 
-### 3. Close Chrome
-
-**IMPORTANT:** Close all Chrome windows before running the script. The script needs exclusive access to your Chrome profile.
-
-### 4. Run the Script
+### 3. Run the Script
 
 ```bash
 python labelbox_automation.py
 ```
 
-The script will:
-- Launch Chrome with your existing profile (so you're already logged in)
-- Prompt you to navigate to editor.labelbox.com if needed
-- Start automating once you press Enter
+**First Run:**
+- Chrome will launch automatically
+- Log into Labelbox in the Chrome window
+- Navigate to your labeling task at editor.labelbox.com
+- Press Enter in the terminal to start automation
+
+**Subsequent Runs:**
+- Chrome launches with your saved session
+- Automation starts immediately (no login needed)
 
 ## How It Works
 
@@ -74,22 +84,29 @@ Use Firefox DevTools (F12) to inspect elements and find the correct selectors.
 
 ## Troubleshooting
 
-### "Chrome user data directory not found"
-- The script looks for Chrome profile at: `C:\Users\Alexander\AppData\Local\Google\Chrome\User Data`
-- If your Chrome is installed elsewhere, set the `CHROME_USER_DATA` environment variable in `.env`
+### "Could not find chrome.exe"
+- Make sure Google Chrome is installed on your system
+- The script looks in common installation paths
+- If Chrome is installed elsewhere, it won't be found automatically
 
-### Chrome doesn't launch or shows "profile in use" error
-- **Close ALL Chrome windows** before running the script
-- Check Task Manager and end any chrome.exe processes
-- Chrome profile can only be used by one instance at a time
+### "Connection refused" or "Unable to connect"
+- Check that port 9222 is not already in use
+- Try closing any other Chrome instances with remote debugging enabled
+- Wait a few seconds after launch before the script connects
 
-### Script can't find Labelbox page
-- The script will prompt you to navigate to editor.labelbox.com
-- Just open the page in the launched Chrome window and press Enter in the terminal
+### "No browser contexts found"
+- Chrome may not have finished starting up
+- The script waits 3 seconds - increase this if your system is slow
+- Check that Chrome actually launched (look for the window)
 
-### Already logged into Labelbox in regular Chrome, but script shows login page
-- Make sure you closed ALL Chrome windows before running the script
-- The script uses your Default profile which should have your Labelbox cookies
+### Need to log in again
+- The profile is stored at `C:\Users\Alexander\chrome-labelbox-profile`
+- If you delete this folder, you'll need to log in again
+- Each profile is independent from your regular Chrome installation
+
+### Script stops but Chrome stays open
+- This is intentional - you can manually close Chrome when done
+- Allows you to inspect the page or continue working if needed
 
 ### "ANTHROPIC_API_KEY not found"
 - Create a `.env` file in the same directory as the script

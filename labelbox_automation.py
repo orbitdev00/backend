@@ -1,8 +1,7 @@
 """
 Labelbox Automation Script
 
-Launches Chrome via Playwright using your existing profile (so you're already logged in),
-then automates labeling workflow:
+Launches Chrome via subprocess with a dedicated profile, then connects via CDP to automate labeling workflow:
 1. Scrapes image, question, and model answer from current row
 2. Calls Claude API for correction
 3. Pastes correction into "Correct Answer" textarea
@@ -10,13 +9,15 @@ then automates labeling workflow:
 5. Clicks Submit and moves to next row
 
 SETUP:
-- Just run this script - it will launch Chrome with your profile automatically
-- Navigate to editor.labelbox.com if not already there
+- First run: script launches Chrome, you log into Labelbox manually
+- Subsequent runs: session is saved in the profile, no login needed
 """
 
 import asyncio
 import os
 import base64
+import subprocess
+import time
 from pathlib import Path
 from dotenv import load_dotenv
 from playwright.async_api import async_playwright
@@ -30,11 +31,14 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 if not ANTHROPIC_API_KEY:
     raise ValueError("ANTHROPIC_API_KEY not found in .env file")
 
-# Chrome user data directory - using Default profile
-CHROME_USER_DATA = os.getenv(
-    "CHROME_USER_DATA",
-    r"C:\Users\Alexander\AppData\Local\Google\Chrome\User Data"
+# Chrome profile directory - dedicated for Labelbox automation
+CHROME_PROFILE_DIR = os.getenv(
+    "CHROME_PROFILE_DIR",
+    r"C:\Users\Alexander\chrome-labelbox-profile"
 )
+
+# Remote debugging port
+CHROME_DEBUG_PORT = os.getenv("CHROME_DEBUG_PORT", "9222")
 
 
 async def get_image_as_base64(page, image_selector: str) -> dict:
@@ -323,42 +327,95 @@ async def submit_correction(page, correction: str):
         return False
 
 
+def launch_chrome():
+    """
+    Launch Chrome with remote debugging enabled via subprocess.
+    """
+    # Create profile directory if it doesn't exist
+    profile_path = Path(CHROME_PROFILE_DIR)
+    profile_path.mkdir(parents=True, exist_ok=True)
+
+    # Find Chrome executable
+    chrome_paths = [
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
+    ]
+
+    chrome_exe = None
+    for path in chrome_paths:
+        if Path(path).exists():
+            chrome_exe = path
+            break
+
+    if not chrome_exe:
+        raise FileNotFoundError("Could not find chrome.exe. Please install Google Chrome.")
+
+    print(f"Launching Chrome from: {chrome_exe}")
+    print(f"Profile directory: {CHROME_PROFILE_DIR}")
+    print(f"Remote debugging port: {CHROME_DEBUG_PORT}")
+
+    # Launch Chrome with remote debugging
+    cmd = [
+        chrome_exe,
+        f"--remote-debugging-port={CHROME_DEBUG_PORT}",
+        f"--user-data-dir={CHROME_PROFILE_DIR}",
+    ]
+
+    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    # Give Chrome time to start
+    print("Waiting for Chrome to start...")
+    time.sleep(3)
+
+
 async def main():
     """
     Main automation loop.
     """
     print("Starting Labelbox automation...")
-    print(f"Using Chrome profile: {CHROME_USER_DATA}")
 
-    # Verify profile exists
-    if not Path(CHROME_USER_DATA).exists():
-        print(f"ERROR: Chrome user data directory not found at {CHROME_USER_DATA}")
-        return
+    # Launch Chrome via subprocess
+    launch_chrome()
 
     async with async_playwright() as p:
         try:
-            # Launch Chrome with your existing profile using persistent context
-            print("Launching Chrome with your profile (cookies/sessions preserved)...")
-            context = await p.chromium.launch_persistent_context(
-                user_data_dir=CHROME_USER_DATA,
-                headless=False,
-                channel="chrome"  # Use system Chrome, not Playwright's bundled Chromium
-            )
+            # Connect to Chrome via CDP
+            print(f"Connecting to Chrome via CDP on port {CHROME_DEBUG_PORT}...")
+            browser = await p.chromium.connect_over_cdp(f"http://localhost:{CHROME_DEBUG_PORT}")
 
-            print("✓ Chrome launched")
+            print("✓ Connected to Chrome")
 
-            # Create a new page
-            page = await context.new_page()
+            # Get the default context and page
+            contexts = browser.contexts
+            if not contexts:
+                print("ERROR: No browser contexts found.")
+                return
+
+            context = contexts[0]
+            pages = context.pages
+
+            # Use existing page or create new one
+            if pages:
+                page = pages[0]
+            else:
+                page = await context.new_page()
 
             # Navigate to Labelbox if not already there
-            current_url = page.url
-            if "editor.labelbox.com" not in current_url:
-                print("\nNavigate to editor.labelbox.com in the browser window...")
-                print("Press Enter here once you're on the labeling page...")
-                input()
-
-            # Bring the page to front
             await page.bring_to_front()
+            current_url = page.url
+
+            if "editor.labelbox.com" not in current_url:
+                print("\n" + "="*60)
+                print("FIRST TIME SETUP")
+                print("="*60)
+                print("1. Log into Labelbox in the Chrome window")
+                print("2. Navigate to your labeling task at editor.labelbox.com")
+                print("3. Press Enter here once you're on the labeling page...")
+                print("\nYour session will be saved for future runs.")
+                input()
+            else:
+                print(f"✓ Already on Labelbox: {current_url}")
 
             # Main automation loop
             iteration = 0
@@ -414,21 +471,20 @@ async def main():
             print("Automation completed successfully!")
             print("="*60)
 
-            # Keep browser open for a moment
-            print("\nPress Enter to close Firefox...")
-            input()
+            # Keep browser open
+            print("\nChrome will remain open. Close the window when you're done.")
 
-            await context.close()
-
+        except KeyboardInterrupt:
+            print("\n\nScript interrupted by user. Chrome will remain open.")
         except Exception as e:
             print(f"\nError in main loop: {e}")
             import traceback
             traceback.print_exc()
             print("\nTroubleshooting tips:")
             print("1. Make sure Chrome is installed on your system")
-            print("2. Close any running Chrome instances before running this script")
-            print("3. Check that you're on editor.labelbox.com")
-            print("4. Verify ANTHROPIC_API_KEY is set in .env file")
+            print("2. Check that port 9222 is not already in use")
+            print("3. Verify ANTHROPIC_API_KEY is set in .env file")
+            print("4. On first run, log into Labelbox manually in the Chrome window")
 
 
 if __name__ == "__main__":

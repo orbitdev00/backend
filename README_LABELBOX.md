@@ -1,6 +1,6 @@
 # Labelbox Automation Script
 
-Automates the Labelbox labeling workflow by connecting to your existing Firefox browser via Marionette protocol, scraping row data, calling Claude API for corrections, and submitting the results.
+Automates the Labelbox labeling workflow by launching Firefox with your existing profile (preserving cookies/sessions), scraping row data, calling Claude API for corrections, and submitting the results.
 
 ## Setup
 
@@ -8,6 +8,12 @@ Automates the Labelbox labeling workflow by connecting to your existing Firefox 
 
 ```bash
 pip install -r labelbox_requirements.txt
+```
+
+After installing, install Playwright's Firefox browser:
+
+```bash
+playwright install firefox
 ```
 
 ### 2. Configure Environment Variables
@@ -22,42 +28,20 @@ Edit `.env` and add your Anthropic API key:
 
 ```
 ANTHROPIC_API_KEY=sk-ant-api03-...
-MARIONETTE_PORT=2828
-MARIONETTE_HOST=localhost
 ```
 
 Get your API key from: https://console.anthropic.com/
 
-### 3. Start Firefox with Marionette Enabled
-
-**Windows:**
-```bash
-firefox.exe -marionette
-```
-
-**Mac:**
-```bash
-/Applications/Firefox.app/Contents/MacOS/firefox -marionette
-```
-
-**Linux:**
-```bash
-firefox -marionette
-```
-
-The `-marionette` flag enables Firefox's native automation protocol on port 2828.
-
-> **Note:** If Firefox is already running, close it first and reopen with the `-marionette` flag.
-
-### 4. Navigate to Labelbox
-
-In the Firefox browser window, navigate to `editor.labelbox.com` and log in to your labeling task.
-
-### 5. Run the Script
+### 3. Run the Script
 
 ```bash
 python labelbox_automation.py
 ```
+
+The script will:
+- Launch Firefox with your existing profile (so you're already logged in)
+- Prompt you to navigate to editor.labelbox.com if needed
+- Start automating once you press Enter
 
 ## How It Works
 
@@ -92,15 +76,17 @@ Use Firefox DevTools (F12) to inspect elements and find the correct selectors.
 
 ## Troubleshooting
 
-### "Connection refused" or "Unable to connect"
-- Make sure Firefox is started with the `-marionette` flag
-- Check that port 2828 is not blocked by firewall
-- Verify Firefox is actually running before starting the script
+### "Firefox profile not found"
+- The script looks for profile at: `C:\Users\Alexander\AppData\Roaming\Mozilla\Firefox\Profiles\ru2fvb43.default-release`
+- If your profile is different, set the `FIREFOX_PROFILE` environment variable in `.env`
 
-### "Could not find editor.labelbox.com tab"
-- Navigate to the Labelbox editor before running the script
-- Make sure the URL contains `editor.labelbox.com`
-- The script will try to switch to the correct tab automatically
+### Firefox doesn't launch
+- Make sure Playwright's Firefox is installed: `playwright install firefox`
+- Close any running Firefox instances before running the script
+
+### Script can't find Labelbox page
+- The script will prompt you to navigate to editor.labelbox.com
+- Just open the page in the launched Firefox window and press Enter in the terminal
 
 ### "ANTHROPIC_API_KEY not found"
 - Create a `.env` file in the same directory as the script

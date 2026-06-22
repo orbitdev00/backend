@@ -1,7 +1,8 @@
 """
 Labelbox Automation Script
 
-Connects to an existing Firefox browser via Marionette protocol and automates labeling workflow:
+Launches Firefox via Playwright using your existing profile (so you're already logged in),
+then automates labeling workflow:
 1. Scrapes image, question, and model answer from current row
 2. Calls Claude API for correction
 3. Pastes correction into "Correct Answer" textarea
@@ -9,18 +10,16 @@ Connects to an existing Firefox browser via Marionette protocol and automates la
 5. Clicks Submit and moves to next row
 
 SETUP:
-Firefox must be started with Marionette enabled:
-firefox.exe -marionette
+- Just run this script - it will launch Firefox with your profile automatically
+- Navigate to editor.labelbox.com if not already there
 """
 
+import asyncio
 import os
 import base64
-import time
+from pathlib import Path
 from dotenv import load_dotenv
-from marionette_driver.marionette import Marionette
-from marionette_driver.by import By
-from marionette_driver.wait import Wait
-from marionette_driver.errors import NoSuchElementException, TimeoutException
+from playwright.async_api import async_playwright
 import anthropic
 
 # Load environment variables
@@ -31,22 +30,27 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 if not ANTHROPIC_API_KEY:
     raise ValueError("ANTHROPIC_API_KEY not found in .env file")
 
-# Firefox Marionette port (default is 2828)
-MARIONETTE_HOST = os.getenv("MARIONETTE_HOST", "localhost")
-MARIONETTE_PORT = int(os.getenv("MARIONETTE_PORT", "2828"))
+# Firefox profile path - using default-release profile
+FIREFOX_PROFILE = os.getenv(
+    "FIREFOX_PROFILE",
+    r"C:\Users\Alexander\AppData\Roaming\Mozilla\Firefox\Profiles\ru2fvb43.default-release"
+)
 
 
-def get_image_as_base64(client: Marionette, image_selector: str) -> dict:
+async def get_image_as_base64(page, image_selector: str) -> dict:
     """
     Extract image from the page and convert to base64 for Claude API.
     Returns dict with source type and data.
     """
     try:
-        # Try to find the image element
-        image = client.find_element(By.CSS_SELECTOR, image_selector)
+        # Wait for image to be loaded
+        await page.wait_for_selector(image_selector, timeout=5000)
 
-        # Get image src
-        src = image.get_attribute("src")
+        # Get image element
+        image = page.locator(image_selector).first
+
+        # Get image src or srcset
+        src = await image.get_attribute("src")
 
         if src and src.startswith("data:image"):
             # Already base64 encoded
@@ -61,46 +65,52 @@ def get_image_as_base64(client: Marionette, image_selector: str) -> dict:
                 }
             }
         elif src and (src.startswith("http") or src.startswith("/")):
-            # Use JavaScript to fetch and convert to base64
-            script = """
-            const img = arguments[0];
-            const canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth || img.width;
-            canvas.height = img.naturalHeight || img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            return canvas.toDataURL('image/png');
-            """
-            data_url = client.execute_script(script, script_args=[image])
+            # Need to fetch and convert
+            response = await page.request.get(src)
+            image_bytes = await response.body()
+            base64_data = base64.b64encode(image_bytes).decode("utf-8")
 
-            if data_url and data_url.startswith("data:image"):
-                media_type = data_url.split(";")[0].split(":")[1]
-                base64_data = data_url.split(",")[1]
-                return {
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": media_type,
-                        "data": base64_data
-                    }
+            # Determine media type from response headers or URL
+            content_type = response.headers.get("content-type", "image/jpeg")
+
+            return {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": content_type,
+                    "data": base64_data
                 }
-
-        return None
-
+            }
+        else:
+            # Fallback: take screenshot of the element
+            screenshot_bytes = await image.screenshot()
+            base64_data = base64.b64encode(screenshot_bytes).decode("utf-8")
+            return {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": "image/png",
+                    "data": base64_data
+                }
+            }
     except Exception as e:
-        print(f"Error extracting image with selector '{image_selector}': {e}")
+        print(f"Error extracting image: {e}")
         return None
 
 
-def scrape_current_row(client: Marionette):
+async def scrape_current_row(page):
     """
     Scrape the current row's image, question, and model answer.
+    You'll need to adjust selectors based on actual Labelbox DOM structure.
     """
     try:
-        # Wait for page to be ready
-        time.sleep(1)
+        # Wait for the page to be ready
+        await page.wait_for_load_state("networkidle")
 
-        # Try to find the image
+        # These are example selectors - adjust based on actual Labelbox structure
+        # You can use browser DevTools to find the correct selectors
+
+        # Try to find the image (common patterns in labeling tools)
         image_selectors = [
             "img.task-image",
             "[data-testid='image']",
@@ -113,9 +123,8 @@ def scrape_current_row(client: Marionette):
         image_data = None
         for selector in image_selectors:
             try:
-                elements = client.find_elements(By.CSS_SELECTOR, selector)
-                if elements:
-                    image_data = get_image_as_base64(client, selector)
+                if await page.locator(selector).count() > 0:
+                    image_data = await get_image_as_base64(page, selector)
                     if image_data:
                         print(f"✓ Found image with selector: {selector}")
                         break
@@ -126,27 +135,32 @@ def scrape_current_row(client: Marionette):
         question_selectors = [
             "[data-testid='question']",
             ".question-text",
+            "label:has-text('Question')",
+            "div:has-text('Question') + div",
         ]
 
         question = ""
         for selector in question_selectors:
             try:
-                elem = client.find_element(By.CSS_SELECTOR, selector)
-                question = elem.text
-                if question.strip():
-                    print(f"✓ Found question with selector: {selector}")
-                    break
+                elem = page.locator(selector).first
+                if await elem.count() > 0:
+                    question = await elem.inner_text()
+                    if question.strip():
+                        print(f"✓ Found question with selector: {selector}")
+                        break
             except:
                 continue
 
-        # If no question found, try heuristic
+        # If still no question, try to find any prominent text
         if not question.strip():
             try:
-                body_text = client.find_element(By.TAG_NAME, "body").text
-                for line in body_text.split("\n"):
+                # Look for any text that looks like a question
+                all_text = await page.inner_text("body")
+                # Simple heuristic: find text with question mark
+                for line in all_text.split("\n"):
                     if "?" in line and len(line) < 500:
                         question = line.strip()
-                        print(f"✓ Found question via heuristic")
+                        print(f"✓ Found question via heuristic: {question[:50]}...")
                         break
             except:
                 pass
@@ -156,16 +170,19 @@ def scrape_current_row(client: Marionette):
             "[data-testid='model-answer']",
             ".model-answer",
             "textarea[readonly]",
+            "div:has-text('Model Answer') + div",
+            "div:has-text('Answer') + div",
         ]
 
         model_answer = ""
         for selector in model_answer_selectors:
             try:
-                elem = client.find_element(By.CSS_SELECTOR, selector)
-                model_answer = elem.text or elem.get_attribute("value")
-                if model_answer.strip():
-                    print(f"✓ Found model answer with selector: {selector}")
-                    break
+                elem = page.locator(selector).first
+                if await elem.count() > 0:
+                    model_answer = await elem.inner_text()
+                    if model_answer.strip():
+                        print(f"✓ Found model answer with selector: {selector}")
+                        break
             except:
                 continue
 
@@ -182,7 +199,7 @@ def scrape_current_row(client: Marionette):
         return None
 
 
-def call_claude_api(image_data: dict, question: str, model_answer: str) -> str:
+async def call_claude_api(image_data: dict, question: str, model_answer: str) -> str:
     """
     Call Claude API with the scraped data and return the correction.
     """
@@ -239,78 +256,65 @@ def call_claude_api(image_data: dict, question: str, model_answer: str) -> str:
         return ""
 
 
-def submit_correction(client: Marionette, correction: str):
+async def submit_correction(page, correction: str):
     """
     Paste the correction into the Correct Answer textarea and submit.
     """
     try:
         # Find and fill the "Correct Answer" textarea
-        try:
-            textarea = client.find_element(By.CSS_SELECTOR, "textarea.css-16l8qav")
-        except:
-            # Try generic textarea
-            textareas = client.find_elements(By.TAG_NAME, "textarea")
-            textarea = textareas[-1] if textareas else None
+        correct_answer_textarea = page.locator("textarea.css-16l8qav")
 
-        if not textarea:
-            print("⚠ Could not find textarea")
-            return False
+        # Wait for it to be visible
+        await correct_answer_textarea.wait_for(state="visible", timeout=5000)
 
         # Clear and fill
-        textarea.clear()
-        textarea.send_keys(correction)
+        await correct_answer_textarea.clear()
+        await correct_answer_textarea.fill(correction)
         print("✓ Pasted correction into textarea")
 
         # Try to set classification dropdown if it exists
         try:
-            selects = client.find_elements(By.TAG_NAME, "select")
-            if selects:
-                # Use JavaScript to select the second option
-                script = """
-                const select = arguments[0];
-                if (select.options.length > 1) {
-                    select.selectedIndex = 1;
-                    select.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-                """
-                client.execute_script(script, script_args=[selects[0]])
-                print("✓ Set classification dropdown")
+            # Look for common dropdown patterns
+            dropdown_selectors = [
+                "select[name*='classification']",
+                "select[name*='category']",
+                "[data-testid='classification-dropdown']",
+                "select"
+            ]
+
+            for selector in dropdown_selectors:
+                if await page.locator(selector).count() > 0:
+                    # Just select the first non-empty option as a guess
+                    options = await page.locator(f"{selector} option").all()
+                    if len(options) > 1:
+                        # Select second option (first is usually empty/placeholder)
+                        await page.select_option(selector, index=1)
+                        print("✓ Set classification dropdown")
+                        break
         except Exception as e:
             print(f"Note: Could not set classification dropdown: {e}")
 
         # Click Submit button
         submit_selectors = [
+            "button:has-text('Submit')",
+            "[data-testid='submit']",
             "button[type='submit']",
-            "input[type='submit']",
+            "input[type='submit']"
         ]
 
-        submit_button = None
         for selector in submit_selectors:
             try:
-                submit_button = client.find_element(By.CSS_SELECTOR, selector)
-                break
+                if await page.locator(selector).count() > 0:
+                    await page.locator(selector).first.click()
+                    print("✓ Clicked Submit")
+                    # Wait a bit for the next row to load
+                    await asyncio.sleep(2)
+                    return True
             except:
                 continue
 
-        # Try finding by text if selectors fail
-        if not submit_button:
-            try:
-                buttons = client.find_elements(By.TAG_NAME, "button")
-                for btn in buttons:
-                    if "submit" in btn.text.lower():
-                        submit_button = btn
-                        break
-            except:
-                pass
-
-        if submit_button:
-            submit_button.click()
-            print("✓ Clicked Submit")
-            time.sleep(2)
-            return True
-        else:
-            print("⚠ Warning: Could not find Submit button")
-            return False
+        print("⚠ Warning: Could not find Submit button")
+        return False
 
     except Exception as e:
         print(f"Error submitting correction: {e}")
@@ -319,117 +323,120 @@ def submit_correction(client: Marionette, correction: str):
         return False
 
 
-def main():
+async def main():
     """
     Main automation loop.
     """
     print("Starting Labelbox automation...")
-    print(f"Connecting to Firefox Marionette at {MARIONETTE_HOST}:{MARIONETTE_PORT}...")
+    print(f"Using Firefox profile: {FIREFOX_PROFILE}")
 
-    try:
-        # Connect to Firefox via Marionette
-        client = Marionette(host=MARIONETTE_HOST, port=MARIONETTE_PORT)
-        client.start_session()
+    # Verify profile exists
+    if not Path(FIREFOX_PROFILE).exists():
+        print(f"ERROR: Firefox profile not found at {FIREFOX_PROFILE}")
+        print("\nAvailable profiles:")
+        profiles_dir = Path(r"C:\Users\Alexander\AppData\Roaming\Mozilla\Firefox\Profiles")
+        for profile in profiles_dir.iterdir():
+            print(f"  - {profile.name}")
+        return
 
-        print("✓ Connected to Firefox")
+    async with async_playwright() as p:
+        try:
+            # Launch Firefox with your existing profile
+            print("Launching Firefox with your profile (cookies/sessions preserved)...")
+            browser = await p.firefox.launch(
+                headless=False,
+                args=[
+                    '-profile',
+                    FIREFOX_PROFILE
+                ]
+            )
 
-        # Get current URL
-        current_url = client.get_url()
-        print(f"Current URL: {current_url}")
+            # Create a new context and page
+            context = browser.contexts[0] if browser.contexts else await browser.new_context()
+            page = await context.new_page() if not context.pages else context.pages[0]
 
-        # Check if we're on the right page
-        if "editor.labelbox.com" not in current_url:
-            print("⚠ Warning: Not on editor.labelbox.com - trying to find the right tab...")
+            print("✓ Firefox launched")
 
-            # Try to switch to a window with labelbox
-            for handle in client.window_handles:
-                client.switch_to_window(handle)
-                url = client.get_url()
-                if "editor.labelbox.com" in url:
-                    print(f"✓ Found Labelbox tab: {url}")
-                    break
+            # Navigate to Labelbox if not already there
+            current_url = page.url
+            if "editor.labelbox.com" not in current_url:
+                print("\nNavigate to editor.labelbox.com in the browser window...")
+                print("Press Enter here once you're on the labeling page...")
+                input()
 
-        # Main automation loop
-        iteration = 0
-        while True:
-            iteration += 1
-            print(f"\n{'='*60}")
-            print(f"Processing row #{iteration}")
-            print(f"{'='*60}")
+            # Bring the page to front
+            await page.bring_to_front()
 
-            # Check if Submit button is still visible
-            try:
-                buttons = client.find_elements(By.TAG_NAME, "button")
-                submit_visible = any("submit" in btn.text.lower() for btn in buttons)
+            # Main automation loop
+            iteration = 0
+            while True:
+                iteration += 1
+                print(f"\n{'='*60}")
+                print(f"Processing row #{iteration}")
+                print(f"{'='*60}")
+
+                # Check if Submit button is still visible
+                submit_visible = await page.locator("button:has-text('Submit')").count() > 0
                 if not submit_visible:
                     print("✓ Submit button no longer visible. Automation complete!")
                     break
-            except:
-                pass
 
-            # 1. Scrape current row
-            row_data = scrape_current_row(client)
-            if not row_data:
-                print("⚠ Could not scrape row data. Retrying in 5 seconds...")
-                time.sleep(5)
-                continue
+                # 1. Scrape current row
+                row_data = await scrape_current_row(page)
+                if not row_data:
+                    print("⚠ Could not scrape row data. Retrying in 5 seconds...")
+                    await asyncio.sleep(5)
+                    continue
 
-            print(f"\nScraped data:")
-            print(f"  - Image: {'✓' if row_data.get('image') else '✗'}")
-            print(f"  - Question: {row_data.get('question', '')[:50]}...")
-            print(f"  - Model Answer: {row_data.get('model_answer', '')[:50]}...")
+                print(f"\nScraped data:")
+                print(f"  - Image: {'✓' if row_data.get('image') else '✗'}")
+                print(f"  - Question: {row_data.get('question', '')[:50]}...")
+                print(f"  - Model Answer: {row_data.get('model_answer', '')[:50]}...")
 
-            # 2. Call Claude API
-            correction = call_claude_api(
-                row_data.get("image"),
-                row_data.get("question", ""),
-                row_data.get("model_answer", "")
-            )
+                # 2. Call Claude API
+                correction = await call_claude_api(
+                    row_data.get("image"),
+                    row_data.get("question", ""),
+                    row_data.get("model_answer", "")
+                )
 
-            if not correction:
-                print("⚠ No correction received from Claude API. Skipping this row.")
-                # Try to click Submit anyway to move to next
-                try:
-                    buttons = client.find_elements(By.TAG_NAME, "button")
-                    for btn in buttons:
-                        if "submit" in btn.text.lower():
-                            btn.click()
-                            time.sleep(2)
-                            break
-                except:
-                    pass
-                continue
+                if not correction:
+                    print("⚠ No correction received from Claude API. Skipping this row.")
+                    # Try to click Submit anyway to move to next
+                    await page.locator("button:has-text('Submit')").first.click()
+                    await asyncio.sleep(2)
+                    continue
 
-            # 3. Submit correction
-            success = submit_correction(client, correction)
+                # 3. Submit correction
+                success = await submit_correction(page, correction)
 
-            if not success:
-                print("⚠ Failed to submit. Waiting 5 seconds before next attempt...")
-                time.sleep(5)
+                if not success:
+                    print("⚠ Failed to submit. Waiting 5 seconds before next attempt...")
+                    await asyncio.sleep(5)
 
-            # Small delay between iterations
-            time.sleep(1)
+                # Small delay between iterations
+                await asyncio.sleep(1)
 
-        print("\n" + "="*60)
-        print("Automation completed successfully!")
-        print("="*60)
+            print("\n" + "="*60)
+            print("Automation completed successfully!")
+            print("="*60)
 
-    except Exception as e:
-        print(f"\nError in main loop: {e}")
-        import traceback
-        traceback.print_exc()
-        print("\nTroubleshooting tips:")
-        print("1. Make sure Firefox is started with Marionette enabled:")
-        print("   firefox.exe -marionette")
-        print("2. Check that you're on editor.labelbox.com")
-        print("3. Verify ANTHROPIC_API_KEY is set in .env file")
-        print("4. Check that Marionette port 2828 is accessible")
-    finally:
-        try:
-            client.delete_session()
-        except:
-            pass
+            # Keep browser open for a moment
+            print("\nPress Enter to close Firefox...")
+            input()
+
+            await browser.close()
+
+        except Exception as e:
+            print(f"\nError in main loop: {e}")
+            import traceback
+            traceback.print_exc()
+            print("\nTroubleshooting tips:")
+            print("1. Make sure you have Playwright's Firefox installed:")
+            print("   playwright install firefox")
+            print("2. Check that you're on editor.labelbox.com")
+            print("3. Verify ANTHROPIC_API_KEY is set in .env file")
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

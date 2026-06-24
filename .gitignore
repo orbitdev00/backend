@@ -1,7 +1,20 @@
-# Secrets
+# Secrets and Environment Variables
+.env
+.env.*
+.env.local
+.env.production
+.env.staging
+.env.development
 backend/.env
+backend/.env.*
 frontend/.env
-frontend/.env.local
+frontend/.env.*
+
+# Railway & Vercel deployment configs with secrets
+railway.json
+railway.toml
+.vercel
+vercel.json
 
 # Dependencies (too large for GitHub)
 node_modules/

@@ -9,7 +9,7 @@ const SOCIALS = [
   { label: 'GitHub', url: 'https://github.com/orbitdev00' },
 ]
 
-const CONTRACT_ADDRESS = 'DAZK8WcKYwUGm8cCoRhYRDfVowogdVuS2VT8hbYgpump'
+const CONTRACT_ADDRESS = 'Ge5JGnzggDqEa1cFcmrCLRQrRYsfcdtYMTjmug43pump'
 
 const STATS = [
   { value: '< 5s', label: 'Per analysis' },

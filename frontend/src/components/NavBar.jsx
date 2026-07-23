@@ -9,7 +9,7 @@ import PricingPanel from './PricingPanel'
 import { getUserTier, openBillingPortal } from '../lib/stripe'
 import { grantBadge } from '../hooks/useBadges'
 
-const CONTRACT_ADDRESS = 'DAZK8WcKYwUGm8cCoRhYRDfVowogdVuS2VT8hbYgpump'
+const CONTRACT_ADDRESS = 'Ge5JGnzggDqEa1cFcmrCLRQrRYsfcdtYMTjmug43pump'
 const CA_SHORT = `${CONTRACT_ADDRESS.slice(0, 5)}…${CONTRACT_ADDRESS.slice(-4)}`
 
 function timeAgo(ts) {

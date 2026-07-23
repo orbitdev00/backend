@@ -118,6 +118,36 @@
 }
 .lp-nav-cta:hover { opacity: 0.85; transform: translateY(-1px); }
 
+/* Contract address — absolutely centered in the nav so it stays mid-screen
+   regardless of the brand/right column widths. */
+.lp-nav-ca {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex; align-items: center; gap: 8px;
+  max-width: 46vw;
+  background: var(--purple-dim);
+  border: 1px solid rgba(167,139,250,0.28);
+  border-radius: 5px; padding: 5px 10px;
+  cursor: pointer; font-family: var(--mono);
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.lp-nav-ca:hover {
+  background: rgba(167,139,250,0.22);
+  border-color: rgba(167,139,250,0.5);
+}
+.lp-nav-ca-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 2px;
+  color: var(--purple); opacity: 0.7; flex-shrink: 0;
+}
+.lp-nav-ca-addr {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+  color: var(--purple);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.lp-nav-ca-copied .lp-nav-ca-addr,
+.lp-nav-ca-copied .lp-nav-ca-label { color: #4ade80; opacity: 1; }
+.lp-nav-ca-copied { border-color: rgba(74,222,128,0.5); background: rgba(74,222,128,0.12); }
+
 /* ── HERO ──────────────────────────────────────────────── */
 .lp-hero {
   position: relative; z-index: 1;
@@ -472,10 +502,16 @@
   .lp-footer-disc { text-align: left; }
   .lp-final { padding: 100px 24px; }
 }
+@media (max-width: 720px) {
+  .lp-nav-ca { max-width: 38vw; padding: 4px 8px; gap: 6px; }
+  .lp-nav-ca-addr { font-size: 10px; }
+}
 @media (max-width: 480px) {
   .lp-nav { padding: 0 16px; }
   .lp-nav-socials { display: none; }
   .lp-nav-divider { display: none; }
+  .lp-nav-ca { max-width: 34vw; }
+  .lp-nav-ca-label { display: none; }
   .lp-hero-h1 { font-size: 40px; letter-spacing: -1px; }
   .lp-footer-top { grid-template-columns: 1fr; }
 }

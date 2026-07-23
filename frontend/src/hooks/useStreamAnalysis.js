@@ -49,7 +49,14 @@ export function useStreamAnalysis() {
     const RAILWAY_HOST = RAILWAY_URL.replace('https://', '')
     let wsParams = ''
     if (session?.user?.id) {
+      // Send BOTH user_id and access_token. The backend now requires a valid
+      // token whenever a user_id is claimed (so nobody can spoof another user's
+      // id to drain their quota / ride their tier). Sending only user_id gets
+      // the socket rejected as auth_failed.
       wsParams = `?user_id=${encodeURIComponent(session.user.id)}`
+      if (session?.access_token) {
+        wsParams += `&access_token=${encodeURIComponent(session.access_token)}`
+      }
     } else {
       // Guest — pass fingerprint for trial gate
       try {

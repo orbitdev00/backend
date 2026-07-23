@@ -1,21 +1,27 @@
 -- Supabase Row Level Security policies for Orbit
 -- Run these in the Supabase SQL Editor (Dashboard > SQL Editor)
 -- The service key bypasses RLS, so backend writes are unaffected.
+--
+-- This script is idempotent: every CREATE POLICY is preceded by
+-- DROP POLICY IF EXISTS, so it is safe to re-run.
 
 -- ─── user_reputation ────────────────────────────────────────────────────────
 ALTER TABLE user_reputation ENABLE ROW LEVEL SECURITY;
 
 -- Anyone can read public reputation data (leaderboard, profiles)
+DROP POLICY IF EXISTS "public read user_reputation" ON user_reputation;
 CREATE POLICY "public read user_reputation"
   ON user_reputation FOR SELECT
   USING (true);
 
 -- Users can only update their own row
+DROP POLICY IF EXISTS "own row update user_reputation" ON user_reputation;
 CREATE POLICY "own row update user_reputation"
   ON user_reputation FOR UPDATE
   USING (auth.uid()::text = user_id);
 
 -- Users can insert their own row (needed for first-time onboarding)
+DROP POLICY IF EXISTS "own insert user_reputation" ON user_reputation;
 CREATE POLICY "own insert user_reputation"
   ON user_reputation FOR INSERT
   WITH CHECK (auth.uid()::text = user_id);
@@ -63,11 +69,13 @@ CREATE TRIGGER trg_protect_reputation_columns
 ALTER TABLE predictions ENABLE ROW LEVEL SECURITY;
 
 -- Public read (accuracy stats, leaderboard)
+DROP POLICY IF EXISTS "public read predictions" ON predictions;
 CREATE POLICY "public read predictions"
   ON predictions FOR SELECT
   USING (true);
 
 -- Users can only insert their own predictions
+DROP POLICY IF EXISTS "own insert predictions" ON predictions;
 CREATE POLICY "own insert predictions"
   ON predictions FOR INSERT
   WITH CHECK (auth.uid()::text = user_id OR user_id IS NULL);
@@ -79,16 +87,19 @@ CREATE POLICY "own insert predictions"
 ALTER TABLE user_calls ENABLE ROW LEVEL SECURITY;
 
 -- Users can only read their own watchlist
+DROP POLICY IF EXISTS "own read user_calls" ON user_calls;
 CREATE POLICY "own read user_calls"
   ON user_calls FOR SELECT
   USING (auth.uid()::text = user_id);
 
 -- Users can only insert into their own watchlist
+DROP POLICY IF EXISTS "own insert user_calls" ON user_calls;
 CREATE POLICY "own insert user_calls"
   ON user_calls FOR INSERT
   WITH CHECK (auth.uid()::text = user_id);
 
 -- Users can only delete their own watchlist entries
+DROP POLICY IF EXISTS "own delete user_calls" ON user_calls;
 CREATE POLICY "own delete user_calls"
   ON user_calls FOR DELETE
   USING (auth.uid()::text = user_id);
@@ -98,6 +109,7 @@ CREATE POLICY "own delete user_calls"
 ALTER TABLE user_badges ENABLE ROW LEVEL SECURITY;
 
 -- Anyone can read badge data (public profiles)
+DROP POLICY IF EXISTS "public read user_badges" ON user_badges;
 CREATE POLICY "public read user_badges"
   ON user_badges FOR SELECT
   USING (true);

@@ -56,5 +56,5 @@ SELECT
   ur.tier,
   au.email as auth_email
 FROM user_reputation ur
-LEFT JOIN auth.users au ON ur.user_id = au.id
+LEFT JOIN auth.users au ON ur.user_id = au.id::text
 WHERE ur.email = 'orbitdev00@gmail.com' OR au.email = 'orbitdev00@gmail.com';

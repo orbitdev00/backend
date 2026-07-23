@@ -5,7 +5,7 @@
 -- This script is idempotent: every CREATE POLICY is preceded by
 -- DROP POLICY IF EXISTS, so it is safe to re-run.
 
--- ─── user_reputation ────────────────────────────────────────────────────────
+-- --- user_reputation ------------------------------------------------------------
 ALTER TABLE user_reputation ENABLE ROW LEVEL SECURITY;
 
 -- Anyone can read public reputation data (leaderboard, profiles)
@@ -26,7 +26,7 @@ CREATE POLICY "own insert user_reputation"
   ON user_reputation FOR INSERT
   WITH CHECK (auth.uid()::text = user_id);
 
--- ─── PROTECT PRIVILEGED COLUMNS ──────────────────────────────────────────────
+-- --- PROTECT PRIVILEGED COLUMNS ------------------------------------------------------------
 -- CRITICAL: the "own row update" policy above lets a user PATCH their own row.
 -- Without a column guard, an authenticated user can set tier='omega',
 -- role='owner', reset their daily quota, or forge total_pnl_pct (leaderboard
@@ -65,7 +65,7 @@ CREATE TRIGGER trg_protect_reputation_columns
   FOR EACH ROW EXECUTE FUNCTION protect_reputation_columns();
 
 
--- ─── predictions ────────────────────────────────────────────────────────────
+-- --- predictions ------------------------------------------------------------
 ALTER TABLE predictions ENABLE ROW LEVEL SECURITY;
 
 -- Public read (accuracy stats, leaderboard)
@@ -80,10 +80,10 @@ CREATE POLICY "own insert predictions"
   ON predictions FOR INSERT
   WITH CHECK (auth.uid()::text = user_id OR user_id IS NULL);
 
--- No direct updates from client — backend service key handles updates
+-- No direct updates from client - backend service key handles updates
 
 
--- ─── user_calls (tracker watchlist) ─────────────────────────────────────────
+-- --- user_calls (tracker watchlist) ------------------------------------------------------------
 ALTER TABLE user_calls ENABLE ROW LEVEL SECURITY;
 
 -- Users can only read their own watchlist
@@ -105,7 +105,7 @@ CREATE POLICY "own delete user_calls"
   USING (auth.uid()::text = user_id);
 
 
--- ─── user_badges ─────────────────────────────────────────────────────────────
+-- --- user_badges ------------------------------------------------------------
 ALTER TABLE user_badges ENABLE ROW LEVEL SECURITY;
 
 -- Anyone can read badge data (public profiles)
@@ -117,7 +117,7 @@ CREATE POLICY "public read user_badges"
 -- Only service key can insert/update badges (no client policy = denied for anon/authed)
 
 
--- ---- watchlist (coin watchlist saved to account) -----------------------------
+-- ---- watchlist (coin watchlist saved to account) ------------------------------------------------------------
 -- Run this block once to create the table, then the policies below.
 -- CREATE TABLE IF NOT EXISTS watchlist (
 --   id         UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -139,7 +139,7 @@ CREATE POLICY "own insert watchlist" ON watchlist FOR INSERT WITH CHECK (auth.ui
 CREATE POLICY "own delete watchlist" ON watchlist FOR DELETE USING (auth.uid()::text = user_id);
 
 
--- ---- direct_messages ---------------------------------------------------------
+-- ---- direct_messages ------------------------------------------------------------
 ALTER TABLE direct_messages ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "own read direct_messages" ON direct_messages;
@@ -152,7 +152,7 @@ CREATE POLICY "own read direct_messages"
 -- Inserts go through backend service key only (no client INSERT policy)
 
 
--- ---- forum_threads -----------------------------------------------------------
+-- ---- forum_threads ------------------------------------------------------------
 ALTER TABLE forum_threads ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "public read forum_threads" ON forum_threads;
@@ -162,7 +162,7 @@ CREATE POLICY "public read forum_threads" ON forum_threads FOR SELECT USING (tru
 -- All writes go through backend service key only
 
 
--- ---- forum_posts -------------------------------------------------------------
+-- ---- forum_posts ------------------------------------------------------------
 ALTER TABLE forum_posts ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "public read forum_posts" ON forum_posts;
@@ -172,7 +172,7 @@ CREATE POLICY "public read forum_posts" ON forum_posts FOR SELECT USING (true);
 -- All writes go through backend service key only
 
 
--- ---- forum_votes -------------------------------------------------------------
+-- ---- forum_votes ------------------------------------------------------------
 ALTER TABLE forum_votes ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "own read forum_votes" ON forum_votes;
@@ -194,7 +194,7 @@ CREATE POLICY "public read user_follows" ON user_follows FOR SELECT USING (true)
 -- All writes go through backend service key only
 
 
--- ---- trial_uses (free-analysis gate) ----------------------------------------
+-- ---- trial_uses (free-analysis gate) ------------------------------------------------------------
 -- The trial gate (trial_gate.py) now uses the SERVICE key. Lock this table so
 -- clients (anon/authenticated) cannot read, insert, delete or forge trial
 -- records to farm unlimited free analyses. With RLS enabled and NO client
@@ -203,4 +203,4 @@ ALTER TABLE trial_uses ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "public read trial_uses"   ON trial_uses;
 DROP POLICY IF EXISTS "public insert trial_uses" ON trial_uses;
--- (Intentionally no policies — service key only.)
+-- (Intentionally no policies - service key only.)

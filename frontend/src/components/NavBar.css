@@ -17,6 +17,22 @@
 .nb-title { font-size: 15px; font-weight: 700; letter-spacing: 3px; color: #fff; }
 .nb-version { font-size: 9px; color: #666680; letter-spacing: 1px; }
 
+/* Contract address pill (after logo) */
+.nb-ca {
+  display: flex; align-items: center; gap: 7px;
+  background: rgba(167,139,250,0.12);
+  border: 1px solid rgba(167,139,250,0.28);
+  border-radius: 6px; padding: 5px 10px;
+  cursor: pointer; font-family: var(--mono);
+  flex-shrink: 0; margin-right: 4px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.nb-ca:hover { background: rgba(167,139,250,0.22); border-color: rgba(167,139,250,0.5); }
+.nb-ca-label { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; color: #a78bfa; opacity: 0.7; }
+.nb-ca-addr { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; color: #a78bfa; white-space: nowrap; }
+.nb-ca-copied { border-color: rgba(74,222,128,0.5); background: rgba(74,222,128,0.12); }
+.nb-ca-copied .nb-ca-label, .nb-ca-copied .nb-ca-addr { color: #4ade80; opacity: 1; }
+
 .nb-links { display: flex; gap: 2px; flex: 1; }
 .nb-link {
   background: none; border: none; color: #666;
@@ -96,6 +112,8 @@
   .nb-desktop { display: none !important; }
   .nb-mobile  { display: flex; }
   .nb-version { display: none; }
+  .nb-ca { margin-left: auto; margin-right: 8px; padding: 4px 8px; }
+  .nb-ca-label { display: none; }
 }
 
 /* Account Settings Modal */

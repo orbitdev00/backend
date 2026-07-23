@@ -8,7 +8,7 @@
 
 -- First, let's see what's currently in the database
 SELECT
-  au.id as user_id,
+  au.id::text as user_id,
   au.email as auth_email,
   ur.email as rep_email,
   ur.username,
@@ -16,7 +16,7 @@ SELECT
   ur.tier,
   ur.subscription_expires_at
 FROM auth.users au
-LEFT JOIN user_reputation ur ON au.id = ur.user_id
+LEFT JOIN user_reputation ur ON au.id::text = ur.user_id
 WHERE au.email = 'orbitdev00@gmail.com';
 
 -- Step 1: Update or insert your owner record
@@ -31,7 +31,7 @@ INSERT INTO user_reputation (
   updated_at
 )
 SELECT
-  id,
+  id::text,
   'orbitdev00@gmail.com',
   'Orbit_Dev',
   'owner',

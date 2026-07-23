@@ -216,7 +216,7 @@ export default function Landing({ onSwitch }) {
         <div className="lp-nav-brand">
           <img src={orbitPfp} className="lp-nav-pfp" alt="" />
           <span className="lp-nav-name">ORBIT</span>
-          <span className="lp-nav-ver">v0.8</span>
+          <span className="lp-nav-ver">v1.0</span>
         </div>
         <button
           className={`lp-nav-ca ${caCopied ? 'lp-nav-ca-copied' : ''}`}
@@ -649,7 +649,7 @@ export default function Landing({ onSwitch }) {
             <div className="lp-footer-logo">
               <img src={orbitPfp} className="lp-nav-pfp" alt="" />
               <span className="lp-nav-name">ORBIT</span>
-              <span className="lp-nav-ver">v0.8</span>
+              <span className="lp-nav-ver">v1.0</span>
             </div>
             <p className="lp-footer-tag">On-chain intelligence for Solana and ETH traders.</p>
             <div className="lp-footer-status"><span className="lp-status-dot" />All systems operational</div>

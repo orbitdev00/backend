@@ -69,7 +69,7 @@ export default function Home() {
         <div className="home-hero">
           <div className="home-hero-pill">
             <span className="home-hero-pulse" />
-            v0.3 · All systems operational
+            v1.0 · All systems operational
           </div>
           <h1 className="home-hero-title">
             gm, <span className="home-hero-name">{username}</span>

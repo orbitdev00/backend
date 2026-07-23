@@ -1,0 +1,53 @@
+#!/bin/sh
+# Orbit pre-commit guard.
+# Blocks two classes of mistakes that have bitten this repo before:
+#   1. UTF-8 BOM at the start of text files (recurring encoding corruption).
+#   2. Live secrets/keys accidentally staged for commit.
+#
+# Enable once with:   git config core.hooksPath .githooks
+# Bypass in a pinch:  git commit --no-verify
+
+fail=0
+
+# Staged files that are added/copied/modified (skip deletions).
+files=$(git diff --cached --name-only --diff-filter=ACM)
+
+for f in $files; do
+  # Skip binaries where these checks are meaningless / noisy.
+  case "$f" in
+    *.png|*.jpg|*.jpeg|*.gif|*.ico|*.webp|*.svg|*.woff|*.woff2|*.ttf|*.otf|*.pdf|*.zip|*.gz|*.mp3|*.wav|*.mp4|*.lock)
+      continue ;;
+  esac
+
+  # Read the STAGED content (not the working tree) so the check matches what
+  # will actually be committed.
+  staged=$(git show ":$f" 2>/dev/null) || continue
+
+  # 1. BOM check -- first three bytes EF BB BF.
+  bom=$(git show ":$f" 2>/dev/null | head -c 3 | od -An -tx1 | tr -d ' \n')
+  if [ "$bom" = "efbbbf" ]; then
+    echo "BOM:    $f starts with a UTF-8 BOM. Re-save as UTF-8 without BOM."
+    fail=1
+  fi
+
+  # 2. Secret patterns. Placeholders like 'sk-ant-your-key-here' won't match
+  #    because the trailing run is too short / contains non-key characters.
+  hit=$(printf '%s' "$staged" | grep -nE \
+    'sk-ant-(api[0-9]{2}-)?[A-Za-z0-9_-]{24}|sk_live_[A-Za-z0-9]{20}|rk_live_[A-Za-z0-9]{20}|whsec_[A-Za-z0-9]{24}|ghp_[A-Za-z0-9]{30}|github_pat_[A-Za-z0-9_]{30}|re_[A-Za-z0-9]{24}' \
+    2>/dev/null | head -3)
+  if [ -n "$hit" ]; then
+    echo "SECRET: $f looks like it contains a live key/token:"
+    echo "$hit" | sed 's/^/          /'
+    fail=1
+  fi
+done
+
+if [ "$fail" -ne 0 ]; then
+  echo ""
+  echo "Commit blocked by .githooks/pre-commit."
+  echo "Fix the issues above. If this is a false positive, bypass with:"
+  echo "    git commit --no-verify"
+  exit 1
+fi
+
+exit 0

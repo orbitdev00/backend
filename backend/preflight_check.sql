@@ -18,7 +18,7 @@ FROM (VALUES
   ('user_reputation'), ('predictions'), ('user_calls'), ('user_badges'),
   ('watchlist'), ('direct_messages'), ('forum_threads'), ('forum_posts'),
   ('forum_votes'), ('user_follows'), ('trial_uses'), ('forum_categories'),
-  ('forum_badges'), ('watched_coins')
+  ('forum_badges'), ('stripe_events')
 ) AS t(tbl)
 
 UNION ALL

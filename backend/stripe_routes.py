@@ -103,6 +103,35 @@ async def _get_user_by_email(email: str) -> str | None:
         return rows[0]["user_id"] if rows else None
 
 
+async def _already_processed(event_id: str, event_type: str) -> bool:
+    """Idempotency guard. Records the Stripe event id in stripe_events (id is the
+    PRIMARY KEY). Returns True if the id was already recorded -- i.e. this is a
+    Stripe retry/replay -- so the caller can skip re-processing (e.g. avoid
+    sending a duplicate welcome DM or re-running tier logic).
+
+    Fails OPEN: if the dedup table can't be reached we process the event anyway,
+    since dropping a real payment event is far worse than a rare duplicate DM.
+    """
+    if not event_id:
+        return False
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.post(
+                f"{SUPABASE_URL}/rest/v1/stripe_events",
+                json={"id": event_id, "type": event_type},
+                headers={**SUPA_HEADERS, "Prefer": "return=minimal"},
+            )
+        if r.status_code in (200, 201, 204):
+            return False   # newly recorded -> first time seeing it
+        if r.status_code == 409:
+            return True    # duplicate primary key -> already handled
+        print(f"[Stripe] idempotency insert status={r.status_code} body={r.text[:200]}")
+        return False
+    except Exception as e:
+        print(f"[Stripe] idempotency check error: {e} -- processing anyway")
+        return False
+
+
 @router.post("/stripe/create-checkout")
 async def create_checkout(request: Request):
     """Create a Stripe checkout session for tier upgrade."""
@@ -167,6 +196,11 @@ async def stripe_webhook(request: Request):
 
     event_type = event["type"]
     print(f"[Stripe] Event: {event_type}")
+
+    # Idempotency: skip events we've already handled (Stripe retries/replays).
+    if await _already_processed(event.get("id", ""), event_type):
+        print(f"[Stripe] Duplicate event {event.get('id')} ({event_type}) -- skipping")
+        return JSONResponse({"received": True, "duplicate": True})
 
     # ── Checkout completed → upgrade tier ─────────────────────
     if event_type == "checkout.session.completed":

@@ -26,7 +26,6 @@ INSERT INTO user_reputation (
   username,
   role,
   tier,
-  reputation,
   created_at,
   updated_at
 )
@@ -36,7 +35,6 @@ SELECT
   'Orbit_Dev',
   'owner',
   'omega',
-  0,
   NOW(),
   NOW()
 FROM auth.users

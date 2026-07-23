@@ -9,9 +9,6 @@ import PricingPanel from './PricingPanel'
 import { getUserTier, openBillingPortal } from '../lib/stripe'
 import { grantBadge } from '../hooks/useBadges'
 
-const CONTRACT_ADDRESS = 'Ge5JGnzggDqEa1cFcmrCLRQrRYsfcdtYMTjmug43pump'
-const CA_SHORT = `${CONTRACT_ADDRESS.slice(0, 5)}…${CONTRACT_ADDRESS.slice(-4)}`
-
 function timeAgo(ts) {
   if (!ts) return '—'
   const s = Math.floor((Date.now() - new Date(ts)) / 1000)
@@ -49,23 +46,7 @@ export default function NavBar({ active, onLogoClick }) {
   const [unreadDMs, setUnreadDMs]         = useState(0)
   const [bellNotifs, setBellNotifs]       = useState([])
   const [showBell, setShowBell]           = useState(false)
-  const [caCopied, setCaCopied]           = useState(false)
   const fileRef = useRef(null)
-
-  const copyCa = async () => {
-    try {
-      await navigator.clipboard.writeText(CONTRACT_ADDRESS)
-    } catch {
-      const ta = document.createElement('textarea')
-      ta.value = CONTRACT_ADDRESS
-      document.body.appendChild(ta)
-      ta.select()
-      document.execCommand('copy')
-      document.body.removeChild(ta)
-    }
-    setCaCopied(true)
-    setTimeout(() => setCaCopied(false), 1400)
-  }
 
   useEffect(() => {
     if (user) {
@@ -284,15 +265,6 @@ export default function NavBar({ active, onLogoClick }) {
           <span className="nb-title">ORBIT</span>
           <span className="nb-version">v1.0</span>
         </div>
-
-        <button
-          className={`nb-ca ${caCopied ? 'nb-ca-copied' : ''}`}
-          onClick={copyCa}
-          title={caCopied ? 'Copied!' : `Copy contract address\n${CONTRACT_ADDRESS}`}
-        >
-          <span className="nb-ca-label">CA</span>
-          <span className="nb-ca-addr">{caCopied ? 'Copied!' : CA_SHORT}</span>
-        </button>
 
         <nav className="nb-links nb-desktop">
           {links.map(l => (

@@ -9,8 +9,6 @@ const SOCIALS = [
   { label: 'GitHub', url: 'https://github.com/orbitdev00' },
 ]
 
-const CONTRACT_ADDRESS = 'Ge5JGnzggDqEa1cFcmrCLRQrRYsfcdtYMTjmug43pump'
-
 const STATS = [
   { value: '< 5s', label: 'Per analysis' },
   { value: '20+', label: 'On-chain signals' },
@@ -134,7 +132,6 @@ export default function Landing({ onSwitch }) {
   const [bhActive, setBhActive] = useState(false)
   const [bhOrigin, setBhOrigin] = useState(null)
   const [bhDest, setBhDest] = useState(null)
-  const [caCopied, setCaCopied] = useState(false)
   const mockRef = useRef(null)
   const mockInView = useRef(false)
 
@@ -166,22 +163,6 @@ export default function Landing({ onSwitch }) {
       if (raf) cancelAnimationFrame(raf)
     }
   }, [])
-
-  const copyCa = async () => {
-    try {
-      await navigator.clipboard.writeText(CONTRACT_ADDRESS)
-    } catch {
-      // Fallback for insecure contexts / older browsers
-      const ta = document.createElement('textarea')
-      ta.value = CONTRACT_ADDRESS
-      document.body.appendChild(ta)
-      ta.select()
-      document.execCommand('copy')
-      document.body.removeChild(ta)
-    }
-    setCaCopied(true)
-    setTimeout(() => setCaCopied(false), 1400)
-  }
 
   const flyTo = (e, dest) => {
     if (bhActive) return
@@ -218,14 +199,6 @@ export default function Landing({ onSwitch }) {
           <span className="lp-nav-name">ORBIT</span>
           <span className="lp-nav-ver">v1.0</span>
         </div>
-        <button
-          className={`lp-nav-ca ${caCopied ? 'lp-nav-ca-copied' : ''}`}
-          onClick={copyCa}
-          title="Copy contract address"
-        >
-          <span className="lp-nav-ca-label">CA</span>
-          <span className="lp-nav-ca-addr">{caCopied ? 'Copied!' : CONTRACT_ADDRESS}</span>
-        </button>
         <div className="lp-nav-right">
           <div className="lp-nav-socials">
             {SOCIALS.map(s => (

@@ -21,19 +21,9 @@ function timeAgo(ts) {
   return `${Math.floor(s/86400)}d ago`
 }
 
-async function updateReputation(userId, email, delta) {
-  const { data: existing } = await supabase.from('user_reputation').select('score,post_count').eq('user_id', userId).single()
-  const newScore = (existing?.score || 0) + delta
-  const newPosts = (existing?.post_count || 0) + 1
-  await supabase.from('user_reputation').upsert({ user_id: userId, email, score: newScore, post_count: newPosts, updated_at: new Date().toISOString() })
-  const BADGES = [{ slug:'trader', threshold:50 }, { slug:'analyst', threshold:200 }, { slug:'whale', threshold:500 }]
-  for (const b of BADGES) {
-    if (newScore >= b.threshold) {
-      const { data: badge } = await supabase.from('forum_badges').select('id').eq('slug', b.slug).single()
-      if (badge) await supabase.from('user_badges').upsert({ user_id: userId, badge_id: badge.id })
-    }
-  }
-}
+// Reputation score/post_count and badges are incremented server-side by
+// POST /forum/posts (service key). The old client-side updateReputation()
+// wrote the now-protected `score` column, so it was removed.
 
 export default function ForumThread() {
   const { id } = useParams()
@@ -172,7 +162,6 @@ export default function ForumThread() {
     })
     const data = await res.json()
     if (res.ok) {
-      await updateReputation(user.id, user.email, 2)
       localStorage.setItem(`orbit_reply_cd_${user.id}`, String(Date.now()))
       setCooldown(15)
       setReply('')

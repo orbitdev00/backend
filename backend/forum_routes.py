@@ -54,6 +54,42 @@ async def _auth_user(request: Request) -> Optional[dict]:
         return None
 
 
+async def _bump_reputation(user_id: str, email: str, delta: int):
+    """Increment a user's forum score/post_count via the service key.
+
+    Moved server-side: the client used to write `score` directly, but that
+    column is now protected by the protect_reputation_columns trigger (a user
+    could otherwise forge their leaderboard rank). Service-key writes are exempt.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(
+                f"{SUPABASE_URL}/rest/v1/user_reputation",
+                params={"user_id": f"eq.{user_id}", "select": "score,post_count"},
+                headers=_HEADERS,
+            )
+            rows = r.json() if r.status_code == 200 else []
+            if rows:
+                score = (rows[0].get("score") or 0) + delta
+                posts = (rows[0].get("post_count") or 0) + 1
+                await client.patch(
+                    f"{SUPABASE_URL}/rest/v1/user_reputation",
+                    params={"user_id": f"eq.{user_id}"},
+                    json={"score": score, "post_count": posts,
+                          "updated_at": datetime.now(timezone.utc).isoformat()},
+                    headers={**_HEADERS, "Prefer": "return=minimal"},
+                )
+            else:
+                await client.post(
+                    f"{SUPABASE_URL}/rest/v1/user_reputation",
+                    json={"user_id": user_id, "email": email, "score": delta,
+                          "post_count": 1, "updated_at": datetime.now(timezone.utc).isoformat()},
+                    headers={**_HEADERS, "Prefer": "return=minimal"},
+                )
+    except Exception as e:
+        print(f"[Forum] reputation bump error: {e}")
+
+
 @forum_router.post("/threads")
 async def create_thread(request: Request):
     """Create a forum thread. Sanitizes title and body before writing."""
@@ -129,6 +165,7 @@ async def create_thread(request: Request):
         data = data[0] if data else {}
 
     asyncio.create_task(check_community_badges(user["id"]))
+    asyncio.create_task(_bump_reputation(user["id"], user["email"], 5))
     return JSONResponse(data)
 
 
@@ -172,6 +209,7 @@ async def create_post(request: Request):
             return JSONResponse({"error": "Failed to create post"}, status_code=500)
 
         asyncio.create_task(check_community_badges(user["id"]))
+        asyncio.create_task(_bump_reputation(user["id"], user["email"], 2))
 
         # Fetch current reply_count then increment — avoids race on concurrent replies
         thread_resp = await client.get(

@@ -53,64 +53,48 @@ function OwnerPanel({ profile, setProfile, currentUserId }) {
     return ''
   }
 
+  // All privileged writes go through the owner-authenticated backend endpoint.
+  // Direct supabase writes to tier/role are blocked by the protect_reputation_columns
+  // DB trigger, and the old flow leaked ADMIN_SECRET into the browser bundle via
+  // VITE_ADMIN_SECRET. The backend verifies the caller's JWT is the owner.
+  const callAdmin = async (payload) => {
+    const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+    const sbKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'))
+    const token = sbKey ? JSON.parse(localStorage.getItem(sbKey) || '{}')?.access_token : null
+    if (!token) throw new Error('Not authenticated')
+    const res = await fetch(`${BACKEND}/admin/user-action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ ...payload, user_id: profile.user_id }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok || data.error) throw new Error(data.error || `Request failed (${res.status})`)
+    return data
+  }
+
   const execute = async () => {
     setSaving(true)
     setMsg('')
     try {
       if (action === 'set_tier') {
-        const expiresAt = (tier === 'degen' || tier === 'omega')
-          ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-          : null
-        const { error } = await supabase.from('user_reputation')
-          .update({ tier, subscription_expires_at: expiresAt })
-          .eq('user_id', profile.user_id)
-        if (error) throw error
+        await callAdmin({ action: 'set_tier', tier })
         setProfile(p => ({ ...p, tier }))
-        setMsg(`✓ Tier set to ${tier}${expiresAt ? ' (expires in 30 days)' : ''}`)
-        // Refresh auth context if owner changed their own tier
+        setMsg(`✓ Tier set to ${tier}${(tier === 'degen' || tier === 'omega') ? ' (expires in 30 days)' : ''}`)
         if (typeof refreshProfile === 'function') refreshProfile()
-        // Send welcome email via backend if upgrading to paid tier
-        if (tier === 'degen' || tier === 'omega') {
-          try {
-            await fetch('https://backend-production-a427a.up.railway.app/admin/assign-tier', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || '',
-              },
-              body: JSON.stringify({ user_id: profile.user_id, tier }),
-            })
-          } catch (e) { console.warn('Email send failed:', e) }
-        }
       } else if (action === 'add_mod') {
-        const { error } = await supabase.from('user_reputation')
-          .update({ role: 'mod' })
-          .eq('user_id', profile.user_id)
-        if (error) throw error
+        await callAdmin({ action: 'set_role', role: 'mod' })
         setMsg('✓ Mod status granted')
       } else if (action === 'remove_mod') {
-        const { error } = await supabase.from('user_reputation')
-          .update({ role: 'member' })
-          .eq('user_id', profile.user_id)
-        if (error) throw error
+        await callAdmin({ action: 'set_role', role: 'member' })
         setMsg('✓ Mod status removed')
       } else if (action === 'ban') {
-        const { error } = await supabase.from('user_reputation')
-          .update({ role: 'banned' })
-          .eq('user_id', profile.user_id)
-        if (error) throw error
+        await callAdmin({ action: 'set_role', role: 'banned' })
         setMsg('✓ Account banned')
       } else if (action === 'unban') {
-        const { error } = await supabase.from('user_reputation')
-          .update({ role: 'member' })
-          .eq('user_id', profile.user_id)
-        if (error) throw error
+        await callAdmin({ action: 'set_role', role: 'member' })
         setMsg('✓ Account unbanned')
       } else if (action === 'delete') {
-        const { error } = await supabase.from('user_reputation')
-          .delete()
-          .eq('user_id', profile.user_id)
-        if (error) throw error
+        await callAdmin({ action: 'delete' })
         setMsg('✓ Account deleted')
       }
     } catch (e) {

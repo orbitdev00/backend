@@ -23,6 +23,7 @@ from badge_routes import badge_router
 from stripe_routes import router as stripe_router
 from forum_routes import forum_router
 from delete_routes import delete_router
+from admin_routes import admin_router
 from pnl_sync import sync_all_wallets
 from badge_engine import (
     check_analysis_badges,
@@ -41,6 +42,18 @@ app.include_router(badge_router)
 app.include_router(stripe_router)
 app.include_router(forum_router)
 app.include_router(delete_router)
+app.include_router(admin_router)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """Baseline hardening headers on every response."""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    return response
 
 # â"€â"€ Nightly PnL sync â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 import asyncio as _asyncio
@@ -103,6 +116,17 @@ async def onboarding_complete(request: Request):
 
     if not username:
         return JSONResponse({"error": "username required"}, status_code=400)
+
+    # Server-side validation — never trust the client form. 3–20 chars,
+    # alphanumeric plus _ and - only.
+    import re as _re
+    if not _re.fullmatch(r"[A-Za-z0-9_-]{3,20}", username):
+        return JSONResponse(
+            {"error": "username must be 3–20 chars: letters, numbers, _ or -"},
+            status_code=400,
+        )
+    if isinstance(avatar_url, str) and len(avatar_url) > 500:
+        return JSONResponse({"error": "avatar_url too long"}, status_code=400)
 
     if not SUPABASE_SERVICE_KEY:
         print("[Onboarding] SUPABASE_SERVICE_KEY is not set — cannot bypass RLS")
@@ -529,11 +553,15 @@ async def stream_analysis(websocket: WebSocket, mint: str, user_id: str = ""):
         await websocket.close()
         return
 
-    # Verify access_token matches user_id when provided
+    # A claimed user_id MUST be backed by a matching access_token. Previously the
+    # token was only checked "if user_id and access_token", so omitting the token
+    # skipped verification entirely — a client could claim any user_id to drain a
+    # victim's daily quota, ride a paid user's unlimited tier, or pollute their
+    # prediction history. Now a user_id with no/invalid token is rejected.
     access_token = websocket.query_params.get("access_token", "")
-    if user_id and access_token:
-        if not await verify_ws_token(access_token, user_id):
-            await send("error", "auth", {"message": "Token verification failed", "error": "auth_failed"})
+    if user_id:
+        if not access_token or not await verify_ws_token(access_token, user_id):
+            await send("error", "auth", {"message": "Authentication required", "error": "auth_failed"})
             await websocket.close()
             return
 

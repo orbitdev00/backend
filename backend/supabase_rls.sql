@@ -20,6 +20,44 @@ CREATE POLICY "own insert user_reputation"
   ON user_reputation FOR INSERT
   WITH CHECK (auth.uid()::text = user_id);
 
+-- ─── PROTECT PRIVILEGED COLUMNS ──────────────────────────────────────────────
+-- CRITICAL: the "own row update" policy above lets a user PATCH their own row.
+-- Without a column guard, an authenticated user can set tier='omega',
+-- role='owner', reset their daily quota, or forge total_pnl_pct (leaderboard
+-- fraud) with a single REST call using their own anon token. RLS cannot restrict
+-- columns, so we enforce it with a trigger. The service key connects as the
+-- 'service_role' DB role and is exempt, so backend writes (Stripe, admin,
+-- rate-limiter) still work.
+CREATE OR REPLACE FUNCTION protect_reputation_columns()
+RETURNS trigger AS $$
+BEGIN
+  -- Backend service key bypasses the guard.
+  IF current_user = 'service_role' THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.tier                    IS DISTINCT FROM OLD.tier
+     OR NEW.role                 IS DISTINCT FROM OLD.role
+     OR NEW.daily_analysis_count IS DISTINCT FROM OLD.daily_analysis_count
+     OR NEW.daily_reset_date     IS DISTINCT FROM OLD.daily_reset_date
+     OR NEW.subscription_expires_at IS DISTINCT FROM OLD.subscription_expires_at
+     OR NEW.stripe_customer_id   IS DISTINCT FROM OLD.stripe_customer_id
+     OR NEW.stripe_subscription_id IS DISTINCT FROM OLD.stripe_subscription_id
+     OR NEW.total_pnl_pct        IS DISTINCT FROM OLD.total_pnl_pct
+     OR NEW.score                IS DISTINCT FROM OLD.score
+  THEN
+    RAISE EXCEPTION 'protected column modification denied';
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_protect_reputation_columns ON user_reputation;
+CREATE TRIGGER trg_protect_reputation_columns
+  BEFORE UPDATE ON user_reputation
+  FOR EACH ROW EXECUTE FUNCTION protect_reputation_columns();
+
 
 -- ─── predictions ────────────────────────────────────────────────────────────
 ALTER TABLE predictions ENABLE ROW LEVEL SECURITY;
@@ -142,3 +180,15 @@ DROP POLICY IF EXISTS "public read user_follows" ON user_follows;
 CREATE POLICY "public read user_follows" ON user_follows FOR SELECT USING (true);
 
 -- All writes go through backend service key only
+
+
+-- ---- trial_uses (free-analysis gate) ----------------------------------------
+-- The trial gate (trial_gate.py) now uses the SERVICE key. Lock this table so
+-- clients (anon/authenticated) cannot read, insert, delete or forge trial
+-- records to farm unlimited free analyses. With RLS enabled and NO client
+-- policies, only the service key (which bypasses RLS) can touch it.
+ALTER TABLE trial_uses ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "public read trial_uses"   ON trial_uses;
+DROP POLICY IF EXISTS "public insert trial_uses" ON trial_uses;
+-- (Intentionally no policies — service key only.)

@@ -10,23 +10,10 @@ const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-
 
 const THREAD_COOLDOWN = 5 * 60 * 1000 // 5 minutes
 
-async function updateReputation(userId, email, delta) {
-  const { data: existing } = await supabase.from('user_reputation').select('score,post_count').eq('user_id', userId).single()
-  const newScore = (existing?.score || 0) + delta
-  const newPosts = (existing?.post_count || 0) + 1
-  await supabase.from('user_reputation').upsert({ user_id: userId, email, score: newScore, post_count: newPosts, updated_at: new Date().toISOString() })
-  if (newPosts === 1) {
-    const { data: badge } = await supabase.from('forum_badges').select('id').eq('slug', 'newcomer').single()
-    if (badge) await supabase.from('user_badges').upsert({ user_id: userId, badge_id: badge.id })
-  }
-  const BADGES = [{ slug:'trader', threshold:50 }, { slug:'analyst', threshold:200 }, { slug:'whale', threshold:500 }]
-  for (const b of BADGES) {
-    if (newScore >= b.threshold) {
-      const { data: badge } = await supabase.from('forum_badges').select('id').eq('slug', b.slug).single()
-      if (badge) await supabase.from('user_badges').upsert({ user_id: userId, badge_id: badge.id })
-    }
-  }
-}
+// Reputation score, post_count and badges are now incremented server-side by
+// POST /forum/threads (service key). The old client-side updateReputation()
+// wrote the protected `score` column and upserted badges — both are now blocked
+// by RLS / the protect_reputation_columns trigger, so it was removed.
 
 export default function ForumNew() {
   const nav = useNavigate()
@@ -110,7 +97,6 @@ export default function ForumNew() {
     if (!res.ok) { setError(data.error || 'Failed to post thread.'); setSubmitting(false); return }
 
     localStorage.setItem(`orbit_thread_cd_${user.id}`, String(Date.now()))
-    await updateReputation(user.id, user.email, 5)
     nav(`/forum/thread/${data.id}`)
   }
 

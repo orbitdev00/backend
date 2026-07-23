@@ -238,7 +238,13 @@ export default function LandingBlackHole({ active, origin, onDone }) {
           style.textContent = 'body > * { animation: orbitFadeIn 0.5s ease forwards !important } @keyframes orbitFadeIn { from { opacity: 0 } to { opacity: 1 } }'
           document.head.appendChild(style)
           setTimeout(() => { const s = document.getElementById('orbit-fadein'); if (s) s.remove() }, 700)
+          // Stop the rAF loop at the terminal frame. Without this the loop
+          // re-queued forever (clearRect every frame at ~60fps) whenever the
+          // component stayed mounted after onDone — a permanent CPU/battery
+          // drain. Mirror BlackHole.jsx which already terminates here.
+          if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
           if (onDone) onDone()
+          return  // do not re-queue
         }
       }
 

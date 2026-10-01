@@ -2,9 +2,11 @@ import { useState, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { getFingerprint } from '../lib/fingerprint'
 
-const RAILWAY_URL = 'https://backend-production-a427a.up.railway.app'
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://backend-3pyp.onrender.com'
 const IS_PROD = window.location.hostname !== 'localhost' && !window.location.hostname.includes('ngrok')
-const API_BASE = IS_PROD ? RAILWAY_URL : ''
+const API_BASE = IS_PROD ? BACKEND_URL : ''
+// ws:// for a http:// backend, wss:// for https:// — derived, never hardcoded
+const WS_BASE = BACKEND_URL.replace(/^http/, 'ws')
 
 export function useStreamAnalysis() {
   const [status, setStatus]           = useState('idle')
@@ -46,7 +48,6 @@ export function useStreamAnalysis() {
     const { data: { session } } = await supabase.auth.getSession()
     const loggedIn = !!(session?.user?.id)
 
-    const RAILWAY_HOST = RAILWAY_URL.replace('https://', '')
     let wsParams = ''
     if (session?.user?.id) {
       // Send BOTH user_id and access_token. The backend now requires a valid
@@ -65,7 +66,7 @@ export function useStreamAnalysis() {
       } catch {}
     }
     const wsUrl = IS_PROD
-      ? `wss://${RAILWAY_HOST}/ws/stream/${mint.trim()}${wsParams}`
+      ? `${WS_BASE}/ws/stream/${mint.trim()}${wsParams}`
       : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/stream/${mint.trim()}${wsParams}`
 
     console.log('[ORBIT] Connecting WebSocket:', wsUrl)

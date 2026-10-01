@@ -58,7 +58,7 @@ function OwnerPanel({ profile, setProfile, currentUserId }) {
   // DB trigger, and the old flow leaked ADMIN_SECRET into the browser bundle via
   // VITE_ADMIN_SECRET. The backend verifies the caller's JWT is the owner.
   const callAdmin = async (payload) => {
-    const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+    const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-3pyp.onrender.com'
     const sbKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'))
     const token = sbKey ? JSON.parse(localStorage.getItem(sbKey) || '{}')?.access_token : null
     if (!token) throw new Error('Not authenticated')
@@ -222,7 +222,7 @@ export default function Profile() {
 
     // Load equipped badges from new schema
     try {
-      const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+      const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-3pyp.onrender.com'
       const res = await fetch(`${BACKEND}/badges/user/${rep.user_id}/equipped`)
       const data = await res.json()
       setBadges(data.equipped || [])
@@ -286,7 +286,7 @@ export default function Profile() {
     setPnlLoading(true); setPnlMsg('')
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+      const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-3pyp.onrender.com'
       const resp = await fetch(`${BACKEND}/pnl/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

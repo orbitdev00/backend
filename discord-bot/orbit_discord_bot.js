@@ -6,7 +6,7 @@ const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ButtonStyle, Act
 require('dotenv').config()
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN
-const ORBIT_BACKEND = process.env.ORBIT_BACKEND || 'https://backend-production-a427a.up.railway.app'
+const ORBIT_BACKEND = process.env.ORBIT_BACKEND || 'https://backend-3pyp.onrender.com'
 const DEXSCREENER_BASE  = 'https://api.dexscreener.com/latest/dex'
 const DEXSCREENER_V1    = 'https://api.dexscreener.com/tokens/v1'
 const PUMPFUN_API       = 'https://frontend-api.pump.fun/coins'

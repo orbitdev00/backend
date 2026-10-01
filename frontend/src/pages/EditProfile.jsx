@@ -22,7 +22,7 @@ export default function EditProfile() {
   const [deleteError, setDeleteError]     = useState('')
   const [deleting, setDeleting]           = useState(false)
   const fileRef = useRef(null)
-  const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+  const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-3pyp.onrender.com'
 
   useEffect(() => {
     if (!user) return

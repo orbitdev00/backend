@@ -4,7 +4,7 @@
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "../lib/supabase";
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL || "https://backend-production-a427a.up.railway.app";
+const BACKEND = import.meta.env.VITE_BACKEND_URL || "https://backend-3pyp.onrender.com";
 
 export function useBadges(userId) {
   const [ownedBadges, setOwnedBadges] = useState([]);

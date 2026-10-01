@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 
-const API = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+const API = import.meta.env.VITE_BACKEND_URL || 'https://backend-3pyp.onrender.com'
 
 export async function getUserTier() {
   const { data: { session } } = await supabase.auth.getSession()

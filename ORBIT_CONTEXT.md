@@ -7,7 +7,7 @@
 ## Identity & Live URLs
 - **Project:** Orbit — Solana memecoin analysis + community platform
 - **Frontend:** https://orbit-app.xyz (Vercel, auto-deploys on push to main)
-- **Backend:** https://backend-production-a427a.up.railway.app (Railway, Python 3.11, port 8080)
+- **Backend:** https://backend-3pyp.onrender.com (Railway, Python 3.11, port 8080)
 - **Repo:** https://github.com/orbitdev00/backend
 - **Local path:** C:\Users\Alexander\KKBOT\
 
@@ -196,7 +196,7 @@ VITE_SUPABASE_ANON_KEY
 ---
 
 ## Stripe Setup
-- Webhook endpoint: `https://backend-production-a427a.up.railway.app/stripe/webhook`
+- Webhook endpoint: `https://backend-3pyp.onrender.com/stripe/webhook`
 - Events: `checkout.session.completed` · `customer.subscription.updated` · `customer.subscription.deleted`
 - Omega launch discount: 7-day coupon via Stripe promo code at checkout (`allow_promotion_codes: true`)
 

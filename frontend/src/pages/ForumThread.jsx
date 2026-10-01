@@ -7,7 +7,7 @@ import NavBar from '../components/NavBar'
 import { grantBadge, revokeBadge } from '../hooks/useBadges'
 import './Forum.css'
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-3pyp.onrender.com'
 
 const REPLY_COOLDOWN = 15 * 1000
 const OWNER_EMAIL = 'orbitdev00@gmail.com'

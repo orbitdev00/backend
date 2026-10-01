@@ -6,7 +6,7 @@ import { filterContent } from '../lib/contentFilter'
 import NavBar from '../components/NavBar'
 import './Forum.css'
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-3pyp.onrender.com'
 
 const THREAD_COOLDOWN = 5 * 60 * 1000 // 5 minutes
 

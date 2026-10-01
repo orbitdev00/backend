@@ -1,7 +1,7 @@
 """
 Tests for /usage endpoint and daily analysis counter rate limiting.
 
-Hits the live backend at https://backend-production-a427a.up.railway.app.
+Hits the live backend at https://backend-3pyp.onrender.com.
 Uses SUPABASE_URL + SUPABASE_SERVICE_KEY to write/tear-down test fixtures
 directly in user_reputation. All test rows use fixed UUIDs with an
 0xffff... prefix so they are clearly non-production data.
@@ -25,7 +25,7 @@ import pytest
 import httpx
 from datetime import datetime, timezone, timedelta
 
-BASE_URL = "https://backend-production-a427a.up.railway.app"
+BASE_URL = "https://backend-3pyp.onrender.com"
 
 SUPABASE_URL         = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")

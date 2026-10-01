@@ -6,7 +6,7 @@ import NavBar from '../components/NavBar'
 import StarField from '../components/StarField'
 import './Tracker.css'
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-3pyp.onrender.com'
 const POLL_MS = 5_000
 
 async function fetchMC(mint) {

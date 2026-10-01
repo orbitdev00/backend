@@ -94,7 +94,7 @@ STRIPE_OMEGA_PRICE_ID=price_xxx
 VITE_ADMIN_SECRET=your_admin_secret
 
 # Frontend env (in .env.local or .env)
-VITE_BACKEND_URL=https://backend-production-a427a.up.railway.app
+VITE_BACKEND_URL=https://backend-3pyp.onrender.com
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```

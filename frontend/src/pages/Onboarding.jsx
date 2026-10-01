@@ -6,7 +6,7 @@ import StarField from '../components/StarField'
 import './Onboarding.css'
 
 const TOTAL_STEPS = 3 // 0: username  1: avatar  2: welcome
-const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-3pyp.onrender.com'
 
 export default function Onboarding() {
   const nav          = useNavigate()
@@ -122,7 +122,7 @@ export default function Onboarding() {
       const controller = new AbortController()
       setTimeout(() => controller.abort(), 8000)
 
-      const resp = await fetch('https://backend-production-a427a.up.railway.app/onboarding/complete', {
+      const resp = await fetch(`${BACKEND}/onboarding/complete`, {
         method: 'POST',
         signal: controller.signal,
         headers: {

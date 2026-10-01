@@ -23,6 +23,8 @@ import BlackHole from './components/BlackHole'
 import StreamReveal from './components/StreamReveal'
 import './App.css'
 
+const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-3pyp.onrender.com'
+
 const IDLE_QUOTES = [
   "I'm not selling, I'm accumulating.",
   "I should've taken profits...",
@@ -231,7 +233,7 @@ export default function App() {
     if (!user || tier !== 'free') return
     const today = new Date().toISOString().slice(0,10)
     const key = `orbit_usage_${user.id}_${today}`
-    fetch(`https://backend-production-a427a.up.railway.app/usage?user_id=${user.id}`)
+    fetch(`${BACKEND}/usage?user_id=${user.id}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data?.count !== undefined) {
@@ -348,7 +350,6 @@ export default function App() {
   // Check for newly awarded badges after analysis
   const checkNewBadges = useCallback(async () => {
     if (!user) return
-    const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
     try {
       const res = await fetch(`${BACKEND}/badges/user/${user.id}`)
       const data = await res.json()
@@ -406,7 +407,6 @@ export default function App() {
   // Initialize known badges on mount
   useEffect(() => {
     if (!user || knownBadgeIdsRef.current !== null) return
-    const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
     fetch(`${BACKEND}/badges/user/${user.id}`)
       .then(r => r.json())
       .then(data => {

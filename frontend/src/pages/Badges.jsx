@@ -6,7 +6,7 @@ import BadgeIcon from "../components/BadgeIcon"
 import { equipBadge, unequipBadge } from "../hooks/useBadges"
 import "./Badges.css"
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL || "https://backend-production-a427a.up.railway.app"
+const BACKEND = import.meta.env.VITE_BACKEND_URL || "https://backend-3pyp.onrender.com"
 
 const CATEGORY_LABELS = {
   activity:     "Activity",

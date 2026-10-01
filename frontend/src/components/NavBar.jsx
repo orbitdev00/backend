@@ -52,7 +52,7 @@ export default function NavBar({ active, onLogoClick }) {
     if (user) {
       getUserTier().then(d => setTier(d.tier || 'free'))
 
-      const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+      const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-3pyp.onrender.com'
       Promise.all([
         fetch(`${BACKEND}/badges/all`).then(r => r.json()).catch(() => ({ badges: [] })),
         fetch(`${BACKEND}/badges/user/${user.id}`).then(r => r.json()).catch(() => ({ badges: [] })),
@@ -452,7 +452,7 @@ export default function NavBar({ active, onLogoClick }) {
                     disabled={!selfGrantId || selfGranting}
                     onClick={async () => {
                       setSelfGranting(true); setSelfGrantMsg('')
-                      const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-production-a427a.up.railway.app'
+                      const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://backend-3pyp.onrender.com'
                       try {
                         const res = await fetch(`${BACKEND}/badges/grant`, {
                           method: 'POST',

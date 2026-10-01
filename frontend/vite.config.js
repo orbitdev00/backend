@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-const RAILWAY_URL = 'https://backend-production-a427a.up.railway.app' // ← replace after Railway deploys
+const BACKEND_URL = process.env.VITE_BACKEND_URL || 'https://backend-3pyp.onrender.com'
 
 export default defineConfig({
   plugins: [react()],
@@ -30,7 +30,7 @@ export default defineConfig({
   },
   define: {
     __API_URL__: JSON.stringify(
-      process.env.NODE_ENV === 'production' ? RAILWAY_URL : 'http://localhost:8000'
+      process.env.NODE_ENV === 'production' ? BACKEND_URL : 'http://localhost:8000'
     )
   }
 })

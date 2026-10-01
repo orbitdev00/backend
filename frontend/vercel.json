@@ -12,7 +12,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://orbit-app.xyz https://*.railway.app wss://orbit-app.xyz wss://*.railway.app https://js.stripe.com https://*.supabase.co; frame-src https://js.stripe.com; object-src 'none'; base-uri 'self'"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://orbit-app.xyz https://*.railway.app https://backend-3pyp.onrender.com wss://orbit-app.xyz wss://*.railway.app wss://backend-3pyp.onrender.com https://js.stripe.com https://*.supabase.co; frame-src https://js.stripe.com; object-src 'none'; base-uri 'self'"
         },
         {
           "key": "X-Frame-Options",

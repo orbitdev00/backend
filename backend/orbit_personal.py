@@ -50,6 +50,7 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 import httpx
+from rich.align import Align
 from rich.console import Console, Group
 from rich.panel import Panel
 from rich.prompt import Prompt
@@ -92,7 +93,16 @@ THEME = Theme({
 
 console = Console(theme=THEME, highlight=False)
 
-PANEL_KW = dict(border_style="#7c3aed", padding=(1, 2))
+PANEL_KW = dict(border_style="bold purple", padding=(1, 2))
+
+# Panels expand to the full terminal by default, which makes centering a
+# no-op. Cap the width so Align.center() has room to work on wide terminals.
+MAX_PANEL_WIDTH = 100
+
+
+def centered(panel: Panel) -> Align:
+    panel.width = min(console.width, MAX_PANEL_WIDTH)
+    return Align.center(panel)
 
 
 # ---------------------------------------------------------------- formatting
@@ -402,31 +412,29 @@ async def analyze(snapshot: dict) -> dict:
 # ---------------------------------------------------------------- panels
 
 def market_panel(s: dict) -> Panel:
-    left = kv_table()
-    left.add_row("Market Cap", usd(s["market_cap_usd"]))
-    left.add_row("Price", usd(s["price_usd"]))
-    left.add_row("Liquidity", usd(s["liquidity_usd"]))
-    left.add_row("Age", age(s["age_seconds"]))
-    left.add_row("Stage", "Migrated" if s["is_migrated"]
-                 else f"Bonding - {s.get('migration_pct_complete', 0)}%")
+    t = Table(box=None, show_edge=False, pad_edge=False, expand=True,
+              header_style="bold purple")
+    t.add_column("Metric", style="label", no_wrap=True)
+    t.add_column("Value", style="dim", justify="right")
+
+    t.add_row("Market Cap", usd(s["market_cap_usd"]))
+    t.add_row("Price", usd(s["price_usd"]))
+    t.add_row("Liquidity", usd(s["liquidity_usd"]))
+    t.add_row("Age", age(s["age_seconds"]))
+    t.add_row("Stage", "Migrated" if s["is_migrated"]
+              else f"Bonding - {s.get('migration_pct_complete', 0)}%")
     if not s["is_migrated"]:
-        left.add_row("Migration ETA", str(s.get("migration_eta_label", "-")))
+        t.add_row("Migration ETA", str(s.get("migration_eta_label", "-")))
+    t.add_row("Change 5m", pct(s["price_change_5m"]))
+    t.add_row("Change 1h", pct(s["price_change_1h"]))
+    t.add_row("Change 24h", pct(s["price_change_24h"]))
+    t.add_row("From 24h peak", pct(-abs(s["pct_from_24h_peak"] or 0)))
+    t.add_row("Vol 1h / 24h", f"{usd(s['volume_1h'])} / {usd(s['volume_24h'])}")
+    t.add_row("Buy:Sell 5m",
+              f"{s['buy_sell_ratio_5m']}  "
+              f"({s['txns_5m_buys']}B / {s['txns_5m_sells']}S)")
 
-    right = kv_table()
-    right.add_row("5m", pct(s["price_change_5m"]))
-    right.add_row("1h", pct(s["price_change_1h"]))
-    right.add_row("24h", pct(s["price_change_24h"]))
-    right.add_row("From 24h peak", pct(-abs(s["pct_from_24h_peak"] or 0)))
-    right.add_row("Vol 1h / 24h", f"{usd(s['volume_1h'])} / {usd(s['volume_24h'])}")
-    right.add_row("Buy:Sell 5m",
-                  f"{s['buy_sell_ratio_5m']}  "
-                  f"({s['txns_5m_buys']}B / {s['txns_5m_sells']}S)")
-
-    cols = Table.grid(padding=(0, 6))
-    cols.add_column()
-    cols.add_column()
-    cols.add_row(left, right)
-    return Panel(cols, title="[accent]Market Data[/accent]", title_align="left", **PANEL_KW)
+    return Panel(t, title="[accent]Market Data[/accent]", title_align="left", **PANEL_KW)
 
 
 def holders_panel(s: dict) -> Panel:
@@ -590,10 +598,10 @@ async def run(mint: str) -> None:
     snap = await build_snapshot(mint)
 
     if not snap["market_cap_usd"] and not snap.get("top_holders"):
-        console.print(Panel(
+        console.print(centered(Panel(
             Text("No market or holder data found. Check the mint - it may be "
                  "brand new, delisted, or not a Solana token.", style="warn"),
-            title="[accent]Nothing to analyze[/accent]", title_align="left", **PANEL_KW))
+            title="[accent]Nothing to analyze[/accent]", title_align="left", **PANEL_KW)))
         return
 
     console.print("  [accent2]*[/accent2] [label]claude narrative[/label]")
@@ -604,39 +612,71 @@ async def run(mint: str) -> None:
         f"[accent]{snap['name']}[/accent] [dim2]-[/dim2] [accent2]${snap['symbol']}[/accent2]",
         style="#4c1d95"))
     console.print()
-    console.print(market_panel(snap))
-    console.print(holders_panel(snap))
-    console.print(flags_panel(snap, pred))
-    console.print(ai_panel(pred))
-    console.print(f"[dim2]  done in {time.time() - t0:.1f}s - "
-                  f"{time.strftime('%H:%M:%S')}[/dim2]\n")
+    console.print(centered(market_panel(snap)))
+    console.print(centered(holders_panel(snap)))
+    console.print(centered(flags_panel(snap, pred)))
+    console.print(centered(ai_panel(pred)))
+    console.print(Align.center(Text(f"done in {time.time() - t0:.1f}s - "
+                                    f"{time.strftime('%H:%M:%S')}", style="dim2")))
+
+
+QUIT_WORDS = {"q", "quit", "exit"}
+
+
+def show_header() -> None:
+    """Fresh screen: title bar, centered banner, missing-key warning."""
+    console.clear()
+    console.print(Rule("[bold purple]ORBIT PERSONAL[/bold purple]", style="bold purple"))
+    console.print(Align.center(Text(BANNER.strip("\n"), style="accent")))
+    console.print()
+    if not ANTHROPIC_API_KEY:
+        console.print(Align.center(Text(
+            "ANTHROPIC_API_KEY not found in backend/.env - "
+            "aggregators will run but the AI panel will be empty.", style="warn")))
+        console.print()
+
+
+def ask_mint() -> str:
+    return Prompt.ask("[bold purple]  Token mint[/bold purple] [dim](q to exit)[/dim]",
+                      console=console).strip()
 
 
 async def main() -> None:
-    console.print(Text(BANNER, style="accent"))
-
-    if not ANTHROPIC_API_KEY:
-        console.print("[warn]  ANTHROPIC_API_KEY not found in backend/.env - "
-                      "aggregators will run but the AI panel will be empty.[/warn]\n")
+    show_header()
 
     # A mint on argv runs once and exits; otherwise loop so you can paste several.
     if len(sys.argv) > 1:
         await run(sys.argv[1].strip())
         return
 
+    mint = ask_mint()
     while True:
-        mint = Prompt.ask("[accent]  mint[/accent]", console=console).strip()
-        if mint.lower() in {"q", "quit", "exit", ""}:
+        if not mint or mint.lower() in QUIT_WORDS:
             console.print("[dim2]  bye[/dim2]\n")
             return
         if not looks_like_mint(mint):
             console.print("[warn]  That doesn't look like a Solana mint "
                           "(expected 32-44 base58 chars).[/warn]\n")
+            mint = ask_mint()
             continue
         try:
             await run(mint)
         except Exception as exc:
             console.print(f"[bad]  Analysis failed: {exc}[/bad]\n")
+
+        console.print()
+        console.print(Rule("[bold purple]next[/bold purple]", style="bold purple"))
+        answer = Prompt.ask(
+            "[bold purple]  Analyze another token?[/bold purple] "
+            "[dim](paste a mint, Enter to continue, q to exit)[/dim]",
+            console=console, default="", show_default=False,
+        ).strip()
+        if answer.lower() in QUIT_WORDS | {"n", "no"}:
+            console.print("[dim2]  bye[/dim2]\n")
+            return
+
+        show_header()
+        mint = answer if looks_like_mint(answer) else ask_mint()
 
 
 if __name__ == "__main__":

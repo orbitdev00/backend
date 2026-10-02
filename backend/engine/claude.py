@@ -46,7 +46,13 @@ MOMENTUM RULES:
 MIGRATION SPEED INTERPRETATION:
 - Rapid migration (under 1 hour) is a BULLISH signal — strong organic demand filled the bonding curve fast
 - Only flag rapid migration as suspicious if COMBINED with fresh wallets > 60% OR bundle detected
-- Do NOT say "rapid migration unusual" — it is common and positive on strong coins
+- Do NOT say "rapid migration unusual" on its own — it is common and positive on strong coins
+- EXCEPTION: migration under 10 min with fresh_wallet_pct > 80% is a coordinated pump-and-dump setup, NOT bullish
+
+COORDINATED PUMP-AND-DUMP — pre-computed:
+- coordinated_dump_score and coordinated_dump_flags are computed deterministically and ADDED to your rug_probability automatically after you respond
+- Do NOT add coordinated_dump_score yourself and do NOT repeat coordinated_dump_flags in your flags — they are merged in for you
+- If coordinated_dump_flags is non-empty, do NOT describe the coin as organic, healthy, or bullish in reasoning
 
 VOLUME INTERPRETATION — critical:
 - High volume relative to liquidity is BULLISH on coins with strong buy pressure (buy_sell_ratio > 1.5)
@@ -68,7 +74,7 @@ UNIFORM HOLDER DETECTION — highest priority signal:
 - Combined with shared_funder_detected: absolute certainty of coordinated wallet farm
 
 FRESH WALLET / SNIPER DETECTION — weight these heavily:
-- Social presence (has_twitter, has_telegram, has_website) is a positive signal but absence is not strongly negative for new coins
+- Social presence (has_twitter, has_telegram, has_website) is a positive signal but absence is not strongly negative for new coins on the bonding curve (absence on migrated coins is penalized via coordinated_dump_score)
 - Do NOT mention "low social engagement" or "community foundation" based on mention counts — we cannot verify Twitter activity
 - fresh_wallet_pct > 60%: majority of early buyers are brand new wallets = sniper farm, very high dump risk
 - fresh_wallet_pct > 80%: almost certain coordinated sniper attack, treat like a bundle
@@ -93,7 +99,7 @@ RUG DETECTION — weight these heavily:
 - top10_concentration_pct > 70%: whale concentration, dump risk
 
 GOPLUS SECURITY — treat these as critical:
-- is_honeypot = true: CANNOT SELL — instant 100 risk score, 100 rug probability
+- is_honeypot = true: CANNOT SELL — instant 100 risk score, 95 rug probability
 - can_freeze = true: dev can freeze all wallets — very high rug risk
 - can_mint = true: supply can be inflated — high rug risk
 - goplus_flags: list of critical security issues, always include in flags
@@ -109,7 +115,7 @@ FLAG RULES — critical:
 - bullish_flags array: ONLY positive observations (clean structure, organic volume, strong momentum)
 - NEVER put positive things in flags. NEVER put negative things in bullish_flags.
 
-Do NOT flag: social media, fresh wallets, holder count, on-chain wallet age.
+Do NOT flag: social media, fresh wallets, holder count, on-chain wallet age (coordinated_dump_flags already cover these where they matter).
 
 Return ONLY valid JSON. No markdown. Start with { end with }
 
@@ -121,7 +127,7 @@ Schema:
   "dip_likely": <true|false>,
   "dip_estimated_depth_pct": <0-100>,
   "risk_score": <0-100>,
-  "rug_probability": <0-100>,
+  "rug_probability": <0-95>,
   "bundle_impact": <"none"|"low"|"medium"|"high">,
   "recommended_entry_mc": <number USD>,
   "recommended_exit_mc": <number USD>,
@@ -204,6 +210,7 @@ async def analyze(snapshot: dict) -> dict:
         return _error(f"JSON parse failed: {e}")
 
     prediction = _fill_defaults(prediction)
+    prediction = _apply_coordinated_dump(prediction, snapshot)
     prediction["mint"] = snapshot.get("mint")
     prediction["snapshot_timestamp"] = snapshot.get("timestamp")
     prediction["current_mc"] = snapshot.get("market_cap_usd", 0)
@@ -231,6 +238,23 @@ def _fill_defaults(p: dict) -> dict:
         p.setdefault("probability_bands", {})[band] = p.get("probability_bands", {}).get(band, 0)
     for s in ["conservative", "moderate", "aggressive"]:
         p.setdefault("pnl_scenarios", {})[s] = p.get("pnl_scenarios", {}).get(s, 1.0)
+    return p
+
+
+RUG_PROBABILITY_CAP = 95  # hard cap — avoid false certainty
+
+
+def _apply_coordinated_dump(p: dict, snapshot: dict) -> dict:
+    """Stack deterministic coordinated-dump score onto the model's rug_probability, merge flags, cap at 95."""
+    try:
+        rug = float(p.get("rug_probability") or 0)
+    except (TypeError, ValueError):
+        rug = 50.0
+    rug += snapshot.get("coordinated_dump_score", 0) or 0
+    p["rug_probability"] = int(max(0, min(RUG_PROBABILITY_CAP, rug)))
+
+    extra = [f for f in snapshot.get("coordinated_dump_flags", []) if f not in p["flags"]]
+    p["flags"] = extra + p["flags"]
     return p
 
 

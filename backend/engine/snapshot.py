@@ -132,6 +132,13 @@ async def build_snapshot(mint: str, ws_broadcast=None) -> dict:
     # Fake chart detection signals
     fake_chart_signals = _detect_fake_chart(dex, hel, top_holders, age_seconds)
 
+    # Coordinated pump-and-dump signals (added to rug_probability in claude.py)
+    coordinated_dump = _detect_coordinated_dump(
+        dex, hel, top10_conc, age_seconds,
+        is_migrated=pump.get("is_migrated", False) or (dex.get("market_cap_usd") or 0) > 34_000,
+        has_socials=bool(has_twitter or has_telegram or has_website),
+    )
+
     # Dev supply — try from helius first, fallback to solscan top holders
     dev_holding_pct = sol.get("dev_holding_pct", 0)
     if dev_holding_pct == 0 and dev_wallet:
@@ -216,6 +223,10 @@ async def build_snapshot(mint: str, ws_broadcast=None) -> dict:
         "fake_chart_score":    fake_chart_signals["score"],
         "fake_chart_flags":    fake_chart_signals["flags"],
         "wash_trading_likely": fake_chart_signals["wash_trading"],
+
+        # Coordinated pump-and-dump signals
+        "coordinated_dump_score": coordinated_dump["score"],
+        "coordinated_dump_flags": coordinated_dump["flags"],
 
         "king_of_the_hill": bool(pump.get("king_of_the_hill_timestamp")),
         # Enhanced rug signals based on MC collapse
@@ -476,6 +487,53 @@ def _detect_fake_chart(dex: dict, hel: dict, holders: list, age_seconds: int) ->
         "flags": flags,
         "wash_trading": score >= 40,
     }
+
+
+def _detect_coordinated_dump(dex: dict, hel: dict, top10_conc: float, age_seconds: int,
+                             is_migrated: bool, has_socials: bool) -> dict:
+    """
+    Detects coordinated pump-and-dump setups (pump to 100k+ then cliff dump in seconds).
+    Returns a rug_probability add-on and list of flags.
+
+    Migration time isn't available from Pump.fun, so coin age on a migrated coin
+    is used as the stand-in (migrated + age < N min => migrated within N min).
+    """
+    score = 0
+    flags = []
+
+    fresh_pct = hel.get("fresh_wallet_pct", 0) or 0
+    vol_5m    = dex.get("volume_5m", 0) or 0
+    vol_1h    = dex.get("volume_1h", 0) or 0
+    change_5m = dex.get("price_change_5m", 0) or 0
+    liquidity = dex.get("liquidity_usd", 0) or 0
+    mc        = dex.get("market_cap_usd", 0) or 0
+
+    # 1. Coordinated exit risk — fresh wallets + fast migration + fake decentralization
+    if fresh_pct > 80 and is_migrated and age_seconds < 600 and top10_conc < 35:
+        score += 25
+        flags.append("Coordinated wallet entry detected — high exit risk")
+
+    # 2. Thin liquidity trap (liquidity 0 = no data, skip)
+    if liquidity > 0 and mc > 0 and liquidity < mc * 0.05:
+        score += 20
+        flags.append("Liquidity too thin to absorb sells — cliff dump risk")
+
+    # 3. Velocity without consolidation — big 5m spike, 1h volume barely above 5m
+    if change_5m > 50 and age_seconds < 600 and vol_5m > 0 and vol_1h < vol_5m * 2:
+        score += 15
+        flags.append("Velocity spike with no follow-through — manufactured pump pattern")
+
+    # 4. Fast migration (< 4 min) with 100% fresh wallets
+    if is_migrated and age_seconds < 240 and fresh_pct >= 100:
+        score += 20
+        flags.append("Migrated in under 4 min with 100% fresh wallets — sniper farm exit setup")
+
+    # 5. Social absence on a migrated coin
+    if is_migrated and not has_socials:
+        score += 15
+        flags.append("Migrated with no Twitter, Telegram or website — no community to absorb exit")
+
+    return {"score": score, "flags": flags}
 
 
 def _compute_age(ts) -> int:

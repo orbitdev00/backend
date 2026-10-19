@@ -35,7 +35,8 @@ from rate_limiter import check_rate_limit, consume_rate_limit, get_usage, get_us
 from stripe_handler import create_billing_portal
 from tier_check import get_tier, invalidate as invalidate_tier_cache
 from ml.predictor import predict_xgboost  # XGBoost â€" background signals
-from config import REFRESH_INTERVAL, MAX_AUTO_REFRESHES
+from config import REFRESH_INTERVAL, MAX_AUTO_REFRESHES, APP_MODE
+from chore_routes import chore_router
 
 app = FastAPI(title="Pump Analyzer API")
 app.include_router(badge_router)
@@ -43,6 +44,33 @@ app.include_router(stripe_router)
 app.include_router(forum_router)
 app.include_router(delete_router)
 app.include_router(admin_router)
+app.include_router(chore_router)
+
+
+# Chore mode: only the chore API and /health are reachable. Every other
+# (crypto) HTTP route returns 404 and WebSockets are refused, without running
+# their handlers. Set APP_MODE=orbit to restore. See ORBIT_CHORE_MODE.md.
+_CHORE_MODE_PATHS = ("/health", "/chores")
+
+
+class ChoreModeGate:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if APP_MODE == "chores" and scope["type"] in ("http", "websocket"):
+            path = scope.get("path", "")
+            allowed = any(path == p or path.startswith(p + "/") for p in _CHORE_MODE_PATHS)
+            if not allowed:
+                if scope["type"] == "websocket":
+                    await send({"type": "websocket.close", "code": 1008})
+                else:
+                    await JSONResponse({"detail": "Not Found"}, status_code=404)(scope, receive, send)
+                return
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(ChoreModeGate)
 
 
 @app.middleware("http")
@@ -74,6 +102,9 @@ async def _nightly_pnl_loop():
 
 @app.on_event("startup")
 async def start_pnl_cron():
+    if APP_MODE == "chores":
+        print("[Startup] APP_MODE=chores — nightly PnL sync disabled")
+        return
     _asyncio.create_task(_nightly_pnl_loop())
 
 @app.post("/onboarding/complete")

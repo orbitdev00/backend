@@ -10,6 +10,10 @@ SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", os.getenv("SUPABASE_ANO
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 PORT = int(os.getenv("PORT", 8000))
 
+# "orbit" = full crypto app | "chores" = Household Chore Dashboard only (crypto endpoints 404).
+# See ORBIT_CHORE_MODE.md.
+APP_MODE = "orbit" if os.getenv("APP_MODE", "chores").strip().lower() == "orbit" else "chores"
+
 HELIUS_RPC_URL  = f"https://mainnet.helius-rpc.com/?api-key={HELIUS_API_KEY}"
 PRIMARY_RPC_URL = HELIUS_RPC_URL
 HELIUS_API_URL = f"https://api.helius.xyz/v0"

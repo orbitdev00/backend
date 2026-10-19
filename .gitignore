@@ -30,3 +30,6 @@ frontend/.vite/
 # Logs & misc
 *.log
 .DS_Store 
+
+# Supabase CLI local state
+supabase/.temp/

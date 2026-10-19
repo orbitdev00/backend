@@ -239,6 +239,8 @@ if os.getenv("ENVIRONMENT") != "production":
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
+    # Vercel preview deployments of this project (backend-<hash>-orbitdev00s-projects.vercel.app)
+    allow_origin_regex=r"https://backend-[a-z0-9]+-orbitdev00s-projects\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

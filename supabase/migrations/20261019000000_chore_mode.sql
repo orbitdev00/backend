@@ -120,9 +120,10 @@ begin
   delete from public.chore_members where true;
 
   insert into public.chore_members (name, color, created_at) values
-    ('Alex',   '#6366f1', base + interval '1 ms'),
-    ('Sam',    '#10b981', base + interval '2 ms'),
-    ('Jordan', '#f59e0b', base + interval '3 ms');
+    ('Matusalen', '#6366f1', base + interval '1 ms'),
+    ('Loly',      '#10b981', base + interval '2 ms'),
+    ('Kyomo',     '#f59e0b', base + interval '3 ms'),
+    ('Pax',       '#ec4899', base + interval '4 ms');
 
   insert into public.chores (title, frequency, zone, minutes, preferred_weekday, month_day, created_at) values
     ('Dog Care: Feed, Water & Quick Walk',      'daily',   'Pet',         20, null, null, base + interval '1 ms'),

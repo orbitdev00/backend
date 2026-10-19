@@ -6,14 +6,14 @@
 -- CHORE_APPROVAL_PIN approves it via the FastAPI backend (POST /chores/review),
 -- which uses the service role key.
 --
--- Additive only: does not touch any existing Orbit table.
+-- Additive only: does not touch any existing Orbit table, policy or function.
+-- Uses plain CREATE (no IF NOT EXISTS / OR REPLACE) so it fails loudly instead
+-- of attaching to an existing object if a name were ever already taken.
 -- ════════════════════════════════════════════════════════════════════════════
-
-create extension if not exists pgcrypto;
 
 -- ── Tables ──────────────────────────────────────────────────────────────────
 
-create table if not exists public.chore_members (
+create table public.chore_members (
   id          uuid primary key default gen_random_uuid(),
   name        text not null check (char_length(name) between 1 and 40),
   color       text not null default '#6366f1' check (color ~ '^#[0-9a-fA-F]{6}$'),
@@ -21,7 +21,7 @@ create table if not exists public.chore_members (
   created_at  timestamptz not null default now()
 );
 
-create table if not exists public.chores (
+create table public.chores (
   id                 uuid primary key default gen_random_uuid(),
   title              text not null check (char_length(title) between 1 and 120),
   frequency          text not null check (frequency in ('daily', 'weekly', 'monthly')),
@@ -34,7 +34,7 @@ create table if not exists public.chores (
 );
 
 -- Manual (non-rotation) assignment of one chore occurrence to a member.
-create table if not exists public.chore_assignments (
+create table public.chore_assignments (
   id          uuid primary key default gen_random_uuid(),
   chore_id    uuid not null references public.chores(id) on delete cascade,
   date        date not null,
@@ -43,7 +43,7 @@ create table if not exists public.chore_assignments (
   unique (chore_id, date)
 );
 
-create table if not exists public.chore_completions (
+create table public.chore_completions (
   id            uuid primary key default gen_random_uuid(),
   chore_id      uuid not null references public.chores(id) on delete cascade,
   date          date not null,
@@ -51,12 +51,12 @@ create table if not exists public.chore_completions (
   unique (chore_id, date)
 );
 
-create table if not exists public.chore_settings (
+create table public.chore_settings (
   id                smallint primary key default 1 check (id = 1),
   rotation_enabled  boolean not null default true
 );
 
-create table if not exists public.pending_changes (
+create table public.pending_changes (
   id            uuid primary key default gen_random_uuid(),
   change_type   text not null check (change_type in (
                   'chore_add', 'chore_edit', 'chore_delete',
@@ -72,9 +72,9 @@ create table if not exists public.pending_changes (
   reviewed_at   timestamptz
 );
 
-create index if not exists chore_assignments_date_idx on public.chore_assignments (date);
-create index if not exists chore_completions_date_idx on public.chore_completions (date);
-create index if not exists pending_changes_status_idx on public.pending_changes (status, submitted_at);
+create index chore_assignments_date_idx on public.chore_assignments (date);
+create index chore_completions_date_idx on public.chore_completions (date);
+create index pending_changes_status_idx on public.pending_changes (status, submitted_at);
 
 -- ── Row level security ──────────────────────────────────────────────────────
 -- anon/authenticated: SELECT everything, INSERT into pending_changes only.
@@ -110,7 +110,7 @@ grant insert on public.pending_changes to anon, authenticated;
 -- Used for the initial seed and for an approved "Reset Default Data" change.
 -- created_at is staggered so the list order (and therefore rotation) is stable.
 
-create or replace function public.chore_reset_defaults()
+create function public.chore_reset_defaults()
 returns void
 language plpgsql
 security definer

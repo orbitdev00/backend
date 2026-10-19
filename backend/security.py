@@ -34,6 +34,11 @@ def ip_rate_ok(ip: str, limit: int = 30, window: int = 60) -> bool:
     _ip_windows[ip].append(now)
     return True
 
+def ip_rate_exceeded(ip: str, limit: int, window: int) -> bool:
+    """Like ip_rate_ok, but only checks; record hits separately with ip_rate_ok."""
+    now = time.time()
+    return len([h for h in _ip_windows[ip] if now - h < window]) >= limit
+
 class _HTMLStripper(HTMLParser):
     """Extracts plain text from HTML, discarding all tags and decoding entities."""
     def __init__(self):

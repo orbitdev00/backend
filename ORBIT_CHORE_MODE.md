@@ -45,7 +45,7 @@ The chore tables stay in Supabase and don't affect Orbit.
 
 - The migration `supabase/migrations/20261019000000_chore_mode.sql` creates `chore_members`, `chores`,
   `chore_assignments`, `chore_completions`, `chore_settings` and `pending_changes`.
-- The public (anon) role can read all of them and can only insert `pending` rows into `pending_changes`.
+- The public (anon) role can only read them. Only the backend (service role key) writes.
 - Every edit in the UI goes to `POST /chores/submit`, which is rate limited per IP and queued as pending.
   Edits show with a dashed "pending" style until someone with the PIN approves them in **Review Changes**
   (`POST /chores/review`). The backend then applies them with the service role key.

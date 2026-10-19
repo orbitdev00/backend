@@ -77,8 +77,9 @@ create index chore_completions_date_idx on public.chore_completions (date);
 create index pending_changes_status_idx on public.pending_changes (status, submitted_at);
 
 -- ── Row level security ──────────────────────────────────────────────────────
--- anon/authenticated: SELECT everything, INSERT into pending_changes only.
--- No UPDATE/DELETE policies exist, so only the service role can change rows.
+-- anon/authenticated: SELECT only. There are no INSERT/UPDATE/DELETE policies, so
+-- only the service role (the backend) writes. Submissions go through the backend's
+-- rate-limited POST /chores/submit and can't be inserted directly with the anon key.
 
 alter table public.chore_members     enable row level security;
 alter table public.chores            enable row level security;
@@ -94,17 +95,11 @@ create policy "chore_completions public read" on public.chore_completions for se
 create policy "chore_settings public read"    on public.chore_settings    for select to anon, authenticated using (true);
 create policy "pending_changes public read"   on public.pending_changes   for select to anon, authenticated using (true);
 
-create policy "pending_changes public submit" on public.pending_changes
-  for insert to anon, authenticated
-  with check (status = 'pending' and reviewed_at is null);
-
 -- Belt and braces: table privileges match the policies above.
 revoke insert, update, delete, truncate on public.chore_members, public.chores, public.chore_assignments,
-  public.chore_completions, public.chore_settings from anon, authenticated;
-revoke update, delete, truncate on public.pending_changes from anon, authenticated;
+  public.chore_completions, public.chore_settings, public.pending_changes from anon, authenticated;
 grant select on public.chore_members, public.chores, public.chore_assignments,
   public.chore_completions, public.chore_settings, public.pending_changes to anon, authenticated;
-grant insert on public.pending_changes to anon, authenticated;
 
 -- ── Default data ────────────────────────────────────────────────────────────
 -- Used for the initial seed and for an approved "Reset Default Data" change.

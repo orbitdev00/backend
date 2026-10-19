@@ -17,7 +17,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from config import SUPABASE_URL, SUPABASE_SERVICE_KEY
-from security import ip_rate_ok, is_valid_uuid, sanitize_text
+from security import ip_rate_exceeded, ip_rate_ok, is_valid_uuid, sanitize_text
 
 chore_router = APIRouter(prefix="/chores")
 
@@ -29,7 +29,9 @@ _HEADERS = {
 }
 
 SUBMIT_LIMIT_PER_MIN = 20
-REVIEW_LIMIT_PER_MIN = 10
+# Only wrong PINs count, so a reviewer can approve items one by one without being throttled.
+PIN_FAILS_ALLOWED = 5
+PIN_FAIL_WINDOW = 300  # seconds
 MAX_REVIEW_BATCH = 200
 
 # change_type → live table it targets
@@ -264,8 +266,9 @@ async def submit_change(request: Request):
 @chore_router.post("/review")
 async def review_changes(request: Request):
     ip = _client_ip(request)
-    if not ip_rate_ok(f"chores-review:{ip}", limit=REVIEW_LIMIT_PER_MIN, window=60):
-        return JSONResponse({"error": "Too many attempts. Try again in a minute."}, status_code=429)
+    fail_key = f"chores-pin-fail:{ip}"
+    if ip_rate_exceeded(fail_key, PIN_FAILS_ALLOWED, PIN_FAIL_WINDOW):
+        return JSONResponse({"error": "Too many wrong PINs. Try again in a few minutes."}, status_code=429)
 
     expected_pin = os.getenv("CHORE_APPROVAL_PIN", "")
     if not expected_pin:
@@ -279,6 +282,7 @@ async def review_changes(request: Request):
 
     pin = body.get("pin")
     if not isinstance(pin, str) or not hmac.compare_digest(pin.encode(), expected_pin.encode()):
+        ip_rate_ok(fail_key, limit=PIN_FAILS_ALLOWED, window=PIN_FAIL_WINDOW)  # record the failure
         return JSONResponse({"error": "Incorrect PIN"}, status_code=403)
 
     action = body.get("action")

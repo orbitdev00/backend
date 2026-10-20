@@ -16,7 +16,7 @@ async function rest(path) {
   return r.json()
 }
 
-const CHORE_FIELDS = 'id,title,frequency,zone,minutes,difficulty,description,time_of_day,allowed_member_ids,' +
+const CHORE_FIELDS = 'id,title,frequency,zone,minutes,difficulty,points_override,description,time_of_day,allowed_member_ids,' +
   'preferred_weekday,month_day,starts_on,retired_on,active,created_at'
 
 /**
@@ -25,7 +25,7 @@ const CHORE_FIELDS = 'id,title,frequency,zone,minutes,difficulty,description,tim
  */
 export async function loadAll(from, to, yesterday, today) {
   const range = `or=(and(date.gte.${from},date.lte.${to}),date.in.(${yesterday},${today}))`
-  const [members, chores, assignments, completions, settings, rotationLog, leaderboard] = await Promise.all([
+  const [members, chores, assignments, completions, settings, rotationLog, leaderboard, cosmetics, purchases, wallet] = await Promise.all([
     rest('chore_members?select=id,name,color,active,created_at&order=created_at.asc'),
     rest(`chores?select=${CHORE_FIELDS}&order=created_at.asc`),
     rest(`chore_assignments?select=chore_id,date,member_id&${range}`),
@@ -33,16 +33,48 @@ export async function loadAll(from, to, yesterday, today) {
     rest('chore_settings?select=rotation_enabled&id=eq.1'),
     rest('chore_rotation_log?select=effective_on,enabled'),
     rest('chore_leaderboard?select=member_id,name,color,points_today,points_week,points_all,streak'),
+    rest('chore_member_cosmetics?select=member_id,theme,avatar,color,name_font,name_color,banner'),
+    rest('chore_purchases?select=member_id,item_id'),
+    rest('chore_wallet?select=member_id,coins,coins_earned,coins_spent'),
   ])
-  return { members, chores, assignments, completions, settings: settings[0] || null, rotationLog, leaderboard }
+  return {
+    members, chores, assignments, completions, settings: settings[0] || null, rotationLog, leaderboard,
+    cosmetics, purchases, wallet,
+  }
+}
+
+const CHAT_FIELDS = 'id,member_id,body,created_at'
+
+/** The newest `limit` messages, oldest first. */
+export async function loadMessages(limit = 100) {
+  const rows = await rest(`chat_messages?select=${CHAT_FIELDS}&order=created_at.desc&limit=${limit}`)
+  return rows.reverse()
+}
+
+/** Messages created after `iso`, oldest first. */
+export function messagesAfter(iso, fields = CHAT_FIELDS) {
+  return rest(`chat_messages?select=${fields}&created_at=gt.${encodeURIComponent(iso)}&order=created_at.asc&limit=100`)
+}
+
+export function sendChat(member_id, body) {
+  return post('chat', { member_id, body })
+}
+
+/** { action: 'buy' | 'equip', member_id, item_id, slot? } */
+export function shopAction(body) {
+  return post('shop', body)
 }
 
 /** Apply a change. Resolves with the backend's result, throws with its error message. */
-export async function submitChange(change_type, { target_id = null, payload = {} } = {}) {
-  const r = await fetch(`${BACKEND}/chores/submit`, {
+export function submitChange(change_type, { target_id = null, payload = {} } = {}) {
+  return post('submit', { change_type, target_id, payload })
+}
+
+async function post(path, body) {
+  const r = await fetch(`${BACKEND}/chores/${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ change_type, target_id, payload }),
+    body: JSON.stringify(body),
   })
   const data = await r.json().catch(() => ({}))
   if (!r.ok) {

@@ -21,6 +21,7 @@ ALEX = "11111111-1111-4111-8111-111111111111"
 NATHAN = "22222222-2222-4222-8222-222222222222"
 NOON = "33333333-3333-4333-8333-333333333333"   # 25m medium → 38 pts
 BATH = "44444444-4444-4444-8444-444444444444"   # 30m hard → 60 pts
+EVENING = "77777777-7777-4777-8777-777777777777"  # 30m extreme, points_override 75
 
 
 class FakeSupabase:
@@ -34,12 +35,18 @@ class FakeSupabase:
             BATH: {"id": BATH, "minutes": 30, "difficulty": "hard", "active": True, "starts_on": "2026-01-01",
                    "frequency": "weekly", "preferred_weekday": 2, "month_day": None,
                    "allowed_member_ids": [ALEX, NATHAN]},
+            EVENING: {"id": EVENING, "minutes": 30, "difficulty": "extreme", "points_override": 75, "active": True,
+                      "starts_on": "2026-01-01", "frequency": "daily", "preferred_weekday": None, "month_day": None,
+                      "allowed_member_ids": None},
         }
         # (chore_id, date) → assignee, as the chore_schedule view would compute it
         self.schedule = {(NOON, TODAY.isoformat()): ALEX, (NOON, YESTERDAY.isoformat()): NATHAN,
-                         (BATH, TODAY.isoformat()): NATHAN}
+                         (BATH, TODAY.isoformat()): NATHAN, (EVENING, TODAY.isoformat()): ALEX}
         self.completions = {}
         self.writes = []
+        self.messages = []
+        self.coins = {ALEX: 100, NATHAN: 0}
+        self.purchases = set()
 
     @staticmethod
     def _eq(params, key):
@@ -77,6 +84,22 @@ class FakeSupabase:
             if request.method == "DELETE":
                 self.completions.pop((self._eq(p, "chore_id"), self._eq(p, "date")), None)
                 return httpx.Response(204)
+        if path == "chat_messages" and request.method == "POST":
+            row = {"id": f"msg-{len(self.messages)}", "created_at": "2026-10-20T12:00:00+00:00", **body}
+            self.messages.append(row)
+            return httpx.Response(201, json=[row])
+        if path == "rpc/chore_buy":
+            member, item, price = body["p_member"], body["p_item"], body["p_price"]
+            if (member, item) in self.purchases:
+                return httpx.Response(400, json={"code": "P0001", "message": "already owned"})
+            if self.coins.get(member, 0) < price:
+                return httpx.Response(400, json={"code": "P0001", "message": "not enough coins"})
+            self.purchases.add((member, item))
+            self.coins[member] -= price
+            return httpx.Response(200, json=self.coins[member])
+        if path == "chore_purchases" and request.method == "GET":
+            key = (self._eq(p, "member_id"), self._eq(p, "item_id"))
+            return httpx.Response(200, json=[{"item_id": key[1]}] if key in self.purchases else [])
         if request.method in ("POST", "PATCH"):
             if path == "chores" and request.method == "POST":
                 return httpx.Response(201, json=[{"id": "55555555-5555-4555-8555-555555555555", **body}])
@@ -232,7 +255,7 @@ def test_edit_schedule_starts_new_version_tomorrow(fake, client):
 
 
 def test_chore_validation(fake, client):
-    assert submit(client, "chore_add", {**CHORE, "difficulty": "extreme"}).status_code == 400
+    assert submit(client, "chore_add", {**CHORE, "difficulty": "insane"}).status_code == 400
     assert submit(client, "chore_add", {**CHORE, "time_of_day": "25:00"}).status_code == 400
     assert submit(client, "chore_add", {**CHORE, "allowed_member_ids": ["nope"]}).status_code == 400
     unknown = "66666666-6666-4666-8666-666666666666"
@@ -272,3 +295,122 @@ def test_rate_limit_per_ip(fake, client):
 def test_ny_today(utc, expected):
     now = datetime.fromisoformat(utc).replace(tzinfo=timezone.utc)
     assert ny_today(now).isoformat() == expected
+
+
+# ── Extreme tier / points_override ───────────────────────────────────────────
+
+def test_points_override_replaces_formula():
+    assert points_for(30, "extreme", 75) == 75
+    assert points_for(30, "medium", None) == 45
+
+
+def test_evening_kitchen_awards_exactly_75(fake, client):
+    r = complete(client, EVENING, TODAY, ALEX)
+    assert r.status_code == 200, r.text
+    assert r.json()["points"] == 75
+    assert fake.completions[(EVENING, TODAY.isoformat())]["points_awarded"] == 75
+
+
+def test_extreme_chore_gets_fixed_override_not_client_value(fake, client):
+    r = submit(client, "chore_add", {**CHORE, "difficulty": "extreme", "points_override": 9999})
+    assert r.status_code == 200, r.text
+    insert = [b for m, p, _, b in fake.writes if m == "POST" and p == "chores"][0]
+    assert insert["difficulty"] == "extreme" and insert["points_override"] == 75
+    fake.writes.clear()
+    submit(client, "chore_add", {**CHORE, "points_override": 9999})
+    insert = [b for m, p, _, b in fake.writes if m == "POST" and p == "chores"][0]
+    assert insert["points_override"] is None
+
+
+def test_past_completion_keeps_recorded_points(fake, client):
+    complete(client, NOON, TODAY, ALEX)
+    fake.chores[NOON].update(difficulty="extreme", points_override=75)
+    assert fake.completions[(NOON, TODAY.isoformat())]["points_awarded"] == 38
+
+
+# ── Chat ─────────────────────────────────────────────────────────────────────
+
+def chat(client, body, member=ALEX):
+    return client.post("/chores/chat", json={"member_id": member, "body": body})
+
+
+def test_chat_trims_and_stores(fake, client):
+    r = chat(client, "   hello family  \n")
+    assert r.status_code == 200, r.text
+    assert fake.messages[0]["body"] == "hello family" and fake.messages[0]["member_id"] == ALEX
+
+
+def test_chat_length_cap(fake, client):
+    assert chat(client, "x" * 500).status_code == 200
+    assert chat(client, "  " + "x" * 500 + "  ").status_code == 200   # trimmed first
+    r = chat(client, "x" * 501)
+    assert r.status_code == 400 and "500" in r.json()["error"]
+    assert len(fake.messages) == 2
+
+
+def test_chat_rejects_empty(fake, client):
+    for body in ("", "   ", "\n\t ", None, 42):
+        assert chat(client, body).status_code == 400
+    assert fake.messages == []
+
+
+def test_chat_rejects_unknown_member(fake, client):
+    assert chat(client, "hi", member="66666666-6666-4666-8666-666666666666").status_code == 400
+    assert chat(client, "hi", member="nope").status_code == 400
+
+
+def test_chat_rate_limit(fake, client):
+    codes = [chat(client, f"msg {i}").status_code for i in range(11)]
+    assert codes[:10] == [200] * 10 and codes[10] == 429
+    assert len(fake.messages) == 10
+
+
+def test_chat_html_is_kept_as_plain_text(fake, client):
+    html = '<img src=x onerror="alert(1)"><b>hi</b>'
+    r = chat(client, html)
+    assert r.status_code == 200
+    # Stored verbatim (not stripped, not interpreted); the UI renders it as text
+    # (see frontend/src/chores/chat.test.js).
+    assert fake.messages[0]["body"] == html
+    assert r.json()["message"]["body"] == html
+
+
+# ── Shop ─────────────────────────────────────────────────────────────────────
+
+def shop(client, action, item_id=None, member=ALEX, **extra):
+    return client.post("/chores/shop", json={"action": action, "member_id": member, "item_id": item_id, **extra})
+
+
+def test_buy_uses_server_price(fake, client):
+    r = shop(client, "buy", "theme-ocean", price=0)
+    assert r.status_code == 200, r.text
+    assert r.json()["coins"] == 85
+    rpc = [b for m, p, _, b in fake.writes if p == "rpc/chore_buy"][0]
+    assert rpc == {"p_member": ALEX, "p_item": "theme-ocean", "p_price": 15}
+
+
+def test_buy_rules(fake, client):
+    assert shop(client, "buy", "theme-ocean", member=NATHAN).status_code == 409   # 0 coins
+    assert shop(client, "buy", "free-everything").status_code == 400
+    assert shop(client, "buy", "theme-ocean").status_code == 200
+    assert shop(client, "buy", "theme-ocean").status_code == 409                  # already owned
+    assert shop(client, "refund", "theme-ocean").status_code == 400
+
+
+def test_equip_requires_ownership(fake, client):
+    assert shop(client, "equip", "avatar-fox").status_code == 403
+    shop(client, "buy", "avatar-fox")
+    assert shop(client, "equip", "avatar-fox").status_code == 200
+    upsert = [b for m, p, _, b in fake.writes if p == "chore_member_cosmetics"][-1]
+    assert upsert["avatar"] == "avatar-fox" and upsert["member_id"] == ALEX
+    assert shop(client, "equip", None, slot="avatar").status_code == 200
+    assert [b for m, p, _, b in fake.writes if p == "chore_member_cosmetics"][-1]["avatar"] is None
+    assert shop(client, "equip", None, slot="points").status_code == 400
+
+
+def test_shop_catalog_matches_frontend():
+    import re
+    from pathlib import Path
+    src = (Path(__file__).resolve().parents[2] / "frontend/src/chores/shop.js").read_text(encoding="utf-8")
+    front = {m[0]: int(m[1]) for m in re.findall(r"id: '([^']+)'[^}]*?price: (\d+)", src)}
+    assert front == {k: v[1] for k, v in chore_routes.SHOP_ITEMS.items()}

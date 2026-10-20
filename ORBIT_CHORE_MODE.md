@@ -53,10 +53,24 @@ anyone with the link can use the app, and each visitor picks their name (saved i
   `chore_reset_defaults()` (members Misael, Penelope, Alex, Nathan and the new chore list).
 - The public (anon) role can only read. Every edit goes to `POST /chores/submit` (rate limited per IP), which
   validates it and applies it right away with the service role key.
-- Points = minutes × difficulty (easy 1x, medium 1.5x, hard 2x), rounded. They are stamped on the completion row
+- Points = minutes × difficulty (easy 1x, medium 1.5x, hard 2x), rounded, unless the chore has `points_override`
+  (every "extreme" chore gets 75). They are stamped on the completion row
   when it is inserted (a trigger recomputes them, whatever was sent) and rows can't be edited. Unchecking deletes the row.
   Only the assigned person can check a task, and only for today or yesterday (America/New_York).
 - Leaderboard and streaks are computed by the `chore_leaderboard` view from `chore_completions`. Nothing stores or
   sets a score. Deleting a chore is a soft delete, and Reset Default Data never touches completions.
 - So past days never change, schedule edits (frequency, day, allowed members) and the rotation toggle take effect
   tomorrow. Minutes/difficulty edits apply in place but only affect future completions.
+
+## Chat, coins and the shop
+
+- `supabase/migrations/20261021000000_matos_shop_chat.sql` adds the extreme tier and `points_override`, the new
+  member colors and chore list, `chat_messages`, `chore_purchases`, `chore_member_cosmetics`, the `chore_wallet`
+  view and `chore_buy()`. Anon can only read all of them.
+- Chat: `POST /chores/chat` (trimmed, 1–500 characters, 10 messages/minute per IP). Messages are stored as typed
+  and rendered as plain text.
+- Coins: 1 coin per 10 points earned, minus what was spent (`chore_wallet`, never stored). `POST /chores/shop` buys
+  (price from `SHOP_ITEMS` in `backend/chore_routes.py`, checked atomically by `chore_buy()`) or equips cosmetics:
+  themes, profile pictures, colors, name fonts, name colors and animated banners. The catalog for the UI is
+  `frontend/src/chores/shop.js`; a backend test keeps the two in sync.
+- Tests: `cd backend && python -m pytest tests/test_chore_routes.py` and `cd frontend && npm test`.

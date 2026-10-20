@@ -4,6 +4,8 @@ Matos Dashboard chore API (APP_MODE=chores) — see ORBIT_CHORE_MODE.md
 POST /chores/submit  Validates a change and applies it right away to the live
                      chore tables with the Supabase service role key. Rate
                      limited per IP. The public (anon) key stays read only.
+POST /chores/chat    Posts a family chat message as the selected member.
+POST /chores/shop    Buys or equips a cosmetic with coins (1 coin per 10 points).
 
 Score integrity: points are never accepted from the client. A completion's
 points_awarded is computed here from the chore's minutes and difficulty (and
@@ -38,7 +40,9 @@ CHANGE_TYPES = {
 }
 
 _FREQUENCIES = {"daily", "weekly", "monthly"}
-DIFFICULTY_MULTIPLIER = {"easy": 1.0, "medium": 1.5, "hard": 2.0}
+DIFFICULTY_MULTIPLIER = {"easy": 1.0, "medium": 1.5, "hard": 2.0, "extreme": 2.5}
+# Extreme chores are worth a fixed amount (stored as chores.points_override).
+EXTREME_POINTS = 75
 _TIME = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)(:00)?$")
 # Changing any of these changes which days (or whom) a chore lands on.
 _SCHEDULE_FIELDS = ("frequency", "preferred_weekday", "month_day", "allowed_member_ids")
@@ -55,8 +59,10 @@ class ChoreRuleError(ValueError):
         self.status = status
 
 
-def points_for(minutes: int, difficulty: str) -> int:
-    """Time estimate × difficulty multiplier, rounded half up."""
+def points_for(minutes: int, difficulty: str, points_override: int | None = None) -> int:
+    """points_override if set, else time estimate × difficulty multiplier, rounded half up."""
+    if points_override is not None:
+        return points_override
     return int(minutes * DIFFICULTY_MULTIPLIER.get(difficulty, 1.0) + 0.5)
 
 
@@ -148,13 +154,15 @@ def _chore_fields(payload: dict) -> dict:
         raise ChoreValidationError("frequency must be daily, weekly or monthly")
     difficulty = payload.get("difficulty")
     if difficulty not in DIFFICULTY_MULTIPLIER:
-        raise ChoreValidationError("difficulty must be easy, medium or hard")
+        raise ChoreValidationError("difficulty must be easy, medium, hard or extreme")
     return {
         "title": _text(payload, "title", 120),
         "frequency": frequency,
         "zone": _text(payload, "zone", 40),
         "minutes": _int(payload, "minutes", 1, 600),
         "difficulty": difficulty,
+        # Never taken from the client: extreme is always the fixed value.
+        "points_override": EXTREME_POINTS if difficulty == "extreme" else None,
         "description": sanitize_text(payload.get("description") or "", 500) or None,
         "time_of_day": _time_of_day(payload),
         "allowed_member_ids": _allowed(payload),
@@ -313,7 +321,7 @@ async def _set_completion(client: httpx.AsyncClient, payload: dict, today: date)
         "chore_id": payload["chore_id"],
         "date": day,
         "completed_by": payload["member_id"],
-        "points_awarded": points_for(chore["minutes"], chore["difficulty"]),
+        "points_awarded": points_for(chore["minutes"], chore["difficulty"], chore.get("points_override")),
     }
     r = await client.post(
         f"{_REST}/chore_completions",
@@ -401,3 +409,178 @@ async def submit_change(request: Request):
     except Exception as e:
         print(f"[Chores] {change_type} error: {e}")
         return JSONResponse({"error": "Could not save change"}, status_code=502)
+
+
+# ── Chat ─────────────────────────────────────────────────────────────────────
+
+CHAT_LIMIT_PER_MIN = 10
+CHAT_MAX_LEN = 500
+
+
+def validate_chat(body: dict) -> tuple[str, str]:
+    """Returns (member_id, text). The text is stored exactly as typed (trimmed);
+    the client renders it as plain text, so HTML in a message is never markup."""
+    member_id = _uuid(body.get("member_id"), "member_id")
+    text = body.get("body")
+    if not isinstance(text, str):
+        raise ChoreValidationError("body must be text")
+    text = text.strip()
+    if not text:
+        raise ChoreValidationError("Message can't be empty")
+    if len(text) > CHAT_MAX_LEN:
+        raise ChoreValidationError(f"Messages are limited to {CHAT_MAX_LEN} characters")
+    return member_id, text
+
+
+@chore_router.post("/chat")
+async def post_chat(request: Request):
+    ip = _client_ip(request)
+    if not ip_rate_ok(f"chores-chat:{ip}", limit=CHAT_LIMIT_PER_MIN, window=60):
+        return JSONResponse({"error": "Slow down! Try again in a minute."}, status_code=429)
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+    if not isinstance(body, dict):
+        return JSONResponse({"error": "Invalid body"}, status_code=400)
+    try:
+        member_id, text = validate_chat(body)
+        async with httpx.AsyncClient(timeout=15) as client:
+            if member_id not in await _active_member_ids(client):
+                raise ChoreValidationError("member_id is not a family member")
+            r = await client.post(f"{_REST}/chat_messages", json={"member_id": member_id, "body": text},
+                                  headers={**_HEADERS, "Prefer": "return=representation"})
+            r.raise_for_status()
+        return {"ok": True, "message": r.json()[0]}
+    except ChoreValidationError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except Exception as e:
+        print(f"[Chores] chat error: {e}")
+        return JSONResponse({"error": "Could not send message"}, status_code=502)
+
+
+# ── Shop ─────────────────────────────────────────────────────────────────────
+# Item id → (slot, price in coins). Mirrors SHOP_ITEMS in
+# frontend/src/chores/shop.js (a test checks they match). Prices are only ever
+# taken from here. Each slot is a column of chore_member_cosmetics.
+
+SHOP_LIMIT_PER_MIN = 30
+SHOP_SLOTS = ("theme", "avatar", "color", "name_font", "name_color", "banner")
+SHOP_ITEMS = {
+    "theme-bubblegum": ("theme", 15),
+    "theme-rose-noir": ("theme", 20),
+    "theme-crimson": ("theme", 20),
+    "theme-ocean": ("theme", 15),
+    "theme-midnight": ("theme", 20),
+    "theme-sunset": ("theme", 15),
+    "theme-silver-gold": ("theme", 25),
+    "theme-obsidian": ("theme", 25),
+    "avatar-fox": ("avatar", 30),
+    "avatar-panda": ("avatar", 30),
+    "avatar-unicorn": ("avatar", 45),
+    "avatar-dragon": ("avatar", 60),
+    "avatar-galaxy": ("avatar", 50),
+    "avatar-holo": ("avatar", 75),
+    "color-crimson": ("color", 40),
+    "color-violet": ("color", 40),
+    "color-teal": ("color", 40),
+    "color-gold": ("color", 40),
+    "color-hotpink": ("color", 40),
+    "color-sky": ("color", 40),
+    "font-playfair": ("name_font", 40),
+    "font-pacifico": ("name_font", 50),
+    "font-orbitron": ("name_font", 50),
+    "font-bungee": ("name_font", 50),
+    "font-pixel": ("name_font", 60),
+    "nc-royal": ("name_color", 40),
+    "nc-neon": ("name_color", 50),
+    "nc-fire": ("name_color", 60),
+    "nc-ice": ("name_color", 60),
+    "nc-gold": ("name_color", 60),
+    "nc-rainbow": ("name_color", 80),
+    "banner-aurora": ("banner", 80),
+    "banner-waves": ("banner", 90),
+    "banner-stars": ("banner", 100),
+    "banner-lava": ("banner", 120),
+}
+
+
+def validate_shop(body: dict) -> dict:
+    action = body.get("action")
+    member_id = _uuid(body.get("member_id"), "member_id")
+    if action == "buy":
+        item_id = body.get("item_id")
+        if item_id not in SHOP_ITEMS:
+            raise ChoreValidationError("Unknown item")
+        return {"action": "buy", "member_id": member_id, "item_id": item_id}
+    if action == "equip":
+        item_id = body.get("item_id")
+        if item_id is None:  # back to the default look for this slot
+            slot = body.get("slot")
+            if slot not in SHOP_SLOTS:
+                raise ChoreValidationError("Unknown slot")
+        elif item_id in SHOP_ITEMS:
+            slot = SHOP_ITEMS[item_id][0]
+        else:
+            raise ChoreValidationError("Unknown item")
+        return {"action": "equip", "member_id": member_id, "item_id": item_id, "slot": slot}
+    raise ChoreValidationError("action must be buy or equip")
+
+
+_BUY_ERRORS = {"not enough coins": "Not enough coins", "already owned": "You already own that",
+               "unknown member": "member_id is not a family member"}
+
+
+async def apply_shop(client: httpx.AsyncClient, req: dict) -> dict:
+    member_id, item_id = req["member_id"], req["item_id"]
+    if req["action"] == "buy":
+        r = await client.post(f"{_REST}/rpc/chore_buy",
+                              json={"p_member": member_id, "p_item": item_id, "p_price": SHOP_ITEMS[item_id][1]},
+                              headers=_HEADERS)
+        if r.status_code >= 400:
+            message = (r.json() if r.content else {}).get("message", "")
+            if message in _BUY_ERRORS:
+                raise ChoreRuleError(_BUY_ERRORS[message], 400 if message == "unknown member" else 409)
+            r.raise_for_status()
+        return {"coins": r.json()}
+
+    if member_id not in await _active_member_ids(client):
+        raise ChoreValidationError("member_id is not a family member")
+    if item_id is not None:
+        owned = await _get(client, "chore_purchases", {
+            "member_id": f"eq.{member_id}", "item_id": f"eq.{item_id}", "select": "item_id"})
+        if not owned:
+            raise ChoreRuleError("Buy it first", 403)
+    r = await client.post(
+        f"{_REST}/chore_member_cosmetics",
+        params={"on_conflict": "member_id"},
+        json={"member_id": member_id, req["slot"]: item_id, "updated_at": datetime.now(timezone.utc).isoformat()},
+        headers={**_HEADERS, "Prefer": "return=minimal,resolution=merge-duplicates"},
+    )
+    r.raise_for_status()
+    return {}
+
+
+@chore_router.post("/shop")
+async def shop(request: Request):
+    ip = _client_ip(request)
+    if not ip_rate_ok(f"chores-shop:{ip}", limit=SHOP_LIMIT_PER_MIN, window=60):
+        return JSONResponse({"error": "Too many requests. Try again in a minute."}, status_code=429)
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+    if not isinstance(body, dict):
+        return JSONResponse({"error": "Invalid body"}, status_code=400)
+    try:
+        req = validate_shop(body)
+        async with httpx.AsyncClient(timeout=15) as client:
+            result = await apply_shop(client, req)
+        return {"ok": True, **result}
+    except ChoreValidationError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except ChoreRuleError as e:
+        return JSONResponse({"error": str(e)}, status_code=e.status)
+    except Exception as e:
+        print(f"[Chores] shop error: {e}")
+        return JSONResponse({"error": "Could not complete purchase"}, status_code=502)

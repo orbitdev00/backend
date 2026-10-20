@@ -12,6 +12,7 @@ export const DIFFICULTY = {
   easy: { label: 'Easy', multiplier: 1 },
   medium: { label: 'Medium', multiplier: 1.5 },
   hard: { label: 'Hard', multiplier: 2 },
+  extreme: { label: 'EXTREME', multiplier: 2.5, fixed: 75 },
 }
 export const TIME_ZONE = 'America/New_York'
 const OVERDUE_AFTER_MIN = 60
@@ -75,7 +76,10 @@ function timeMinutes(t) {
   return h * 60 + m
 }
 
+/** points_override (set on every extreme chore) wins over minutes × multiplier. */
 export function pointsFor(chore) {
+  if (chore.points_override != null) return chore.points_override
+  if (DIFFICULTY[chore.difficulty]?.fixed) return DIFFICULTY[chore.difficulty].fixed
   return Math.round(chore.minutes * (DIFFICULTY[chore.difficulty]?.multiplier ?? 1))
 }
 

@@ -1,6 +1,6 @@
 # Orbit ⇄ Chore mode
 
-orbit-app.xyz currently serves the **Household Chore Dashboard** instead of Orbit.
+orbit-app.xyz currently serves the **Matos Dashboard** chores app instead of Orbit.
 Nothing Orbit-related was deleted. It is hidden behind two env vars.
 
 | Where   | Variable        | Chore mode (default) | Orbit   |
@@ -38,14 +38,25 @@ The chore tables stay in Supabase and don't affect Orbit.
 | Vercel  | `VITE_SUPABASE_ANON_KEY` | already set for Orbit |
 | Vercel  | `VITE_BACKEND_URL`       | already set for Orbit (Railway URL) |
 | Railway | `SUPABASE_URL`           | already set |
-| Railway | `SUPABASE_SERVICE_KEY`   | already set. This is the service role key the backend uses to apply approved changes |
-| Railway | `CHORE_APPROVAL_PIN`     | **new**: shared PIN for the Review Changes modal |
+| Railway | `SUPABASE_SERVICE_KEY`   | already set. The service role key the backend uses to write chore data |
 
-## Data and change review
+`CHORE_APPROVAL_PIN` is no longer used and can be deleted from Railway. There is no login or passcode:
+anyone with the link can use the app, and each visitor picks their name (saved in the `chore_user` cookie for a year).
 
-- The migration `supabase/migrations/20261019000000_chore_mode.sql` creates `chore_members`, `chores`,
-  `chore_assignments`, `chore_completions`, `chore_settings` and `pending_changes`.
-- The public (anon) role can only read them. Only the backend (service role key) writes.
-- Every edit in the UI goes to `POST /chores/submit`, which is rate limited per IP and queued as pending.
-  Edits show with a dashed "pending" style until someone with the PIN approves them in **Review Changes**
-  (`POST /chores/review`). The backend then applies them with the service role key.
+## Data, points and streaks
+
+- `supabase/migrations/20261019000000_chore_mode.sql` creates `chore_members`, `chores`, `chore_assignments`,
+  `chore_completions`, `chore_settings` and `pending_changes` (still there, no longer used).
+- `supabase/migrations/20261020000000_chore_points.sql` adds difficulty, description, time of day, allowed members
+  and a validity window (`starts_on`/`retired_on`) to chores, `completed_by`/`points_awarded` to completions,
+  `chore_rotation_log`, the internal `chore_schedule` view and the public `chore_leaderboard` view, and replaces
+  `chore_reset_defaults()` (members Misael, Penelope, Alex, Nathan and the new chore list).
+- The public (anon) role can only read. Every edit goes to `POST /chores/submit` (rate limited per IP), which
+  validates it and applies it right away with the service role key.
+- Points = minutes × difficulty (easy 1x, medium 1.5x, hard 2x), rounded. They are stamped on the completion row
+  when it is inserted (a trigger recomputes them, whatever was sent) and rows can't be edited. Unchecking deletes the row.
+  Only the assigned person can check a task, and only for today or yesterday (America/New_York).
+- Leaderboard and streaks are computed by the `chore_leaderboard` view from `chore_completions`. Nothing stores or
+  sets a score. Deleting a chore is a soft delete, and Reset Default Data never touches completions.
+- So past days never change, schedule edits (frequency, day, allowed members) and the rotation toggle take effect
+  tomorrow. Minutes/difficulty edits apply in place but only affect future completions.

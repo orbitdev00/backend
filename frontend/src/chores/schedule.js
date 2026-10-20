@@ -1,13 +1,20 @@
-// Pure scheduling helpers: dates, occurrences, rotation and pending-change overlay.
+// Pure scheduling helpers: dates, occurrences, rotation and points.
 // Everything here is deterministic so every visitor sees the same calendar.
+// Rotation mirrors the chore_schedule view in
+// supabase/migrations/20261020000000_chore_points.sql — keep the two in sync.
 
 export const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 export const WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 export const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
   'August', 'September', 'October', 'November', 'December']
 export const FREQ_LABEL = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' }
-export const MEMBER_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#ec4899',
-  '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#64748b']
+export const DIFFICULTY = {
+  easy: { label: 'Easy', multiplier: 1 },
+  medium: { label: 'Medium', multiplier: 1.5 },
+  hard: { label: 'Hard', multiplier: 2 },
+}
+export const TIME_ZONE = 'America/New_York'
+const OVERDUE_AFTER_MIN = 60
 
 const pad = n => String(n).padStart(2, '0')
 
@@ -20,8 +27,30 @@ export function parseKey(key) {
   return new Date(y, m - 1, d)
 }
 
+export function addDays(key, n) {
+  const [y, m, d] = key.split('-').map(Number)
+  const t = new Date(Date.UTC(y, m - 1, d + n))
+  return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`
+}
+
+const nyFormat = new Intl.DateTimeFormat('en-CA', {
+  timeZone: TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+})
+
+/** Current date key and minutes since midnight in America/New_York. */
+export function nyNow(at = new Date()) {
+  const p = Object.fromEntries(nyFormat.formatToParts(at).map(x => [x.type, x.value]))
+  return { key: `${p.year}-${p.month}-${p.day}`, minutes: Number(p.hour) * 60 + Number(p.minute) }
+}
+
 export function todayKey() {
-  return dateKey(new Date())
+  return nyNow().key
+}
+
+/** Sunday that starts the week containing `key`. */
+export function weekStart(key) {
+  return addDays(key, -parseKey(key).getDay())
 }
 
 export function shortDate(key) {
@@ -32,6 +61,22 @@ export function shortDate(key) {
 export function longDate(key) {
   const d = parseKey(key)
   return `${WEEKDAYS_LONG[d.getDay()]}, ${MONTHS[d.getMonth()].slice(0, 3)} ${d.getDate()}, ${d.getFullYear()}`
+}
+
+/** "12:00:00" → "12:00 PM" */
+export function formatTime(t) {
+  if (!t) return ''
+  const [h, m] = t.split(':').map(Number)
+  return `${((h + 11) % 12) + 1}:${pad(m)} ${h < 12 ? 'AM' : 'PM'}`
+}
+
+function timeMinutes(t) {
+  const [h, m] = t.split(':').map(Number)
+  return h * 60 + m
+}
+
+export function pointsFor(chore) {
+  return Math.round(chore.minutes * (DIFFICULTY[chore.difficulty]?.multiplier ?? 1))
 }
 
 // Whole days since 1970-01-01, independent of the viewer's time zone.
@@ -54,7 +99,10 @@ export function monthGrid(year, month) {
   return cells
 }
 
+/** Whether a chore version applies on `key`: inside [starts_on, retired_on) and on its schedule. */
 export function occursOn(chore, key) {
+  if (chore.starts_on && key < chore.starts_on) return false
+  if (chore.retired_on && key >= chore.retired_on) return false
   const d = parseKey(key)
   if (chore.frequency === 'daily') return true
   if (chore.frequency === 'weekly') return d.getDay() === chore.preferred_weekday
@@ -71,130 +119,97 @@ export function scheduleLabel(chore) {
   return 'Every day'
 }
 
-const byCreated = (a, b) =>
-  (a.created_at || '').localeCompare(b.created_at || '') || String(a.id).localeCompare(String(b.id))
+const byCreated = (a, b) => {
+  const x = a.created_at || '', y = b.created_at || ''
+  if (x !== y) return x < y ? -1 : 1
+  return String(a.id) < String(b.id) ? -1 : String(a.id) > String(b.id) ? 1 : 0
+}
+
+/** Rotation on/off for a day: the latest log entry on or before it (default on). */
+export function rotationOn(log, key) {
+  let state = true, at = ''
+  for (const row of log) {
+    if (row.effective_on <= key && row.effective_on > at) { state = row.enabled; at = row.effective_on }
+  }
+  return state
+}
 
 /**
- * Rotation: chores are dealt across live active members by their position in
- * the chore list. With rotation on, daily chores shift by one member each day
- * and weekly chores each week. Monthly chores (and everything when rotation is
- * off) keep a fixed owner. Removing a member re-deals everything across the rest.
+ * Rotation: each chore has a fixed slot (its position among every chore ever
+ * created) and rotates through its pool (allowed active members, or everyone).
+ * Daily chores shift by one member each day, weekly chores each Sunday-week,
+ * monthly chores (and everything on days rotation is off) keep a fixed owner.
  */
-export function makeAssigner(liveChores, liveMembers, rotationEnabled) {
-  const members = liveMembers.filter(m => m.active).sort(byCreated)
-  const order = new Map(liveChores.filter(c => c.active).sort(byCreated).map((c, i) => [c.id, i]))
+export function makeAssigner(allChores, members, rotationLog) {
+  const active = members.filter(m => m.active).sort(byCreated)
+  const slot = new Map([...allChores].sort(byCreated).map((c, i) => [c.id, i]))
+  const pools = new Map()
+  const poolFor = chore => {
+    if (!pools.has(chore.id)) {
+      const allowed = chore.allowed_member_ids
+      const pool = allowed ? active.filter(m => allowed.includes(m.id)) : active
+      pools.set(chore.id, pool.length ? pool : active)
+    }
+    return pools.get(chore.id)
+  }
   return (chore, key) => {
-    if (!members.length) return null
-    const i = order.has(chore.id) ? order.get(chore.id) : order.size
+    const pool = poolFor(chore)
+    if (!pool.length) return null
+    const i = slot.has(chore.id) ? slot.get(chore.id) : slot.size
     let shift = 0
-    if (rotationEnabled && chore.frequency === 'daily') shift = dayNumber(key)
-    // 1970-01-01 was a Thursday; +4 aligns week numbers to Sunday-start weeks.
-    if (rotationEnabled && chore.frequency === 'weekly') shift = Math.floor((dayNumber(key) + 4) / 7)
-    return members[(i + shift) % members.length]
+    if (rotationOn(rotationLog, key)) {
+      if (chore.frequency === 'daily') shift = dayNumber(key)
+      // 1970-01-01 was a Thursday; +4 aligns week numbers to Sunday-start weeks.
+      if (chore.frequency === 'weekly') shift = Math.floor((dayNumber(key) + 4) / 7)
+    }
+    return pool[(i + shift) % pool.length]
   }
 }
 
 const occKey = (choreId, key) => `${choreId}|${key}`
 
-/**
- * Merge pending (unapproved) changes over the live data so the submitter sees
- * them right away. Anything only pending carries a `pending` marker.
- */
-export function buildView(live) {
-  const members = live.members.map(m => ({ ...m }))
-  const chores = live.chores.filter(c => c.active).map(c => ({ ...c }))
-  const overrides = new Map()
-  const completions = new Map()
-  for (const a of live.assignments) overrides.set(occKey(a.chore_id, a.date), { member_id: a.member_id })
-  for (const c of live.completions) completions.set(occKey(c.chore_id, c.date), { done: true })
-
-  let rotationEnabled = live.settings?.rotation_enabled ?? true
-  let rotationPending = false
-  let resetPending = false
-
-  const pending = [...live.pending].sort((a, b) => a.submitted_at.localeCompare(b.submitted_at))
-  for (const pc of pending) {
-    const p = pc.payload || {}
-    switch (pc.change_type) {
-      case 'chore_add':
-        chores.push({ ...p, id: `pending:${pc.id}`, active: true, created_at: pc.submitted_at, pending: 'add' })
-        break
-      case 'chore_edit': {
-        const c = chores.find(x => x.id === pc.target_id)
-        if (c) Object.assign(c, p, { pending: c.pending || 'edit' })
-        break
-      }
-      case 'chore_delete': {
-        const c = chores.find(x => x.id === pc.target_id)
-        if (c) c.pending = 'delete'
-        break
-      }
-      case 'member_add':
-        members.push({ ...p, id: `pending:${pc.id}`, active: true, created_at: pc.submitted_at, pending: 'add' })
-        break
-      case 'member_edit': {
-        const m = members.find(x => x.id === pc.target_id)
-        if (m) Object.assign(m, p, { pending: m.pending || 'edit' })
-        break
-      }
-      case 'member_remove': {
-        const m = members.find(x => x.id === pc.target_id)
-        if (m) m.pending = 'remove'
-        break
-      }
-      case 'assignment_set':
-        overrides.set(occKey(p.chore_id, p.date), { member_id: p.member_id, pending: true })
-        break
-      case 'completion_set':
-        completions.set(occKey(p.chore_id, p.date), { done: !!p.done, pending: true })
-        break
-      case 'rotation_toggle':
-        rotationEnabled = !!p.rotation_enabled
-        rotationPending = true
-        break
-      case 'reset_defaults':
-        resetPending = true
-        break
-    }
-  }
-
-  const liveRotation = live.settings?.rotation_enabled ?? true
-  const assign = makeAssigner(live.chores, live.members, liveRotation)
-  const memberById = new Map(members.map(m => [m.id, m]))
+export function buildView(live, now = nyNow()) {
+  const members = live.members.filter(m => m.active).sort(byCreated)
+  const memberById = new Map(live.members.map(m => [m.id, m]))
+  const overrides = new Map(live.assignments.map(a => [occKey(a.chore_id, a.date), a.member_id]))
+  const completions = new Map(live.completions.map(c => [occKey(c.chore_id, c.date), c]))
+  const assign = makeAssigner(live.chores, live.members, live.rotationLog)
+  const today = now.key
+  const yesterday = addDays(today, -1)
 
   /** All chore occurrences on a date with their resolved assignee and status. */
   function tasksFor(key) {
-    return chores
+    return live.chores
       .filter(c => occursOn(c, key))
+      .sort((a, b) => (a.time_of_day || '99').localeCompare(b.time_of_day || '99') || byCreated(a, b))
       .map(chore => {
         const k = occKey(chore.id, key)
-        const ov = overrides.get(k)
-        const ovMember = ov && memberById.get(ov.member_id)
-        const assignee = (ovMember && ovMember.active) ? ovMember
-          : chore.pending === 'add' ? null
-          : assign(chore, key)
+        const ov = memberById.get(overrides.get(k))
+        const assignee = ov?.active ? ov : assign(chore, key)
         const comp = completions.get(k)
+        const done = Boolean(comp)
+        const overdue = !done && Boolean(chore.time_of_day) && (
+          key < today || (key === today && now.minutes >= timeMinutes(chore.time_of_day) + OVERDUE_AFTER_MIN))
         return {
           key: k,
           date: key,
           chore,
-          assignee: assignee ? memberById.get(assignee.id) || assignee : null,
-          assigneePending: !!ov?.pending,
-          done: !!comp?.done,
-          donePending: !!comp?.pending,
-          liveDone: live.completions.some(c => c.chore_id === chore.id && c.date === key),
+          assignee,
+          done,
+          completedBy: comp ? memberById.get(comp.completed_by) || null : null,
+          points: done ? comp.points_awarded : pointsFor(chore),
+          overdue,
+          checkable: key === today || key === yesterday,
         }
       })
   }
 
   return {
     members,
-    activeMembers: members.filter(m => m.active),
-    chores,
-    rotationEnabled,
-    rotationPending,
-    resetPending,
-    pending,
+    chores: live.chores.filter(c => c.active).sort(byCreated),
+    rotationEnabled: live.settings?.rotation_enabled ?? true,
+    today,
+    yesterday,
     tasksFor,
   }
 }

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 const BACKEND_URL = process.env.VITE_BACKEND_URL || 'https://backend-3pyp.onrender.com'
 
-// VITE_APP_MODE: "orbit" (full app) | "chores" (Household Chore Dashboard). Default: chores.
+// VITE_APP_MODE: "orbit" (full app) | "chores" (Matos Dashboard chores app). Default: chores.
 // See ORBIT_CHORE_MODE.md at the repo root.
 function resolveAppMode(mode) {
   const env = loadEnv(mode, process.cwd(), 'VITE_')
@@ -24,8 +24,8 @@ function appModeHtml(appMode) {
       if (appMode === 'orbit') return html
       return html
         .replace('<title>Orbit</title>',
-          '<title>Household Chore Dashboard</title>\n' +
-          '    <meta name="description" content="Household chore schedule, fair rotation and shared family calendar." />\n' +
+          '<title>Matos Dashboard</title>\n' +
+          '    <meta name="description" content="Family chores: today\'s tasks, points, streaks and the shared calendar." />\n' +
           '    <meta name="theme-color" content="#4f46e5" />\n' +
           `    <link rel="icon" href="${CHORES_FAVICON}" />`)
         .replace(/family=Inter:wght@300;400;500;600&family=JetBrains\+Mono:wght@400;500/, 'family=Inter:wght@400;500;600;700')

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { MAX_TEAMS } from './bracket.js'
 import { NAME_MAX, SKILLS, cleanName, teamErrors } from './teams.js'
 import { reducedMotion } from './motion.js'
+import { burst, replay } from './fx.js'
 
 const CLOSE_MS = 200
 
@@ -58,6 +59,8 @@ export function TeamForm({ entry, entries, colors, onSubmit, onRemove, removeLab
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [confirmRemove, setConfirmRemove] = useState(false)
+  const formRef = useRef(null)
+  const shake = () => replay(formRef.current, 'is-shaking')
 
   const errors = teamErrors(form, entries, entry?.id)
   if (!form.skill_level) errors.skill_level = 'Pick a skill level'
@@ -69,7 +72,8 @@ export function TeamForm({ entry, entries, colors, onSubmit, onRemove, removeLab
   const submit = async e => {
     e.preventDefault()
     setTouched(t => ({ ...t, submit: true }))
-    if (!valid || busy) return
+    if (!valid) return shake()
+    if (busy) return
     setBusy(true)
     setError('')
     try {
@@ -77,6 +81,7 @@ export function TeamForm({ entry, entries, colors, onSubmit, onRemove, removeLab
     } catch (err) {
       setError(err.message)
       setBusy(false)
+      shake()
     }
   }
 
@@ -94,7 +99,7 @@ export function TeamForm({ entry, entries, colors, onSubmit, onRemove, removeLab
   }
 
   return (
-    <form className="pb-form" onSubmit={submit} noValidate>
+    <form className="pb-form" onSubmit={submit} noValidate ref={formRef}>
       <Field id="pb-player" label="Your name" error={show('player_name')}>
         <input id="pb-player" className="pb-input" value={form.player_name} onChange={set('player_name')}
           onBlur={() => setTouched(t => ({ ...t, player_name: true }))} maxLength={NAME_MAX + 10} autoComplete="name"
@@ -150,13 +155,20 @@ function Field({ id, label, error, children }) {
 }
 
 /** 1.5s number roll that lands on `slot`, then onDone(). Reduced motion: no roll. */
-export function SlotDraw({ slot, team, onDone }) {
+export function SlotDraw({ slot, team, color, onDone }) {
   const still = reducedMotion()
   const [shown, setShown] = useState(still ? slot : 1 + Math.floor(Math.random() * MAX_TEAMS))
   const [tick, setTick] = useState(0)
   const [landed, setLanded] = useState(still)
   const doneRef = useRef(onDone)
+  const ballRef = useRef(null)
   doneRef.current = onDone
+
+  useEffect(() => {
+    if (!landed || !ballRef.current) return
+    const r = ballRef.current.getBoundingClientRect()
+    burst(r.left + r.width / 2, r.top + r.height / 2, [color || '#d9f24a', '#d9f24a', '#ffffff'])
+  }, [landed])
 
   useEffect(() => {
     const timers = []
@@ -180,7 +192,7 @@ export function SlotDraw({ slot, team, onDone }) {
     <div className="pb-draw" role="dialog" aria-modal="true" aria-label="Slot draw" onClick={() => landed && doneRef.current()}>
       <div className="pb-draw-card">
         <p className="pb-draw-kicker">{landed ? "You're in!" : 'Drawing your slot…'}</p>
-        <div className={`pb-draw-ball${landed ? ' is-landed' : ''}`}>
+        <div className={`pb-draw-ball${landed ? ' is-landed' : ''}`} ref={ballRef}>
           <span key={tick} className="pb-draw-num">{shown}</span>
         </div>
         <p className="pb-draw-team" aria-live="polite">
@@ -192,6 +204,7 @@ export function SlotDraw({ slot, team, onDone }) {
 }
 
 export function PinForm({ onSubmit, close }) {
+  const formRef = useRef(null)
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -206,10 +219,11 @@ export function PinForm({ onSubmit, close }) {
       setError(err.message)
       setBusy(false)
       setPin('')
+      replay(formRef.current, 'is-shaking')
     }
   }
   return (
-    <form className="pb-form" onSubmit={submit}>
+    <form className="pb-form" onSubmit={submit} ref={formRef}>
       <div className="pb-field">
         <label className="pb-label" htmlFor="pb-pin">Organizer PIN</label>
         <input id="pb-pin" className="pb-input" type="password" inputMode="numeric" autoComplete="off" value={pin}

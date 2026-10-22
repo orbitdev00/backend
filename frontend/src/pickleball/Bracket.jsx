@@ -1,19 +1,41 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { BRACKET, byeFor, bySlot, sectionEdges, sourceLabel, teamName } from './bracket.js'
 import { skillOf } from './teams.js'
+import { reducedMotion } from './motion.js'
 
-/** Display-only double-elimination bracket. */
+const JUMPS = [
+  { id: 'winners', label: 'Winners', target: '#pb-section-winners' },
+  { id: 'losers', label: 'Losers', target: '#pb-section-losers' },
+  { id: 'final', label: 'Grand final', target: '[data-node="GF"]' },
+]
+
+function jump(target) {
+  const el = document.querySelector(target)
+  el?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start', inline: 'center' })
+}
+
+/** Display-only double-elimination bracket: both brackets on one board. */
 export default function Bracket({ entries, ownedIds, organizer, onEdit, newIds, pulseSlot }) {
   const slots = bySlot(entries)
   const box = { slots, ownedIds, organizer, onEdit, newIds, pulseSlot }
   // Names and badges change box heights, so the lines are re-measured when teams change.
   const version = (entries || []).map(e => `${e.id}:${e.player_name}:${e.partner_name}`).join('|') + organizer
   return (
-    <div className="pb-bracket">
-      {BRACKET.map((section, i) => (
-        <Section key={section.id} section={section} colOffset={i * 2} box={box} version={version} />
-      ))}
-    </div>
+    <section className="pb-board" aria-labelledby="pb-board-title">
+      <div className="pb-board-head">
+        <h2 id="pb-board-title" className="pb-card-title">Bracket</h2>
+        <div className="pb-jump" role="group" aria-label="Jump to">
+          {JUMPS.map(j => (
+            <button key={j.id} type="button" className={`pb-jump-btn is-${j.id}`} onClick={() => jump(j.target)}>{j.label}</button>
+          ))}
+        </div>
+      </div>
+      <div className="pb-bracket">
+        {BRACKET.map((section, i) => (
+          <Section key={section.id} section={section} colOffset={i * 2} box={box} version={version} />
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -58,9 +80,9 @@ function Section({ section, colOffset, box, version }) {
   }, [])
 
   return (
-    <section className={`pb-section is-${section.id}`} aria-label={section.title}>
+    <section className={`pb-section is-${section.id}`} id={`pb-section-${section.id}`} aria-label={section.title}>
       <h2 className="pb-section-title">{section.title}</h2>
-      <div className="pb-scroll" tabIndex={0} aria-label={`${section.title}, scrolls sideways`}>
+      <div className="pb-scroll" tabIndex={0} aria-label={section.title}>
         <div className="pb-section-inner" ref={innerRef}>
           <div className={`pb-lines${drawing ? ' is-drawing' : ''}`} aria-hidden="true">
             {lines.map(s => (

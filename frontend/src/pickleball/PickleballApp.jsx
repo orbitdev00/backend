@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as api from './api.js'
 import Bracket from './Bracket.jsx'
-import WallMessage from './WallMessage.js'
 import { Modal, PinForm, SlotDraw, TeamForm } from './Modals.jsx'
+import { ChatPanel, Drawer, NotificationsPanel } from './Panels.jsx'
 import { MAX_TEAMS, teamName } from './bracket.js'
-import { MESSAGE_MAX, forgetToken, formatEventDate, readPin, readTokens, savePin, saveToken } from './teams.js'
+import { forgetToken, formatEventDate, readPin, readTokens, savePin, saveToken } from './teams.js'
+import { addItems, bracketEvents, loadNotify, messageEvents, saveNotify, snapshotEntries, unreadCount } from './notify.js'
 import { drawBracketImage } from './drawBracket.js'
 import { scrollToSlot } from './motion.js'
+import { installRipples } from './fx.js'
 import './pickleball.css'
 
 const BRACKET_POLL_MS = 10_000
 const WALL_POLL_MS = 8_000
+const PANEL_CLOSE_MS = 260
 
 const RULES = [
   ['Format', "Double elimination with a winners' bracket and a losers' bracket. Lose once and you drop to the losers' bracket; lose twice and you're out."],
@@ -30,6 +33,8 @@ function addedIds(prevRef, rows) {
   return new Set([...ids].filter(id => !prev.has(id)))
 }
 
+const badge = n => (n > 99 ? '99+' : String(n))
+
 export default function PickleballApp() {
   const [data, setData] = useState(null)
   const [loadError, setLoadError] = useState('')
@@ -38,13 +43,22 @@ export default function PickleballApp() {
   const [tokens, setTokens] = useState(() => readTokens())
   const [pin, setPin] = useState(() => readPin())
   const [modal, setModal] = useState(null)
+  const [panel, setPanel] = useState(null) // 'chat' | 'notifs'
   const [newIds, setNewIds] = useState(() => new Set())
   const [newMsgIds, setNewMsgIds] = useState(() => new Set())
   const [pulseSlot, setPulseSlot] = useState(null)
   const [notice, setNotice] = useState('')
   const [saving, setSaving] = useState(false)
+  const [notify, setNotify] = useState(() => loadNotify())
+  const [ring, setRing] = useState(0)
+  const [panelReadAt, setPanelReadAt] = useState(null)
+  const rootRef = useRef(null)
   const seenEntries = useRef(null)
   const seenMessages = useRef(null)
+  const notifyRef = useRef(notify)
+  const dataRef = useRef(null)
+  const chatOpen = useRef(false)
+  const ignore = useRef(new Set())
 
   const entries = data?.entries || []
   const settings = data?.settings
@@ -52,6 +66,42 @@ export default function PickleballApp() {
   const owned = entries.filter(e => ownedIds.has(e.id))
   const full = entries.length >= MAX_TEAMS
   const organizer = Boolean(pin)
+  const unread = unreadCount(notify.items, notify.readAt)
+  const chatReadSince = notify.chatReadAt ? Date.parse(notify.chatReadAt) : Infinity
+  const chatUnread = messages.filter(m => !ownedIds.has(m.entry_id) && Date.parse(m.created_at) > chatReadSince).length
+
+  useEffect(() => (rootRef.current ? installRipples(rootRef.current) : undefined), [])
+
+  const updateNotify = patch => {
+    notifyRef.current = { ...notifyRef.current, ...patch }
+    saveNotify(notifyRef.current)
+    setNotify(notifyRef.current)
+  }
+
+  const say = text => {
+    setNotice(text)
+    setTimeout(() => setNotice(n => (n === text ? '' : n)), 4000)
+  }
+
+  /** Your own changes don't notify you. */
+  const ignoreFor = id => {
+    ignore.current.add(id)
+    setTimeout(() => ignore.current.delete(id), 30_000)
+  }
+
+  const deliver = events => {
+    if (!events.length) return
+    updateNotify({ items: addItems(notifyRef.current.items, events) })
+    setRing(r => r + 1)
+    const loud = events.filter(e => e.personal || e.kind === 'full')
+    if (loud.length && !document.hidden) say(loud[loud.length - 1].text)
+    if (notifyRef.current.alerts && document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+      const title = dataRef.current?.settings?.event_name || 'Pickleball Tournament'
+      for (const e of events.slice(-3)) {
+        try { new Notification(title, { body: e.text, tag: e.id }) } catch { /* not allowed here */ }
+      }
+    }
+  }
 
   const refresh = useCallback(async () => {
     try {
@@ -61,8 +111,19 @@ export default function PickleballApp() {
         setNewIds(added)
         setTimeout(() => setNewIds(new Set()), 1400)
       }
+      dataRef.current = d
       setData(d)
       setLoadError('')
+
+      const cur = notifyRef.current
+      const next = { entries: snapshotEntries(d.entries), settings: d.settings }
+      const events = bracketEvents(cur.entries ? { entries: cur.entries, settings: cur.settings } : null, next,
+        { tokens: readTokens(), ignore: ignore.current })
+      const removed = events.filter(e => e.kind === 'removed')
+      removed.forEach(e => forgetToken(e.entryId))
+      if (removed.length) setTokens(readTokens())
+      updateNotify(next)
+      deliver(events)
     } catch {
       setLoadError("Couldn't load the bracket. Retrying…")
     }
@@ -76,6 +137,22 @@ export default function PickleballApp() {
         setNewMsgIds(added)
         setTimeout(() => setNewMsgIds(new Set()), 1200)
       }
+      const cur = notifyRef.current
+      const newest = rows.length ? rows[rows.length - 1].created_at : cur.lastMessageAt
+      if (!cur.wallInit) {
+        // First visit on this device: nothing old counts as new.
+        updateNotify({ wallInit: true, lastMessageAt: newest, chatReadAt: newest || new Date().toISOString() })
+      } else {
+        const ents = dataRef.current?.entries || []
+        const toks = readTokens()
+        const events = messageEvents(cur.lastMessageAt || '1970-01-01T00:00:00Z', rows, {
+          owned: ents.filter(e => toks[e.id]),
+          byId: Object.fromEntries(ents.map(e => [e.id, e])),
+          skipPlain: chatOpen.current,
+        })
+        updateNotify({ lastMessageAt: newest, ...(chatOpen.current && newest ? { chatReadAt: newest } : {}) })
+        deliver(events)
+      }
       setMessages(rows)
     } catch { /* keep the last messages */ }
   }, [])
@@ -86,8 +163,7 @@ export default function PickleballApp() {
 
   useEffect(() => {
     if (!api.configured) return
-    refresh()
-    refreshWall()
+    refresh().then(refreshWall)
     const a = setInterval(() => { if (!document.hidden) refresh() }, BRACKET_POLL_MS)
     const b = setInterval(() => { if (!document.hidden) refreshWall() }, WALL_POLL_MS)
     return () => { clearInterval(a); clearInterval(b) }
@@ -102,11 +178,6 @@ export default function PickleballApp() {
     if (!pin) return
     api.verifyPin(pin).catch(err => { if (err.status !== 429) endOrganizer() })
   }, [])
-
-  const say = text => {
-    setNotice(text)
-    setTimeout(() => setNotice(n => (n === text ? '' : n)), 4000)
-  }
 
   const endOrganizer = (message = '') => {
     savePin('')
@@ -124,6 +195,53 @@ export default function PickleballApp() {
     }
   }
 
+  // ── Panels ─────────────────────────────────────────────────────────────────
+
+  const openChat = () => {
+    chatOpen.current = true
+    const newest = messages.length ? messages[messages.length - 1].created_at : notifyRef.current.chatReadAt
+    if (newest) updateNotify({ chatReadAt: newest })
+    setPanel('chat')
+  }
+
+  const closePanel = () => {
+    chatOpen.current = false
+    setPanel(null)
+  }
+
+  const openNotifs = () => {
+    setPanelReadAt(notifyRef.current.readAt)
+    updateNotify({ readAt: new Date().toISOString() })
+    setPanel('notifs')
+  }
+
+  const setAlerts = async on => {
+    if (!on) return updateNotify({ alerts: false })
+    try {
+      const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission()
+      updateNotify({ alerts: permission === 'granted' })
+      if (permission !== 'granted') say('Alerts are blocked for this site')
+    } catch {
+      say("This browser can't show alerts")
+    }
+  }
+
+  const openItem = (item, close) => {
+    close()
+    setTimeout(() => {
+      if (item.kind === 'message' || item.kind === 'mention') openChat()
+      else if (item.slot) showSlot(item.slot)
+    }, PANEL_CLOSE_MS + 20)
+  }
+
+  const showSlot = slot => {
+    requestAnimationFrame(() => {
+      scrollToSlot(slot)
+      setPulseSlot(slot)
+      setTimeout(() => setPulseSlot(null), 2600)
+    })
+  }
+
   // ── Actions ────────────────────────────────────────────────────────────────
 
   // The draw replaces the join dialog right away (no delayed close that would dismiss it).
@@ -131,8 +249,9 @@ export default function PickleballApp() {
     try {
       const res = await api.joinTournament(team)
       saveToken(res.id, res.token)
+      ignoreFor(res.id)
       setTokens(readTokens())
-      setModal({ type: 'draw', slot: res.slot, team: teamName(team) })
+      setModal({ type: 'draw', slot: res.slot, team: teamName(team), color: team.color })
       refresh()
     } catch (err) {
       if (err.status === 409) refresh()
@@ -142,14 +261,11 @@ export default function PickleballApp() {
 
   const finishDraw = slot => {
     setModal(null)
-    requestAnimationFrame(() => {
-      scrollToSlot(slot)
-      setPulseSlot(slot)
-      setTimeout(() => setPulseSlot(null), 2600)
-    })
+    showSlot(slot)
   }
 
   const saveTeam = entry => async (team, close) => {
+    ignoreFor(entry.id)
     if (ownedIds.has(entry.id)) await api.editEntry(entry.id, tokens[entry.id], team)
     else await asOrganizer(p => api.adminEditEntry(p, entry.id, team))
     close()
@@ -158,6 +274,7 @@ export default function PickleballApp() {
   }
 
   const removeTeam = entry => async close => {
+    ignoreFor(entry.id)
     if (ownedIds.has(entry.id)) {
       await api.leaveEntry(entry.id, tokens[entry.id])
       forgetToken(entry.id)
@@ -201,21 +318,49 @@ export default function PickleballApp() {
 
   const editing = modal?.type === 'edit' ? modal.entry : null
   const editingOwn = editing && ownedIds.has(editing.id)
+  const eventName = settings?.event_name || 'Pickleball Tournament'
 
   return (
-    <div className="pb-app">
-      <header className="pb-header">
-        <div className="pb-header-inner">
-          <div className="pb-brand">
+    <div className="pb-app" ref={rootRef}>
+      <nav className="pb-nav" aria-label="Tournament">
+        <div className="pb-nav-inner">
+          <a className="pb-nav-brand" href="/pickleball" aria-label={`${eventName}, top of page`}>
             <Ball />
-            <div>
-              <h1 className="pb-title">{settings?.event_name || 'Pickleball Tournament'}</h1>
-              {settings?.event_date && <p className="pb-date">{formatEventDate(settings.event_date)}</p>}
+            <span className="pb-nav-name">{eventName}</span>
+          </a>
+          <span className="pb-nav-count" aria-label={`${entries.length} of ${MAX_TEAMS} teams`}>
+            {data ? entries.length : '–'}<span>/{MAX_TEAMS}</span>
+          </span>
+          <div className="pb-nav-actions">
+            <button type="button" className={`pb-nav-btn${panel === 'chat' ? ' is-active' : ''}`} onClick={openChat}
+              aria-label={chatUnread ? `Chat, ${chatUnread} unread` : 'Chat'}>
+              <ChatIcon />
+              <span className="pb-nav-label">Chat</span>
+              {chatUnread > 0 && <span key={chatUnread} className="pb-badge">{badge(chatUnread)}</span>}
+            </button>
+            <button type="button" className={`pb-nav-btn${panel === 'notifs' ? ' is-active' : ''}`} onClick={openNotifs}
+              aria-label={unread ? `Notifications, ${unread} new` : 'Notifications'}>
+              <span key={ring} className={`pb-bell${ring && unread ? ' is-ringing' : ''}`}><BellIcon /></span>
+              <span className="pb-nav-label">Alerts</span>
+              {unread > 0 && <span key={unread} className="pb-badge">{badge(unread)}</span>}
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <header className="pb-hero">
+        <div className="pb-hero-inner">
+          <div className="pb-hero-text">
+            <p className="pb-kicker">Doubles · Double elimination</p>
+            <h1 className="pb-title">{eventName}</h1>
+            {settings?.event_date && <p className="pb-date">{formatEventDate(settings.event_date)}</p>}
+          </div>
+          <div className="pb-meter" aria-live="polite">
+            <div className="pb-meter-text"><strong>{data ? entries.length : '–'}</strong> of {MAX_TEAMS} teams</div>
+            <div className="pb-meter-track" aria-hidden="true">
+              <span className="pb-meter-fill" style={{ transform: `scaleX(${entries.length / MAX_TEAMS})` }} />
             </div>
           </div>
-          <p className="pb-count" aria-live="polite">
-            <strong>{data ? entries.length : '–'}</strong> of {MAX_TEAMS} teams
-          </p>
         </div>
       </header>
 
@@ -225,7 +370,7 @@ export default function PickleballApp() {
             onClick={() => setModal({ type: 'join' })}>
             {full ? 'Tournament full' : 'Join Tournament'}
           </button>
-          <button type="button" className="pb-btn pb-btn-ghost" onClick={saveImage} disabled={!data || saving}>
+          <button type="button" className="pb-btn pb-btn-ghost pb-save" onClick={saveImage} disabled={!data || saving}>
             {saving ? 'Saving…' : 'Save bracket image'}
           </button>
         </div>
@@ -241,9 +386,6 @@ export default function PickleballApp() {
           !loadError && <p className="pb-empty">Loading bracket…</p>
         )}
 
-        <Wall messages={messages} entries={entries} owned={owned} tokens={tokens} newIds={newMsgIds}
-          organizer={organizer} onPosted={refreshWall} asOrganizer={asOrganizer} />
-
         {organizer && <OrganizerPanel settings={settings} asOrganizer={asOrganizer} onSaved={refresh}
           onExit={() => endOrganizer('Organizer mode off')} />}
       </main>
@@ -256,6 +398,21 @@ export default function PickleballApp() {
       </footer>
 
       <div className={`pb-toast${notice ? ' is-shown' : ''}`} role="status" aria-live="polite">{notice}</div>
+
+      {panel === 'chat' && (
+        <Drawer title="Chat" id="pb-chat" onClose={closePanel}>
+          <ChatPanel messages={messages} entries={entries} owned={owned} tokens={tokens} newIds={newMsgIds}
+            organizer={organizer} onPosted={refreshWall} asOrganizer={asOrganizer} />
+        </Drawer>
+      )}
+      {panel === 'notifs' && (
+        <Drawer title="Notifications" id="pb-notifs" onClose={closePanel}>
+          {close => (
+            <NotificationsPanel items={notify.items} readAt={panelReadAt} alerts={notify.alerts} onAlerts={setAlerts}
+              onOpen={item => openItem(item, close)} onClear={() => updateNotify({ items: [] })} />
+          )}
+        </Drawer>
+      )}
 
       {modal?.type === 'join' && (
         <Modal title="Join the tournament" onClose={() => setModal(null)}>
@@ -276,7 +433,9 @@ export default function PickleballApp() {
           {close => <PinForm onSubmit={unlock} close={close} />}
         </Modal>
       )}
-      {modal?.type === 'draw' && <SlotDraw slot={modal.slot} team={modal.team} onDone={() => finishDraw(modal.slot)} />}
+      {modal?.type === 'draw' && (
+        <SlotDraw slot={modal.slot} team={modal.team} color={modal.color} onDone={() => finishDraw(modal.slot)} />
+      )}
     </div>
   )
 }
@@ -292,6 +451,25 @@ function Ball() {
   )
 }
 
+function ChatIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6c-.5.4-1.3.1-1.3-.6V16A2.5 2.5 0 0 1 4 13.5v-8Z"
+        fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function BellIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path d="M6 10a6 6 0 1 1 12 0c0 3.5 1.2 5.3 2 6.2.3.4 0 .8-.4.8H4.4c-.4 0-.7-.4-.4-.8.8-.9 2-2.7 2-6.2Z"
+        fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M9.5 20a2.5 2.5 0 0 0 5 0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function Rules() {
   const [open, setOpen] = useState(false)
   return (
@@ -303,95 +481,10 @@ function Rules() {
       </button>
       {open && (
         <dl id="pb-rules-body" className="pb-rules-body">
-          {RULES.map(([term, text]) => (
-            <div key={term} className="pb-rule"><dt>{term}</dt><dd>{text}</dd></div>
+          {RULES.map(([term, text], i) => (
+            <div key={term} className="pb-rule" style={{ '--i': i }}><dt>{term}</dt><dd>{text}</dd></div>
           ))}
         </dl>
-      )}
-    </section>
-  )
-}
-
-function Wall({ messages, entries, owned, tokens, newIds, organizer, onPosted, asOrganizer }) {
-  const [text, setText] = useState('')
-  const [asId, setAsId] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const [confirmId, setConfirmId] = useState(null)
-  const listRef = useRef(null)
-  const stick = useRef(true)
-  const byId = useMemo(() => Object.fromEntries(entries.map(e => [e.id, e])), [entries])
-  const poster = owned.find(e => e.id === asId) || owned[0]
-  const now = Date.now()
-
-  useEffect(() => {
-    const el = listRef.current
-    if (el && stick.current) el.scrollTop = el.scrollHeight
-  }, [messages])
-
-  const onScroll = () => {
-    const el = listRef.current
-    stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60
-  }
-
-  const send = async e => {
-    e.preventDefault()
-    const body = text.trim()
-    if (!body || !poster || busy) return
-    setBusy(true)
-    setError('')
-    try {
-      await api.postMessage(poster.id, tokens[poster.id], body)
-      setText('')
-      stick.current = true
-      await onPosted()
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const remove = async id => {
-    if (confirmId !== id) return setConfirmId(id)
-    setConfirmId(null)
-    try {
-      await asOrganizer(p => api.adminDeleteMessage(p, id))
-      onPosted()
-    } catch (err) {
-      setError(err.message)
-    }
-  }
-
-  return (
-    <section className="pb-card pb-wall" aria-labelledby="pb-wall-title">
-      <h2 id="pb-wall-title" className="pb-card-title">Message wall</h2>
-      <ol className="pb-wall-list" ref={listRef} onScroll={onScroll} aria-live="polite">
-        {messages.length === 0 && <li className="pb-empty">No messages yet.</li>}
-        {messages.map(m => (
-          <WallMessage key={m.id} message={m} team={byId[m.entry_id]} now={now} isNew={newIds.has(m.id)}
-            onDelete={organizer ? () => remove(m.id) : null} confirming={confirmId === m.id} />
-        ))}
-      </ol>
-      {poster ? (
-        <form className="pb-compose" onSubmit={send}>
-          {owned.length > 1 && (
-            <select className="pb-input pb-compose-as" value={poster.id} onChange={e => setAsId(e.target.value)} aria-label="Post as">
-              {owned.map(e => <option key={e.id} value={e.id}>{teamName(e)}</option>)}
-            </select>
-          )}
-          <div className="pb-compose-row">
-            <textarea className="pb-input pb-compose-text" rows={2} value={text} maxLength={MESSAGE_MAX}
-              placeholder={`Post as ${teamName(poster)}`} aria-label="Message"
-              onChange={e => setText(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) send(e) }} />
-            <button type="submit" className="pb-btn pb-btn-ball" disabled={busy || !text.trim()}>Send</button>
-          </div>
-          <p className="pb-hint">{text.length}/{MESSAGE_MAX}</p>
-          {error && <p className="pb-error" role="alert">{error}</p>}
-        </form>
-      ) : (
-        <p className="pb-hint">Join the tournament to post on the wall.</p>
       )}
     </section>
   )
@@ -429,7 +522,7 @@ function OrganizerPanel({ settings, asOrganizer, onSaved, onExit }) {
         <h2 id="pb-org-title" className="pb-card-title">Organizer</h2>
         <button type="button" className="pb-btn pb-btn-ghost" onClick={onExit}>Exit organizer mode</button>
       </div>
-      <p className="pb-hint">Every team box has an Edit button, and wall messages can be deleted. Slots can't be moved.</p>
+      <p className="pb-hint">Every team box has an Edit button, and chat messages can be deleted. Slots can't be moved.</p>
       <form className="pb-form pb-settings" onSubmit={save}>
         <div className="pb-field">
           <label className="pb-label" htmlFor="pb-event-name">Event name</label>

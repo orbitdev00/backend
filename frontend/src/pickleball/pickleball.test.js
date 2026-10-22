@@ -8,6 +8,7 @@ import { BRACKET, BYE_SLOTS, allSlots, byeFor, sectionEdges, sourceLabel } from 
 import { cleanName, formatEventDate, relativeTime, teamErrors } from './teams.js'
 import { layout } from './drawBracket.js'
 import WallMessage from './WallMessage.js'
+import { addItems, bracketEvents, mentions, messageEvents, snapshotEntries, unreadCount } from './notify.js'
 
 const matches = BRACKET.flatMap(s => s.rounds.flatMap(r => r.matches))
 const byId = Object.fromEntries(matches.map(m => [m.id, m]))
@@ -119,4 +120,74 @@ test('the pickleball page never touches chore code, tables or endpoints', () => 
     assert.ok(!/chore|chat_messages/i.test(src), `${file} mentions chores`)
     assert.ok(!/from '\.\.\//.test(src), `${file} imports from outside src/pickleball`)
   }
+})
+
+// ── Notifications ────────────────────────────────────────────────────────────
+
+const team = (id, slot, player, partner, extra = {}) =>
+  ({ id, slot, player_name: player, partner_name: partner, skill_level: 'beginner', color: '#ef4444', ...extra })
+
+test('bracket notifications: joins, leaves, organizer edits and removals of your team', () => {
+  const a = team('a', 1, 'Alex', 'Taylor'), b = team('b', 2, 'Sam', 'Robin'), c = team('c', 3, 'Kim', 'Lee')
+  const prev = { entries: snapshotEntries([a, b]), settings: { event_name: 'Cup', event_date: null } }
+  const next = {
+    entries: snapshotEntries([{ ...a, color: '#3b82f6' }, c]),
+    settings: { event_name: 'Cup', event_date: '2026-11-14' },
+  }
+  const events = bracketEvents(prev, next, { tokens: { a: 't' } })
+  const kinds = events.map(e => e.kind).sort()
+  assert.deepEqual(kinds, ['edited', 'event', 'joined', 'left'])
+  assert.ok(events.find(e => e.kind === 'edited').personal)
+  assert.match(events.find(e => e.kind === 'joined').text, /Kim & Lee joined · Slot 3/)
+
+  // Your own change doesn't notify you, and your team disappearing is a removal.
+  assert.deepEqual(bracketEvents(prev, next, { tokens: { a: 't' }, ignore: new Set(['a', 'c', 'b']) }).map(e => e.kind), ['event'])
+  const removed = bracketEvents(prev, { ...prev, entries: snapshotEntries([b]) }, { tokens: { a: 't' } })
+  assert.deepEqual(removed.map(e => [e.kind, e.personal]), [['removed', true]])
+  // No snapshot yet (first visit): nothing.
+  assert.deepEqual(bracketEvents(null, next), [])
+})
+
+test('many joins collapse, and a full bracket is announced', () => {
+  const twelve = Array.from({ length: 12 }, (_, i) => team(`t${i}`, i + 1, `P${i}a`, `P${i}b`))
+  const events = bracketEvents({ entries: snapshotEntries(twelve.slice(0, 5)), settings: null },
+    { entries: snapshotEntries(twelve), settings: null })
+  assert.deepEqual(events.map(e => e.kind), ['joined', 'full'])
+  assert.match(events[0].text, /7 new teams joined/)
+})
+
+test('chat notifications: mentions are personal, your own messages are skipped', () => {
+  const mine = team('a', 1, 'Alex', 'Taylor'), other = team('b', 2, 'Sam', 'Robin')
+  const rows = [
+    { id: 'm0', entry_id: 'b', body: 'old', created_at: '2026-10-22T11:00:00Z' },
+    { id: 'm1', entry_id: 'b', body: 'good luck @taylor!', created_at: '2026-10-22T12:01:00Z' },
+    { id: 'm2', entry_id: 'b', body: 'Alexander is not Alex', created_at: '2026-10-22T12:02:00Z' },
+    { id: 'm3', entry_id: 'a', body: 'Sam who?', created_at: '2026-10-22T12:03:00Z' },
+    { id: 'm4', entry_id: 'b', body: 'hello', created_at: '2026-10-22T12:04:00Z' },
+  ]
+  const opts = { owned: [mine], byId: { a: mine, b: other } }
+  const events = messageEvents('2026-10-22T12:00:00Z', rows, opts)
+  assert.deepEqual(events.map(e => [e.kind, e.messageId]), [['mention', 'm1'], ['mention', 'm2'], ['message', 'm4']])
+  assert.ok(events[0].personal && /Sam & Robin mentioned you/.test(events[0].text))
+  // Chat open: only mentions.
+  assert.deepEqual(messageEvents('2026-10-22T12:00:00Z', rows, { ...opts, skipPlain: true }).map(e => e.kind), ['mention', 'mention'])
+  assert.deepEqual(messageEvents(null, rows, opts), [])
+})
+
+test('mentions match whole names only, any case', () => {
+  const t = team('a', 1, 'Al', 'Jo Ann')
+  assert.ok(mentions('go AL go', t))
+  assert.ok(mentions('@jo ann nice', t))
+  assert.ok(!mentions('Alan and Joanna', t))
+  assert.ok(!mentions('<script>', team('x', 1, 'a.b', 'c+d')))
+})
+
+test('notification list is newest first, capped, with an unread count', () => {
+  const ev = i => ({ id: `e${i}`, kind: 'joined', text: `${i}`, at: new Date(Date.UTC(2026, 9, 22, 12, i)).toISOString() })
+  let items = []
+  for (let i = 0; i < 50; i++) items = addItems(items, [ev(i)])
+  assert.equal(items.length, 40)
+  assert.equal(items[0].id, 'e49')
+  assert.equal(unreadCount(items, new Date(Date.UTC(2026, 9, 22, 12, 45)).toISOString()), 4)
+  assert.equal(unreadCount(items, null), 40)
 })

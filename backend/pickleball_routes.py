@@ -53,6 +53,8 @@ PICKLEBALL_COLORS = (
     "#14b8a6", "#3b82f6", "#8b5cf6", "#ec4899",
 )
 SKILL_LEVELS = ("beginner", "intermediate", "advanced")
+# Given only by migration (Marlito and Kyomo); never offered, never picked.
+RESERVED_SKILL = "professional"
 NAME_MIN, NAME_MAX = 2, 30
 MESSAGE_MAX = 200
 EVENT_NAME_MAX = 60
@@ -89,12 +91,14 @@ def clean_name(value, label: str) -> str:
     return name
 
 
-def validate_team(body: dict) -> dict:
+def validate_team(body: dict, editing: bool = False) -> dict:
+    """On an edit the reserved skill may be sent back unchanged; pickleball_update()
+    only keeps it for players who already have it."""
     if "slot" in body:
         raise PickleballError("Slots come from the random draw and can't be chosen or changed")
     player = clean_name(body.get("player_name"), "Your name")
     skill = body.get("skill_level")
-    if skill not in SKILL_LEVELS:
+    if skill not in SKILL_LEVELS and not (editing and skill == RESERVED_SKILL):
         raise PickleballError("Skill level must be beginner, intermediate or advanced")
     color = body.get("color")
     color = color.lower() if isinstance(color, str) else None
@@ -159,6 +163,7 @@ _DB_ERRORS = {
     "tournament full": PickleballError("The tournament is full", 409),
     "name taken": PickleballError("That name is already in the tournament", 409),
     "not found": PickleballError("Player not found", 404),
+    "professional is reserved": PickleballError("Skill level must be beginner, intermediate or advanced"),
 }
 
 
@@ -245,7 +250,7 @@ async def edit_entry(entry_id: str, request: Request):
     try:
         _rate(request, "edit", EDIT_LIMIT, EDIT_WINDOW)
         entry_id = _uuid(entry_id)
-        team = validate_team(await _body(request))
+        team = validate_team(await _body(request), editing=True)
     except PickleballError as e:
         return _error(e)
 
@@ -318,7 +323,7 @@ async def admin_edit_entry(entry_id: str, request: Request):
     try:
         check_pin(request)
         entry_id = _uuid(entry_id)
-        team = validate_team(await _body(request))
+        team = validate_team(await _body(request), editing=True)
     except PickleballError as e:
         return _error(e)
     return await _run(lambda client: _update_entry(client, entry_id, team))

@@ -13,7 +13,7 @@ const HEADER_H = 160, TITLE_H = 44, ROUND_TITLE_H = 30, SECTION_GAP = 36, FOOTER
 const C = {
   bg: '#0b3a29', bg2: '#0e4732', line: 'rgba(255,255,255,0.10)', text: '#f2fbf4', muted: '#a9c9b6',
   surface: '#135a40', open: 'rgba(255,255,255,0.06)', ball: '#d9f24a', ballInk: '#183018', connector: 'rgba(242,251,244,0.45)',
-  skill: { beginner: '#5ee0a0', intermediate: '#7cc4ff', advanced: '#ffb36b' },
+  skill: { beginner: '#5ee0a0', intermediate: '#7cc4ff', advanced: '#ffb36b', professional: '#000000' },
 }
 const DISPLAY = '"Barlow Condensed", "Arial Narrow", sans-serif'
 const BODY = 'Barlow, system-ui, sans-serif'
@@ -112,7 +112,8 @@ function drawTeam(ctx, x, y, w, h, slot, entry) {
   const bx = x + w - badgeW - 8
   roundRect(ctx, bx, y + h / 2 - 9, badgeW, 18, 9)
   ctx.fillStyle = C.skill[skill.id]; ctx.fill()
-  ctx.fillStyle = '#0b2418'; ctx.textAlign = 'center'
+  if (skill.id === 'professional') { ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1; ctx.stroke() }
+  ctx.fillStyle = skill.id === 'professional' ? '#ffffff' : '#0b2418'; ctx.textAlign = 'center'
   ctx.fillText(skill.short, bx + badgeW / 2, y + h / 2 + 1)
   ctx.textAlign = 'left'
   ctx.fillStyle = C.text; ctx.font = `600 15px ${BODY}`

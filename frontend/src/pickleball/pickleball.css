@@ -651,6 +651,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .pb-skill.is-beginner { background: var(--pb-skill-beginner); color: var(--pb-skill-beginner-ink); }
 .pb-skill.is-intermediate { background: var(--pb-skill-intermediate); color: var(--pb-skill-intermediate-ink); }
 .pb-skill.is-advanced { background: var(--pb-skill-advanced); color: var(--pb-skill-advanced-ink); }
+/* Reserved role: black with white text in both themes (outlined so it shows on dark surfaces). */
+.pb-skill.is-professional { background: #000; color: #fff; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35); }
+.pb-skill-lg { display: inline-block; padding: 4px 12px; font-size: 13px; }
 .pb-you { background: var(--pb-ball); color: var(--pb-ball-ink); }
 .pb-edit {
   position: relative;

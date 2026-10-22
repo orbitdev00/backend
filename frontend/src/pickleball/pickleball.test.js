@@ -5,7 +5,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { createElement as h } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { BRACKET, BYE_SLOTS, allSlots, byeFor, sectionEdges, sourceLabel } from './bracket.js'
-import { cleanName, formatEventDate, relativeTime, teamErrors } from './teams.js'
+import { PROFESSIONAL, SKILLS, cleanName, formatEventDate, relativeTime, skillOf, teamErrors } from './teams.js'
 import { layout } from './drawBracket.js'
 import WallMessage from './WallMessage.js'
 import { addItems, bracketEvents, mentions, messageEvents, snapshotEntries, unreadCount } from './notify.js'
@@ -189,4 +189,11 @@ test('notification list is newest first, capped, with an unread count', () => {
   assert.equal(items[0].id, 'e49')
   assert.equal(unreadCount(items, new Date(Date.UTC(2026, 9, 22, 12, 45)).toISOString()), 4)
   assert.equal(unreadCount(items, null), 40)
+})
+
+test('Professional is a reserved skill: shown as a badge, never offered as a choice', () => {
+  assert.ok(!SKILLS.some(s => s.id === 'professional'))
+  assert.deepEqual(skillOf('professional'), PROFESSIONAL)
+  assert.equal(PROFESSIONAL.label, 'Professional')
+  assert.equal(skillOf('advanced').id, 'advanced')
 })

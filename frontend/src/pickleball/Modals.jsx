@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { MAX_TEAMS } from './bracket.js'
-import { NAME_MAX, SKILLS, cleanName, teamErrors } from './teams.js'
+import { NAME_MAX, PROFESSIONAL, SKILLS, cleanName, teamErrors } from './teams.js'
 import { reducedMotion } from './motion.js'
 import { burst, replay } from './fx.js'
 
@@ -104,12 +104,20 @@ export function TeamForm({ entry, entries, colors, onSubmit, onRemove, removeLab
           onBlur={() => setTouched(t => ({ ...t, player_name: true }))} maxLength={NAME_MAX + 10} autoComplete="name"
           required autoFocus={!entry} />
       </Field>
-      <Field id="pb-skill" label="Skill level" error={show('skill_level')}>
-        <select id="pb-skill" className="pb-input" value={form.skill_level} onChange={set('skill_level')} required>
-          <option value="" disabled>Choose…</option>
-          {SKILLS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-        </select>
-      </Field>
+      {form.skill_level === PROFESSIONAL.id ? (
+        <div className="pb-field">
+          <span className="pb-label">Skill level</span>
+          <span><span className="pb-skill is-professional pb-skill-lg">{PROFESSIONAL.label}</span></span>
+          <p className="pb-hint">A reserved role. It stays with you.</p>
+        </div>
+      ) : (
+        <Field id="pb-skill" label="Skill level" error={show('skill_level')}>
+          <select id="pb-skill" className="pb-input" value={form.skill_level} onChange={set('skill_level')} required>
+            <option value="" disabled>Choose…</option>
+            {SKILLS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+          </select>
+        </Field>
+      )}
       <fieldset className="pb-field pb-swatches-field">
         <legend className="pb-label">Your color</legend>
         <div className="pb-swatches" role="radiogroup" aria-label="Color">

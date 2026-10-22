@@ -7,7 +7,10 @@ export const SKILLS = [
   { id: 'intermediate', label: 'Intermediate', short: 'INT' },
   { id: 'advanced', label: 'Advanced', short: 'ADV' },
 ]
-export const skillOf = id => SKILLS.find(x => x.id === id) || SKILLS[0]
+// Reserved: given to a few players by the organizer's database migration only.
+// Never shown as a choice; the backend refuses it from anyone who doesn't have it.
+export const PROFESSIONAL = { id: 'professional', label: 'Professional', short: 'PRO' }
+export const skillOf = id => [...SKILLS, PROFESSIONAL].find(x => x.id === id) || SKILLS[0]
 
 export const NAME_MIN = 2
 export const NAME_MAX = 30

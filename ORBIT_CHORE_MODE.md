@@ -84,6 +84,9 @@ anyone with the link can use the app, and each visitor picks their name (saved i
 - 12 singles players (one per slot; switched from doubles by `20261023000000_pickleball_singles.sql`,
   which also cleared all signups), double elimination (winners' and losers' brackets, grand final). The bracket is display only: no scores
   or advancing. Slots come only from the random draw and a trigger stops them from ever changing.
+- `20261024000000_pickleball_professional.sql` adds a reserved `professional` skill (black badge, white text) that
+  nobody can pick; only Marlito and Kyomo have it. It also made the only slot move ever: Marlito went from 11 to 8 or 9
+  so the two can't meet before the winners' final.
 - Joining returns an edit token once (only its SHA-256 is stored). The device keeps it in localStorage and a cookie
   and needs it to edit, leave or post on the wall.
 - Organizer tools need `PICKLEBALL_ADMIN_PIN` on Railway (503 when unset; 5 wrong tries per 5 minutes per IP, then 429).

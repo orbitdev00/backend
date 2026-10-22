@@ -29,6 +29,7 @@ _RealAsyncClient = httpx.AsyncClient
 _MIGRATIONS = Path(__file__).resolve().parents[2] / "supabase" / "migrations"
 MIGRATION = _MIGRATIONS / "20261022000000_pickleball.sql"
 SINGLES = _MIGRATIONS / "20261023000000_pickleball_singles.sql"
+PROFESSIONAL = _MIGRATIONS / "20261024000000_pickleball_professional.sql"
 
 
 class FakeSupabase:
@@ -58,6 +59,8 @@ class FakeSupabase:
         eq = lambda k: (p.get(k) or "")[3:]
 
         if path == "rpc/pickleball_join":
+            if body["p_skill"] == "professional":
+                return self._err("professional is reserved")
             async with self.lock:
                 if len(self.entries) >= 12:
                     return self._err("tournament full")
@@ -77,10 +80,12 @@ class FakeSupabase:
                 e = self.entries.get(body["p_id"])
                 if not e:
                     return self._err("not found")
+                if body["p_skill"] == "professional" and e["skill_level"] != "professional":
+                    return self._err("professional is reserved")
                 if body["p_player"].lower() in self._names(exclude=e["id"]):
                     return self._err("name taken")
-                e.update(player_name=body["p_player"],
-                         skill_level=body["p_skill"], color=body["p_color"])
+                e.update(player_name=body["p_player"], color=body["p_color"],
+                         skill_level="professional" if e["skill_level"] == "professional" else body["p_skill"])
                 return httpx.Response(200, content=b"")
         if path == "pickleball_entries" and request.method == "GET":
             e = self.entries.get(eq("id"))
@@ -399,9 +404,9 @@ def test_bracket_view_never_exposes_token_hashes(fake, client):
 
 
 def test_migration_join_locks_before_drawing_a_slot():
-    for path in (MIGRATION, SINGLES):
+    for path in (MIGRATION, SINGLES, PROFESSIONAL):
         sql = path.read_text(encoding="utf-8")
-        fn = re.search(r"create function public\.pickleball_join.*?\$\$(.*?)\$\$", sql, re.S).group(1)
+        fn = re.search(r"create (?:or replace )?function public\.pickleball_join.*?\$\$(.*?)\$\$", sql, re.S).group(1)
         assert fn.index("lock table public.pickleball_entries") < fn.index("order by random()")
     assert re.search(r"slot\s+integer not null unique", MIGRATION.read_text(encoding="utf-8"))
 
@@ -464,3 +469,47 @@ def test_config_has_eight_colors(client):
     assert data["colors"] == list(PICKLEBALL_COLORS) and len(set(data["colors"])) == 8
     assert all(re.fullmatch(r"#[0-9a-f]{6}", c) for c in data["colors"])
     assert data["max_teams"] == 12
+
+
+# ── Reserved "professional" skill ────────────────────────────────────────────
+
+def test_nobody_can_join_as_professional(fake, client):
+    assert join(client, team(skill_level="professional")).status_code == 400
+    assert not fake.entries
+    assert "professional" not in client.get("/pickleball/config").json()["skill_levels"]
+
+
+def test_nobody_can_edit_themselves_or_others_into_professional(fake, client):
+    e = joined(client)
+    r = client.patch(f"/pickleball/entry/{e['id']}", json=team(0, skill_level="professional"),
+                     headers={"x-entry-token": e["token"]})
+    assert r.status_code == 400
+    r = client.patch(f"/pickleball/admin/entry/{e['id']}", json=team(0, skill_level="professional"), headers=pin())
+    assert r.status_code == 400
+    assert fake.entries[e["id"]]["skill_level"] == "intermediate"
+
+
+def test_professionals_keep_the_role_when_editing(fake, client):
+    e = joined(client)
+    fake.entries[e["id"]]["skill_level"] = "professional"  # as the migration sets it
+    auth = {"x-entry-token": e["token"]}
+    r = client.patch(f"/pickleball/entry/{e['id']}", json=team(0, player_name="Renamed", skill_level="professional"),
+                     headers=auth)
+    assert r.status_code == 200, r.text
+    r = client.patch(f"/pickleball/entry/{e['id']}", json=team(0, skill_level="beginner"), headers=auth)
+    assert r.status_code == 200, r.text
+    assert fake.entries[e["id"]]["skill_level"] == "professional"
+    assert fake.entries[e["id"]]["player_name"] == "Player 0"
+
+
+def test_professional_migration_reserves_the_role_and_guards_the_move():
+    sql = PROFESSIONAL.read_text(encoding="utf-8")
+    join_fn = re.search(r"create or replace function public\.pickleball_join.*?\$\$(.*?)\$\$", sql, re.S).group(1)
+    assert "raise exception 'professional is reserved'" in join_fn
+    update_fn = re.search(r"create or replace function public\.pickleball_update.*?\$\$(.*?)\$\$", sql, re.S).group(1)
+    assert "raise exception 'professional is reserved'" in update_fn
+    assert "when v_skill = 'professional' then 'professional'" in update_fn
+    # The one-time move only runs on the state it was written for and turns the slot guard back on.
+    assert "v_marlito.slot <> 11 or v_kyomo.slot <> 6" in sql
+    assert sql.index("disable trigger pickleball_entry_guard") < sql.index("enable trigger pickleball_entry_guard")
+    assert "array[8, 9]" in sql

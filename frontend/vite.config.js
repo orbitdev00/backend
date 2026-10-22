@@ -23,9 +23,12 @@ function appModeHtml(appMode) {
     transformIndexHtml(html) {
       if (appMode === 'orbit') return html
       return html
+        // Link previews (WhatsApp, iMessage, …) read these tags without running JS.
         .replace('<title>Orbit</title>',
-          '<title>Matos Dashboard</title>\n' +
-          '    <meta name="description" content="Family chores: today\'s tasks, points, streaks and the shared calendar." />\n' +
+          '<title>Orbit Domain</title>\n' +
+          '    <meta property="og:title" content="Orbit Domain" />\n' +
+          '    <meta property="og:site_name" content="Orbit Domain" />\n' +
+          '    <meta property="og:type" content="website" />\n' +
           '    <meta name="theme-color" content="#4f46e5" />\n' +
           `    <link rel="icon" href="${CHORES_FAVICON}" />`)
         .replace(/family=Inter:wght@300;400;500;600&family=JetBrains\+Mono:wght@400;500/, 'family=Inter:wght@400;500;600;700')

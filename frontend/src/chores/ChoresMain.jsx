@@ -15,5 +15,6 @@ export function mount(rootEl) {
   if (window.location.pathname !== '/') {
     window.history.replaceState(null, '', '/')
   }
+  document.title = 'Matos Dashboard'
   import('./ChoreApp.jsx').then(m => render(m.default))
 }

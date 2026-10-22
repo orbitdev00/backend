@@ -18,21 +18,14 @@ export const cleanName = value => String(value || '').split(/\s+/).filter(Boolea
 /**
  * Client-side check before sending (the backend checks again).
  * `entries` are the teams already in, `selfId` the team being edited.
- * Returns { player_name?, partner_name? } error messages, empty when valid.
+ * Returns { player_name? } error messages, empty when valid.
  */
-export function teamErrors({ player_name, partner_name }, entries = [], selfId = null) {
+export function teamErrors({ player_name }, entries = [], selfId = null) {
   const errors = {}
-  const player = cleanName(player_name), partner = cleanName(partner_name)
-  for (const [key, value, label] of [['player_name', player, 'Your name'], ['partner_name', partner, 'Partner name']]) {
-    if (value.length < NAME_MIN || value.length > NAME_MAX) errors[key] = `${label} must be ${NAME_MIN} to ${NAME_MAX} characters`
-  }
-  if (!errors.partner_name && player && player.toLowerCase() === partner.toLowerCase()) {
-    errors.partner_name = 'You and your partner need different names'
-  }
-  const taken = new Set(entries.filter(e => e.id !== selfId)
-    .flatMap(e => [e.player_name.toLowerCase(), e.partner_name.toLowerCase()]))
+  const player = cleanName(player_name)
+  if (player.length < NAME_MIN || player.length > NAME_MAX) errors.player_name = `Your name must be ${NAME_MIN} to ${NAME_MAX} characters`
+  const taken = new Set(entries.filter(e => e.id !== selfId).map(e => e.player_name.toLowerCase()))
   if (!errors.player_name && taken.has(player.toLowerCase())) errors.player_name = `${player} is already in the tournament`
-  if (!errors.partner_name && taken.has(partner.toLowerCase())) errors.partner_name = `${partner} is already in the tournament`
   return errors
 }
 

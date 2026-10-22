@@ -125,7 +125,7 @@ export function ChatPanel({ messages, entries, owned, tokens, newIds, organizer,
               <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 11.5 21 3l-8.5 18-2.2-7.3L3 11.5Z" fill="currentColor" /></svg>
             </button>
           </div>
-          <p className="pb-hint">{text.length}/{MESSAGE_MAX} · Mention a player's name to notify their team</p>
+          <p className="pb-hint">{text.length}/{MESSAGE_MAX} · Mention a player's name to notify them</p>
           {error && <p className="pb-error" role="alert">{error}</p>}
         </form>
       ) : (
@@ -156,7 +156,7 @@ export function NotificationsPanel({ items, readAt, alerts, onAlerts, onOpen, on
         </div>
       )}
       {items.length === 0 ? (
-        <p className="pb-empty">You're all caught up. New teams, chat mentions and changes to your team show up here.</p>
+        <p className="pb-empty">You're all caught up. New players, chat mentions and changes to your entry show up here.</p>
       ) : (
         <ul className="pb-notif-list">
           {items.map((item, i) => (

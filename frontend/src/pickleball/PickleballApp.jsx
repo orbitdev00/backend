@@ -18,8 +18,8 @@ const PANEL_CLOSE_MS = 260
 const RULES = [
   ['Format', "Double elimination with a winners' bracket and a losers' bracket. Lose once and you drop to the losers' bracket; lose twice and you're out."],
   ['Games', 'First to 11 points.'],
-  ['Sides', 'Switch sides when the first team reaches 6 points.'],
-  ['Teams', 'Doubles: every team is two players. 12 teams in all.'],
+  ['Sides', 'Switch sides when the first player reaches 6 points.'],
+  ['Players', 'Singles: one player per slot. 12 players in all.'],
   ['Seeding', 'Slots are drawn at random when you join. Slots 1 to 4 get a first-round bye.'],
   ['Grand final', "The winners' bracket champion plays the losers' bracket champion."],
 ]
@@ -269,7 +269,7 @@ export default function PickleballApp() {
     if (ownedIds.has(entry.id)) await api.editEntry(entry.id, tokens[entry.id], team)
     else await asOrganizer(p => api.adminEditEntry(p, entry.id, team))
     close()
-    say('Team updated')
+    say('Entry updated')
     refresh()
   }
 
@@ -282,7 +282,7 @@ export default function PickleballApp() {
       say('You left the tournament. Your slot is open again.')
     } else {
       await asOrganizer(p => api.adminRemoveEntry(p, entry.id))
-      say('Team removed')
+      say('Player removed')
     }
     close()
     refresh()
@@ -328,7 +328,7 @@ export default function PickleballApp() {
             <Ball />
             <span className="pb-nav-name">{eventName}</span>
           </a>
-          <span className="pb-nav-count" aria-label={`${entries.length} of ${MAX_TEAMS} teams`}>
+          <span className="pb-nav-count" aria-label={`${entries.length} of ${MAX_TEAMS} players`}>
             {data ? entries.length : '–'}<span>/{MAX_TEAMS}</span>
           </span>
           <div className="pb-nav-actions">
@@ -351,12 +351,12 @@ export default function PickleballApp() {
       <header className="pb-hero">
         <div className="pb-hero-inner">
           <div className="pb-hero-text">
-            <p className="pb-kicker">Doubles · Double elimination</p>
+            <p className="pb-kicker">Singles · Double elimination</p>
             <h1 className="pb-title">{eventName}</h1>
             {settings?.event_date && <p className="pb-date">{formatEventDate(settings.event_date)}</p>}
           </div>
           <div className="pb-meter" aria-live="polite">
-            <div className="pb-meter-text"><strong>{data ? entries.length : '–'}</strong> of {MAX_TEAMS} teams</div>
+            <div className="pb-meter-text"><strong>{data ? entries.length : '–'}</strong> of {MAX_TEAMS} players</div>
             <div className="pb-meter-track" aria-hidden="true">
               <span className="pb-meter-fill" style={{ transform: `scaleX(${entries.length / MAX_TEAMS})` }} />
             </div>
@@ -420,10 +420,10 @@ export default function PickleballApp() {
         </Modal>
       )}
       {editing && (
-        <Modal title={editingOwn ? 'Edit your team' : `Edit team · Slot ${editing.slot}`} onClose={() => setModal(null)}>
+        <Modal title={editingOwn ? 'Edit your entry' : `Edit player · Slot ${editing.slot}`} onClose={() => setModal(null)}>
           {close => (
             <TeamForm entry={editing} entries={entries} colors={colors} onSubmit={saveTeam(editing)}
-              onRemove={removeTeam(editing)} removeLabel={editingOwn ? 'Leave tournament' : 'Remove team'}
+              onRemove={removeTeam(editing)} removeLabel={editingOwn ? 'Leave tournament' : 'Remove player'}
               submitLabel="Save" close={close} />
           )}
         </Modal>
@@ -522,7 +522,7 @@ function OrganizerPanel({ settings, asOrganizer, onSaved, onExit }) {
         <h2 id="pb-org-title" className="pb-card-title">Organizer</h2>
         <button type="button" className="pb-btn pb-btn-ghost" onClick={onExit}>Exit organizer mode</button>
       </div>
-      <p className="pb-hint">Every team box has an Edit button, and chat messages can be deleted. Slots can't be moved.</p>
+      <p className="pb-hint">Every player box has an Edit button, and chat messages can be deleted. Slots can't be moved.</p>
       <form className="pb-form pb-settings" onSubmit={save}>
         <div className="pb-field">
           <label className="pb-label" htmlFor="pb-event-name">Event name</label>

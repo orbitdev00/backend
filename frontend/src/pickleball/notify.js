@@ -1,14 +1,14 @@
 // Notifications for this device. They're worked out on the client by comparing
 // each poll (and the first load after a visit) with the last snapshot, and
 // "per user" means per device: your teams are the ones whose edit token this
-// device holds. Saved in localStorage; nothing is stored on the server.
+// device holds (one player each). Saved in localStorage; nothing is stored on the server.
 import { MAX_TEAMS, teamName } from './bracket.js'
 import { formatEventDate } from './teams.js'
 
 const KEY = 'pb_notify'
 const MAX_ITEMS = 40
 const COLLAPSE_OVER = 3
-const FIELDS = ['player_name', 'partner_name', 'skill_level', 'color']
+const FIELDS = ['player_name', 'skill_level', 'color']
 
 export function emptyNotify() {
   return { entries: null, settings: null, wallInit: false, lastMessageAt: null, items: [], readAt: null, chatReadAt: null, alerts: false }
@@ -28,7 +28,7 @@ export function saveNotify(state) {
 
 export function snapshotEntries(entries) {
   return Object.fromEntries((entries || []).map(e => [e.id, {
-    slot: e.slot, player_name: e.player_name, partner_name: e.partner_name, skill_level: e.skill_level, color: e.color,
+    slot: e.slot, player_name: e.player_name, skill_level: e.skill_level, color: e.color,
   }]))
 }
 
@@ -48,21 +48,21 @@ export function bracketEvents(prev, next, { tokens = {}, ignore = new Set(), now
     if (!before) {
       if (!tokens[id] && !ignore.has(id)) joined.push({ kind: 'joined', entryId: id, slot: e.slot, text: `${teamName(e)} joined · Slot ${e.slot}` })
     } else if (tokens[id] && !ignore.has(id) && FIELDS.some(f => before[f] !== e[f])) {
-      events.push({ kind: 'edited', entryId: id, slot: e.slot, personal: true, text: 'The organizer updated your team' })
+      events.push({ kind: 'edited', entryId: id, slot: e.slot, personal: true, text: 'The organizer updated your entry' })
     }
   }
   events.push(...(joined.length > COLLAPSE_OVER
-    ? [{ kind: 'joined', text: `${joined.length} new teams joined` }]
+    ? [{ kind: 'joined', text: `${joined.length} new players joined` }]
     : joined))
 
   for (const [id, e] of Object.entries(prev.entries)) {
     if (next.entries[id] || ignore.has(id)) continue
-    if (tokens[id]) events.push({ kind: 'removed', entryId: id, personal: true, text: `The organizer removed your team, ${teamName(e)}` })
+    if (tokens[id]) events.push({ kind: 'removed', entryId: id, personal: true, text: `The organizer removed you (${teamName(e)}) from the bracket` })
     else events.push({ kind: 'left', entryId: id, slot: e.slot, text: `${teamName(e)} left · Slot ${e.slot} is open` })
   }
 
   const before = Object.keys(prev.entries).length, after = Object.keys(next.entries).length
-  if (before < MAX_TEAMS && after >= MAX_TEAMS) events.push({ kind: 'full', text: `All ${MAX_TEAMS} teams are in. The bracket is full!` })
+  if (before < MAX_TEAMS && after >= MAX_TEAMS) events.push({ kind: 'full', text: `All ${MAX_TEAMS} players are in. The bracket is full!` })
 
   if (prev.settings && next.settings) {
     if (prev.settings.event_name !== next.settings.event_name) {
@@ -77,9 +77,9 @@ export function bracketEvents(prev, next, { tokens = {}, ignore = new Set(), now
 
 const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-/** True when `body` names one of the team's players as a whole word (optionally with @). */
+/** True when `body` names the player as a whole word (optionally with @). */
 export function mentions(body, entry) {
-  return [entry.player_name, entry.partner_name].some(name =>
+  return [entry.player_name].some(name =>
     new RegExp(`(^|[^\\p{L}\\p{N}])@?${escapeRe(name)}(?=$|[^\\p{L}\\p{N}])`, 'iu').test(body))
 }
 
@@ -99,7 +99,7 @@ export function messageEvents(lastAt, rows, { owned = [], byId = {}, skipPlain =
   const plain = []
   for (const m of fresh) {
     const team = byId[m.entry_id]
-    const who = team ? teamName(team) : 'A team'
+    const who = team ? teamName(team) : 'A player'
     if (owned.some(e => mentions(m.body, e))) {
       events.push({ kind: 'mention', messageId: m.id, at: m.created_at, personal: true, text: `${who} mentioned you: “${snippet(m.body)}”` })
     } else {

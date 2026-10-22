@@ -79,22 +79,21 @@ test('image layout: no boxes overlap', () => {
   }
 })
 
-test('names: trimmed, 2–30 characters, unique across player and partner, any case', () => {
-  const entries = [{ id: 'e1', player_name: 'Alex', partner_name: 'Taylor' }]
-  assert.deepEqual(teamErrors({ player_name: 'Sam', partner_name: 'Robin' }, entries), {})
-  assert.ok(teamErrors({ player_name: 'alex', partner_name: 'Robin' }, entries).player_name)
-  assert.ok(teamErrors({ player_name: 'Sam', partner_name: ' TAYLOR ' }, entries).partner_name)
-  assert.ok(teamErrors({ player_name: 'Sam', partner_name: 'sam' }, entries).partner_name)
-  assert.ok(teamErrors({ player_name: 'A', partner_name: 'Robin' }, entries).player_name)
-  assert.ok(teamErrors({ player_name: 'x'.repeat(31), partner_name: 'Robin' }, entries).player_name)
-  // Editing your own team keeps your own names.
-  assert.deepEqual(teamErrors({ player_name: 'ALEX', partner_name: 'taylor' }, entries, 'e1'), {})
+test('names: trimmed, 2–30 characters, unique in any case', () => {
+  const entries = [{ id: 'e1', player_name: 'Alex' }]
+  assert.deepEqual(teamErrors({ player_name: 'Sam' }, entries), {})
+  assert.ok(teamErrors({ player_name: 'alex' }, entries).player_name)
+  assert.ok(teamErrors({ player_name: ' ALEX ' }, entries).player_name)
+  assert.ok(teamErrors({ player_name: 'A' }, entries).player_name)
+  assert.ok(teamErrors({ player_name: 'x'.repeat(31) }, entries).player_name)
+  // Editing your own entry keeps your own name.
+  assert.deepEqual(teamErrors({ player_name: 'ALEX' }, entries, 'e1'), {})
   assert.equal(cleanName('  Jamie   Lee '), 'Jamie Lee')
 })
 
 test('HTML in a wall message renders as text, never markup', () => {
   const body = '<img src=x onerror="alert(1)"><b>hi</b><script>alert(2)</script>'
-  const team = { id: 'e1', player_name: '<i>Al</i>', partner_name: 'Bo', color: '#ef4444' }
+  const team = { id: 'e1', player_name: '<i>Al</i>', color: '#ef4444' }
   const html = renderToStaticMarkup(h(WallMessage, {
     message: { id: 'm1', entry_id: 'e1', body, created_at: '2026-10-22T12:00:00Z' }, team, now: Date.parse('2026-10-22T12:05:00Z'),
   }))
@@ -124,11 +123,11 @@ test('the pickleball page never touches chore code, tables or endpoints', () => 
 
 // ── Notifications ────────────────────────────────────────────────────────────
 
-const team = (id, slot, player, partner, extra = {}) =>
-  ({ id, slot, player_name: player, partner_name: partner, skill_level: 'beginner', color: '#ef4444', ...extra })
+const team = (id, slot, player, extra = {}) =>
+  ({ id, slot, player_name: player, skill_level: 'beginner', color: '#ef4444', ...extra })
 
 test('bracket notifications: joins, leaves, organizer edits and removals of your team', () => {
-  const a = team('a', 1, 'Alex', 'Taylor'), b = team('b', 2, 'Sam', 'Robin'), c = team('c', 3, 'Kim', 'Lee')
+  const a = team('a', 1, 'Alex'), b = team('b', 2, 'Sam'), c = team('c', 3, 'Kim')
   const prev = { entries: snapshotEntries([a, b]), settings: { event_name: 'Cup', event_date: null } }
   const next = {
     entries: snapshotEntries([{ ...a, color: '#3b82f6' }, c]),
@@ -138,7 +137,7 @@ test('bracket notifications: joins, leaves, organizer edits and removals of your
   const kinds = events.map(e => e.kind).sort()
   assert.deepEqual(kinds, ['edited', 'event', 'joined', 'left'])
   assert.ok(events.find(e => e.kind === 'edited').personal)
-  assert.match(events.find(e => e.kind === 'joined').text, /Kim & Lee joined · Slot 3/)
+  assert.match(events.find(e => e.kind === 'joined').text, /Kim joined · Slot 3/)
 
   // Your own change doesn't notify you, and your team disappearing is a removal.
   assert.deepEqual(bracketEvents(prev, next, { tokens: { a: 't' }, ignore: new Set(['a', 'c', 'b']) }).map(e => e.kind), ['event'])
@@ -149,18 +148,18 @@ test('bracket notifications: joins, leaves, organizer edits and removals of your
 })
 
 test('many joins collapse, and a full bracket is announced', () => {
-  const twelve = Array.from({ length: 12 }, (_, i) => team(`t${i}`, i + 1, `P${i}a`, `P${i}b`))
+  const twelve = Array.from({ length: 12 }, (_, i) => team(`t${i}`, i + 1, `Player ${i}`))
   const events = bracketEvents({ entries: snapshotEntries(twelve.slice(0, 5)), settings: null },
     { entries: snapshotEntries(twelve), settings: null })
   assert.deepEqual(events.map(e => e.kind), ['joined', 'full'])
-  assert.match(events[0].text, /7 new teams joined/)
+  assert.match(events[0].text, /7 new players joined/)
 })
 
 test('chat notifications: mentions are personal, your own messages are skipped', () => {
-  const mine = team('a', 1, 'Alex', 'Taylor'), other = team('b', 2, 'Sam', 'Robin')
+  const mine = team('a', 1, 'Alex'), other = team('b', 2, 'Sam')
   const rows = [
     { id: 'm0', entry_id: 'b', body: 'old', created_at: '2026-10-22T11:00:00Z' },
-    { id: 'm1', entry_id: 'b', body: 'good luck @taylor!', created_at: '2026-10-22T12:01:00Z' },
+    { id: 'm1', entry_id: 'b', body: 'good luck @alex!', created_at: '2026-10-22T12:01:00Z' },
     { id: 'm2', entry_id: 'b', body: 'Alexander is not Alex', created_at: '2026-10-22T12:02:00Z' },
     { id: 'm3', entry_id: 'a', body: 'Sam who?', created_at: '2026-10-22T12:03:00Z' },
     { id: 'm4', entry_id: 'b', body: 'hello', created_at: '2026-10-22T12:04:00Z' },
@@ -168,18 +167,18 @@ test('chat notifications: mentions are personal, your own messages are skipped',
   const opts = { owned: [mine], byId: { a: mine, b: other } }
   const events = messageEvents('2026-10-22T12:00:00Z', rows, opts)
   assert.deepEqual(events.map(e => [e.kind, e.messageId]), [['mention', 'm1'], ['mention', 'm2'], ['message', 'm4']])
-  assert.ok(events[0].personal && /Sam & Robin mentioned you/.test(events[0].text))
+  assert.ok(events[0].personal && /Sam mentioned you/.test(events[0].text))
   // Chat open: only mentions.
   assert.deepEqual(messageEvents('2026-10-22T12:00:00Z', rows, { ...opts, skipPlain: true }).map(e => e.kind), ['mention', 'mention'])
   assert.deepEqual(messageEvents(null, rows, opts), [])
 })
 
 test('mentions match whole names only, any case', () => {
-  const t = team('a', 1, 'Al', 'Jo Ann')
-  assert.ok(mentions('go AL go', t))
+  const t = team('a', 1, 'Jo Ann')
+  assert.ok(mentions('go JO ANN go', t))
   assert.ok(mentions('@jo ann nice', t))
   assert.ok(!mentions('Alan and Joanna', t))
-  assert.ok(!mentions('<script>', team('x', 1, 'a.b', 'c+d')))
+  assert.ok(!mentions('<script>', team('x', 1, 'a.b+c')))
 })
 
 test('notification list is newest first, capped, with an unread count', () => {

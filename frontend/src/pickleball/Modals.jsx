@@ -51,7 +51,6 @@ export function Modal({ title, onClose, children, labelledBy = 'pb-modal-title',
 export function TeamForm({ entry, entries, colors, onSubmit, onRemove, removeLabel, submitLabel, close }) {
   const [form, setForm] = useState(() => ({
     player_name: entry?.player_name || '',
-    partner_name: entry?.partner_name || '',
     skill_level: entry?.skill_level || '',
     color: entry?.color || '',
   }))
@@ -64,7 +63,7 @@ export function TeamForm({ entry, entries, colors, onSubmit, onRemove, removeLab
 
   const errors = teamErrors(form, entries, entry?.id)
   if (!form.skill_level) errors.skill_level = 'Pick a skill level'
-  if (!colors.includes(form.color)) errors.color = 'Pick a team color'
+  if (!colors.includes(form.color)) errors.color = 'Pick a color'
   const valid = Object.keys(errors).length === 0
   const set = key => e => setForm(f => ({ ...f, [key]: e.target ? e.target.value : e }))
   const show = key => (touched[key] || touched.submit) && errors[key]
@@ -77,7 +76,7 @@ export function TeamForm({ entry, entries, colors, onSubmit, onRemove, removeLab
     setBusy(true)
     setError('')
     try {
-      await onSubmit({ ...form, player_name: cleanName(form.player_name), partner_name: cleanName(form.partner_name) }, close)
+      await onSubmit({ ...form, player_name: cleanName(form.player_name) }, close)
     } catch (err) {
       setError(err.message)
       setBusy(false)
@@ -105,10 +104,6 @@ export function TeamForm({ entry, entries, colors, onSubmit, onRemove, removeLab
           onBlur={() => setTouched(t => ({ ...t, player_name: true }))} maxLength={NAME_MAX + 10} autoComplete="name"
           required autoFocus={!entry} />
       </Field>
-      <Field id="pb-partner" label="Partner name" error={show('partner_name')}>
-        <input id="pb-partner" className="pb-input" value={form.partner_name} onChange={set('partner_name')}
-          onBlur={() => setTouched(t => ({ ...t, partner_name: true }))} maxLength={NAME_MAX + 10} autoComplete="off" required />
-      </Field>
       <Field id="pb-skill" label="Skill level" error={show('skill_level')}>
         <select id="pb-skill" className="pb-input" value={form.skill_level} onChange={set('skill_level')} required>
           <option value="" disabled>Choose…</option>
@@ -116,8 +111,8 @@ export function TeamForm({ entry, entries, colors, onSubmit, onRemove, removeLab
         </select>
       </Field>
       <fieldset className="pb-field pb-swatches-field">
-        <legend className="pb-label">Team color</legend>
-        <div className="pb-swatches" role="radiogroup" aria-label="Team color">
+        <legend className="pb-label">Your color</legend>
+        <div className="pb-swatches" role="radiogroup" aria-label="Color">
           {colors.map((c, i) => (
             <label key={c} className="pb-swatch" style={{ '--swatch': c }}>
               <input type="radio" name="pb-color" value={c} checked={form.color === c} onChange={() => set('color')(c)} />

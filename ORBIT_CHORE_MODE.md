@@ -81,13 +81,14 @@ anyone with the link can use the app, and each visitor picks their name (saved i
 - `supabase/migrations/20261022000000_pickleball.sql` adds `pickleball_entries` (backend only), `pickleball_settings`,
   `pickleball_messages`, the `pickleball_bracket` view (no token hashes) and `pickleball_join()`/`pickleball_update()`,
   which lock the table so simultaneous joins can't share a slot or a name. Anon can only read the view, settings and messages.
-- 12 doubles teams, double elimination (winners' and losers' brackets, grand final). The bracket is display only: no scores
+- 12 singles players (one per slot; switched from doubles by `20261023000000_pickleball_singles.sql`,
+  which also cleared all signups), double elimination (winners' and losers' brackets, grand final). The bracket is display only: no scores
   or advancing. Slots come only from the random draw and a trigger stops them from ever changing.
 - Joining returns an edit token once (only its SHA-256 is stored). The device keeps it in localStorage and a cookie
   and needs it to edit, leave or post on the wall.
 - Organizer tools need `PICKLEBALL_ADMIN_PIN` on Railway (503 when unset; 5 wrong tries per 5 minutes per IP, then 429).
-- Chat (the message wall) opens from the nav bar. Notifications are per device (the teams whose tokens it holds):
-  joins, leaves, chat mentions of your names, organizer edits/removals of your team, a full bracket and event changes.
+- Chat (the message wall) opens from the nav bar. Notifications are per device (the players whose tokens it holds):
+  joins, leaves, chat mentions of your name, organizer edits/removals of your entry, a full bracket and event changes.
   They're worked out in the browser from each poll and kept in localStorage; nothing new is stored server side.
 - Team colors are `PICKLEBALL_COLORS` in `backend/pickleball_routes.py`; the page reads them from `GET /pickleball/config`.
 - Tests: `cd backend && python -m pytest tests/test_pickleball_routes.py` and `cd frontend && npm test`.

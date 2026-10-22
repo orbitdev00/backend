@@ -18,7 +18,7 @@ async function rest(path) {
 
 export async function loadBracket() {
   const [entries, settings] = await Promise.all([
-    rest('pickleball_bracket?select=id,player_name,partner_name,skill_level,color,slot,created_at&order=slot.asc'),
+    rest('pickleball_bracket?select=id,player_name,skill_level,color,slot,created_at&order=slot.asc'),
     rest('pickleball_settings?select=event_name,event_date&id=eq.1'),
   ])
   return { entries, settings: settings[0] || null }

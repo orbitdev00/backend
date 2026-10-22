@@ -26,7 +26,9 @@ from pickleball_routes import PICKLEBALL_COLORS, pickleball_router
 FAKE_PIN = "test-pin-not-real-0000"
 RED, BLUE = PICKLEBALL_COLORS[0], PICKLEBALL_COLORS[5]
 _RealAsyncClient = httpx.AsyncClient
-MIGRATION = Path(__file__).resolve().parents[2] / "supabase" / "migrations" / "20261022000000_pickleball.sql"
+_MIGRATIONS = Path(__file__).resolve().parents[2] / "supabase" / "migrations"
+MIGRATION = _MIGRATIONS / "20261022000000_pickleball.sql"
+SINGLES = _MIGRATIONS / "20261023000000_pickleball_singles.sql"
 
 
 class FakeSupabase:
@@ -38,7 +40,7 @@ class FakeSupabase:
 
     def _names(self, exclude=None):
         return {n.lower() for e in self.entries.values() if e["id"] != exclude
-                for n in (e["player_name"], e["partner_name"])}
+                for n in (e["player_name"],)}
 
     @staticmethod
     def _err(message):
@@ -46,7 +48,7 @@ class FakeSupabase:
 
     def bracket(self):
         """What the pickleball_bracket view returns."""
-        cols = ("id", "player_name", "partner_name", "skill_level", "color", "slot", "created_at")
+        cols = ("id", "player_name", "skill_level", "color", "slot", "created_at")
         return [{k: e[k] for k in cols} for e in self.entries.values()]
 
     async def __call__(self, request: httpx.Request) -> httpx.Response:
@@ -60,14 +62,13 @@ class FakeSupabase:
                 if len(self.entries) >= 12:
                     return self._err("tournament full")
                 taken = self._names()
-                if body["p_player"].lower() == body["p_partner"].lower() or \
-                        {body["p_player"].lower(), body["p_partner"].lower()} & taken:
+                if body["p_player"].lower() in taken:
                     return self._err("name taken")
                 open_slots = [s for s in range(1, 13) if s not in {e["slot"] for e in self.entries.values()}]
                 await asyncio.sleep(0)  # let other joins run while this one holds the lock
                 slot = random.choice(open_slots)
                 eid = str(uuid.uuid4())
-                self.entries[eid] = {"id": eid, "player_name": body["p_player"], "partner_name": body["p_partner"],
+                self.entries[eid] = {"id": eid, "player_name": body["p_player"],
                                      "skill_level": body["p_skill"], "color": body["p_color"], "slot": slot,
                                      "edit_token_hash": body["p_token_hash"], "created_at": "2026-10-22T12:00:00Z"}
                 return httpx.Response(200, json={"id": eid, "slot": slot})
@@ -76,10 +77,9 @@ class FakeSupabase:
                 e = self.entries.get(body["p_id"])
                 if not e:
                     return self._err("not found")
-                if body["p_player"].lower() == body["p_partner"].lower() or \
-                        {body["p_player"].lower(), body["p_partner"].lower()} & self._names(exclude=e["id"]):
+                if body["p_player"].lower() in self._names(exclude=e["id"]):
                     return self._err("name taken")
-                e.update(player_name=body["p_player"], partner_name=body["p_partner"],
+                e.update(player_name=body["p_player"],
                          skill_level=body["p_skill"], color=body["p_color"])
                 return httpx.Response(200, content=b"")
         if path == "pickleball_entries" and request.method == "GET":
@@ -136,7 +136,7 @@ def fresh_ip():
 
 
 def team(i=0, **overrides):
-    return {"player_name": f"Player {i}", "partner_name": f"Partner {i}", "skill_level": "intermediate",
+    return {"player_name": f"Player {i}", "skill_level": "intermediate",
             "color": RED, **overrides}
 
 
@@ -199,27 +199,21 @@ def test_join_rate_limit_is_three_per_hour_per_ip(fake, client):
     assert join(client, team(4), ip="198.51.100.2").status_code == 200
 
 
-@pytest.mark.parametrize("player,partner", [
-    ("Alex", "Pat"),          # same player
-    ("alex", "Sam"),          # case
-    ("Sam", "ALEX"),          # as partner
-    ("Jordan", "  aLeX  "),   # trimmed
-    ("Riley", "taylor"),      # existing partner, as partner
-    ("TAYLOR", "Morgan"),     # existing partner, as player
-])
-def test_duplicate_names_rejected_across_player_and_partner(fake, client, player, partner):
-    joined(client, player_name="Alex", partner_name="Taylor")
-    r = join(client, team(player_name=player, partner_name=partner))
+@pytest.mark.parametrize("name", ["Alex", "alex", "ALEX", "  aLeX  ", "Alex "])
+def test_duplicate_names_rejected_regardless_of_case(fake, client, name):
+    joined(client, player_name="Alex")
+    r = join(client, team(player_name=name))
     assert r.status_code == 409, r.text
     assert len(fake.entries) == 1
 
 
-def test_player_and_partner_must_differ(fake, client):
-    assert join(client, team(player_name="Casey", partner_name="casey")).status_code == 400
+def test_partner_names_are_ignored(fake, client):
+    r = joined(client, player_name="Casey", partner_name="Casey")
+    assert "partner_name" not in fake.entries[r["id"]]
 
 
 @pytest.mark.parametrize("field,value", [
-    ("player_name", "A"), ("player_name", "x" * 31), ("player_name", "   "), ("partner_name", None),
+    ("player_name", "A"), ("player_name", "x" * 31), ("player_name", "   "), ("player_name", None),
     ("skill_level", "pro"), ("skill_level", "Beginner"), ("skill_level", None),
     ("color", "#123456"), ("color", "red"), ("color", None), ("color", "#ef444"),
 ])
@@ -230,9 +224,8 @@ def test_invalid_fields_rejected(fake, client, field, value):
 
 
 def test_names_are_trimmed(fake, client):
-    r = joined(client, player_name="  Jamie   Lee ", partner_name="Robin ")
+    r = joined(client, player_name="  Jamie   Lee ")
     assert fake.entries[r["id"]]["player_name"] == "Jamie Lee"
-    assert fake.entries[r["id"]]["partner_name"] == "Robin"
 
 
 def test_slot_cannot_be_chosen_on_join(fake, client):
@@ -277,12 +270,12 @@ def test_leaving_frees_the_slot(fake, client):
 
 
 def test_edit_keeps_its_own_names_but_not_others(fake, client):
-    e = joined(client, player_name="Alex", partner_name="Taylor")
-    joined(client, player_name="Morgan", partner_name="Riley")
+    e = joined(client, player_name="Alex")
+    joined(client, player_name="Morgan")
     auth = {"x-entry-token": e["token"]}
-    assert client.patch(f"/pickleball/entry/{e['id']}", json=team(player_name="ALEX", partner_name="Taylor"),
+    assert client.patch(f"/pickleball/entry/{e['id']}", json=team(player_name="ALEX"),
                         headers=auth).status_code == 200
-    assert client.patch(f"/pickleball/entry/{e['id']}", json=team(player_name="Alex", partner_name="riley"),
+    assert client.patch(f"/pickleball/entry/{e['id']}", json=team(player_name="morgan"),
                         headers=auth).status_code == 409
 
 
@@ -396,19 +389,30 @@ def test_bracket_view_never_exposes_token_hashes(fake, client):
     for t in tokens:
         assert hashlib.sha256(t.encode()).hexdigest() not in view
 
-    sql = MIGRATION.read_text(encoding="utf-8")
-    view_sql = re.search(r"create view public\.pickleball_bracket as(.*?);", sql, re.S | re.I).group(1)
-    assert "edit_token_hash" not in view_sql and "*" not in view_sql
-    assert "grant select on public.pickleball_bracket to anon" in sql
-    assert not re.search(r"grant[^;]*on public\.pickleball_entries[^;]*to[^;]*anon", sql, re.I)
-    assert not re.search(r"grant\s+(insert|update|delete|all)", sql, re.I)
+    for path in (MIGRATION, SINGLES):
+        sql = path.read_text(encoding="utf-8")
+        view_sql = re.search(r"create view public\.pickleball_bracket as(.*?);", sql, re.S | re.I).group(1)
+        assert "edit_token_hash" not in view_sql and "*" not in view_sql
+        assert "grant select on public.pickleball_bracket to anon" in sql
+        assert not re.search(r"grant[^;]*on public\.pickleball_entries[^;]*to[^;]*anon", sql, re.I)
+        assert not re.search(r"grant\s+(insert|update|delete|all)", sql, re.I)
 
 
 def test_migration_join_locks_before_drawing_a_slot():
-    sql = MIGRATION.read_text(encoding="utf-8")
-    fn = re.search(r"create function public\.pickleball_join.*?\$\$(.*?)\$\$", sql, re.S).group(1)
-    assert fn.index("lock table public.pickleball_entries") < fn.index("order by random()")
-    assert re.search(r"slot\s+integer not null unique", sql)
+    for path in (MIGRATION, SINGLES):
+        sql = path.read_text(encoding="utf-8")
+        fn = re.search(r"create function public\.pickleball_join.*?\$\$(.*?)\$\$", sql, re.S).group(1)
+        assert fn.index("lock table public.pickleball_entries") < fn.index("order by random()")
+    assert re.search(r"slot\s+integer not null unique", MIGRATION.read_text(encoding="utf-8"))
+
+
+def test_singles_migration_clears_signups_and_drops_partner():
+    sql = SINGLES.read_text(encoding="utf-8")
+    assert "delete from public.pickleball_entries;" in sql
+    assert "drop column partner_name" in sql
+    view_sql = re.search(r"create view public\.pickleball_bracket as(.*?);", sql, re.S).group(1)
+    assert "partner" not in view_sql
+    assert re.search(r"create unique index \w+ on public\.pickleball_entries \(lower\(player_name\)\)", sql)
 
 
 # ── Message wall ─────────────────────────────────────────────────────────────

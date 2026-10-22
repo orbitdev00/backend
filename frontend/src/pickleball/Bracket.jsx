@@ -19,7 +19,7 @@ export default function Bracket({ entries, ownedIds, organizer, onEdit, newIds, 
   const slots = bySlot(entries)
   const box = { slots, ownedIds, organizer, onEdit, newIds, pulseSlot }
   // Names and badges change box heights, so the lines are re-measured when teams change.
-  const version = (entries || []).map(e => `${e.id}:${e.player_name}:${e.partner_name}`).join('|') + organizer
+  const version = (entries || []).map(e => `${e.id}:${e.player_name}`).join('|') + organizer
   return (
     <section className="pb-board" aria-labelledby="pb-board-title">
       <div className="pb-board-head">

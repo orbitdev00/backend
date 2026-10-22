@@ -92,4 +92,5 @@ export function bySlot(entries) {
   return map
 }
 
-export const teamName = e => `${e.player_name} & ${e.partner_name}`
+// Singles: one player per slot.
+export const teamName = e => e.player_name

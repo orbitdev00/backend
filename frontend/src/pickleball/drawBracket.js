@@ -161,7 +161,7 @@ export async function drawBracketImage({ entries, settings, scale = 2 }) {
   ctx.fillText(fit(ctx, (settings?.event_name || 'Pickleball Tournament').toUpperCase(), W - PAD * 2 - 260), PAD + 60, 88)
   ctx.font = `500 20px ${BODY}`
   ctx.fillStyle = C.muted
-  const sub = [formatEventDate(settings?.event_date), 'Double elimination · Doubles'].filter(Boolean).join('  ·  ')
+  const sub = [formatEventDate(settings?.event_date), 'Double elimination · Singles'].filter(Boolean).join('  ·  ')
   ctx.fillText(sub, PAD + 60, 120)
   ctx.textAlign = 'right'
   ctx.fillStyle = C.ball
@@ -169,7 +169,7 @@ export async function drawBracketImage({ entries, settings, scale = 2 }) {
   ctx.fillText(`${(entries || []).length} OF ${MAX_TEAMS}`, W - PAD, 84)
   ctx.font = `600 15px ${BODY}`
   ctx.fillStyle = C.muted
-  ctx.fillText('TEAMS', W - PAD, 106)
+  ctx.fillText('PLAYERS', W - PAD, 106)
   ctx.textAlign = 'left'
 
   for (const { section, top, rounds } of sections) {

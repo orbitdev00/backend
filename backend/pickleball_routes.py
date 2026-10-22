@@ -1,13 +1,13 @@
 """
 Pickleball tournament API (/pickleball page) — see ORBIT_CHORE_MODE.md
 
-GET    /pickleball/config               Colors, skill levels and team count for the UI.
-POST   /pickleball/join                 Joins a doubles team. The slot is drawn at random
+GET    /pickleball/config               Colors, skill levels and player count for the UI.
+POST   /pickleball/join                 Joins as a singles player. The slot is drawn at random
                                         inside pickleball_join() under a table lock. Returns
                                         the raw edit token once; only its SHA-256 is stored.
-PATCH  /pickleball/entry/{id}           Edits a team (X-Entry-Token header).
+PATCH  /pickleball/entry/{id}           Edits an entry (X-Entry-Token header).
 DELETE /pickleball/entry/{id}           Leaves the tournament (X-Entry-Token header).
-POST   /pickleball/messages             Posts to the wall as a joined team (X-Entry-Token header).
+POST   /pickleball/messages             Posts to the chat as a joined player (X-Entry-Token header).
 
 Organizer (X-Organizer-Pin header, checked on every request against the
 PICKLEBALL_ADMIN_PIN env var; 503 when it's unset, 429 after 5 wrong tries in
@@ -47,7 +47,7 @@ _HEADERS = {
 _MIN = {**_HEADERS, "Prefer": "return=minimal"}
 
 MAX_TEAMS = 12
-# The one list of team colors. The page reads it from GET /pickleball/config.
+# The one list of player colors. The page reads it from GET /pickleball/config.
 PICKLEBALL_COLORS = (
     "#ef4444", "#f97316", "#facc15", "#22c55e",
     "#14b8a6", "#3b82f6", "#8b5cf6", "#ec4899",
@@ -93,17 +93,14 @@ def validate_team(body: dict) -> dict:
     if "slot" in body:
         raise PickleballError("Slots come from the random draw and can't be chosen or changed")
     player = clean_name(body.get("player_name"), "Your name")
-    partner = clean_name(body.get("partner_name"), "Partner name")
-    if player.lower() == partner.lower():
-        raise PickleballError("You and your partner need different names")
     skill = body.get("skill_level")
     if skill not in SKILL_LEVELS:
         raise PickleballError("Skill level must be beginner, intermediate or advanced")
     color = body.get("color")
     color = color.lower() if isinstance(color, str) else None
     if color not in PICKLEBALL_COLORS:
-        raise PickleballError("Pick one of the team colors")
-    return {"player_name": player, "partner_name": partner, "skill_level": skill, "color": color}
+        raise PickleballError("Pick one of the colors")
+    return {"player_name": player, "skill_level": skill, "color": color}
 
 
 def validate_message(body: dict) -> tuple[str, str]:
@@ -138,7 +135,7 @@ def validate_settings(body: dict) -> dict:
 
 def _uuid(value: str) -> str:
     if not is_valid_uuid(value):
-        raise PickleballError("Team not found", 404)
+        raise PickleballError("Player not found", 404)
     return value
 
 
@@ -161,7 +158,7 @@ async def _body(request: Request) -> dict:
 _DB_ERRORS = {
     "tournament full": PickleballError("The tournament is full", 409),
     "name taken": PickleballError("That name is already in the tournament", 409),
-    "not found": PickleballError("Team not found", 404),
+    "not found": PickleballError("Player not found", 404),
 }
 
 
@@ -181,16 +178,15 @@ async def _require_owner(client: httpx.AsyncClient, request: Request, entry_id: 
     r.raise_for_status()
     rows = r.json()
     if not rows:
-        raise PickleballError("Team not found", 404)
+        raise PickleballError("Player not found", 404)
     token = request.headers.get("x-entry-token") or ""
     if not hmac.compare_digest(rows[0]["edit_token_hash"], hash_token(token)):
-        raise PickleballError("Only the device that joined this team can do that", 403)
+        raise PickleballError("Only the device that signed up this player can do that", 403)
 
 
 async def _update_entry(client: httpx.AsyncClient, entry_id: str, team: dict):
     await _rpc(client, "pickleball_update", {
-        "p_id": entry_id, "p_player": team["player_name"], "p_partner": team["partner_name"],
-        "p_skill": team["skill_level"], "p_color": team["color"]})
+        "p_id": entry_id, "p_player": team["player_name"], "p_skill": team["skill_level"], "p_color": team["color"]})
 
 
 async def _delete_entry(client: httpx.AsyncClient, entry_id: str):
@@ -198,7 +194,7 @@ async def _delete_entry(client: httpx.AsyncClient, entry_id: str):
                             headers={**_HEADERS, "Prefer": "return=representation"})
     r.raise_for_status()
     if not r.json():
-        raise PickleballError("Team not found", 404)
+        raise PickleballError("Player not found", 404)
 
 
 def _rate(request: Request, name: str, limit: int, window: int):
@@ -237,8 +233,8 @@ async def join(request: Request):
     async def go(client):
         token = secrets.token_urlsafe(32)
         row = await _rpc(client, "pickleball_join", {
-            "p_player": team["player_name"], "p_partner": team["partner_name"], "p_skill": team["skill_level"],
-            "p_color": team["color"], "p_token_hash": hash_token(token)})
+            "p_player": team["player_name"], "p_skill": team["skill_level"], "p_color": team["color"],
+            "p_token_hash": hash_token(token)})
         ip_rate_ok(key, limit=JOIN_LIMIT, window=JOIN_WINDOW)  # only successful joins count
         return {"id": row["id"], "slot": row["slot"], "token": token}
     return await _run(go)

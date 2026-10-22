@@ -37,6 +37,7 @@ from tier_check import get_tier, invalidate as invalidate_tier_cache
 from ml.predictor import predict_xgboost  # XGBoost â€" background signals
 from config import REFRESH_INTERVAL, MAX_AUTO_REFRESHES, APP_MODE
 from chore_routes import chore_router
+from pickleball_routes import pickleball_router
 
 app = FastAPI(title="Pump Analyzer API")
 app.include_router(badge_router)
@@ -45,12 +46,13 @@ app.include_router(forum_router)
 app.include_router(delete_router)
 app.include_router(admin_router)
 app.include_router(chore_router)
+app.include_router(pickleball_router)
 
 
-# Chore mode: only the chore API and /health are reachable. Every other
+# Chore mode: only the chore and pickleball APIs and /health are reachable. Every other
 # (crypto) HTTP route returns 404 and WebSockets are refused, without running
 # their handlers. Set APP_MODE=orbit to restore. See ORBIT_CHORE_MODE.md.
-_CHORE_MODE_PATHS = ("/health", "/chores")
+_CHORE_MODE_PATHS = ("/health", "/chores", "/pickleball")
 
 
 class ChoreModeGate:

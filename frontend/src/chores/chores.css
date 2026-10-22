@@ -382,6 +382,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .ch-btn-sm { min-height: 36px; padding: 0 12px; font-size: 13px; }
 .ch-btn-light { background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.3); color: inherit; backdrop-filter: blur(8px); }
 .ch-btn-light:hover { background: rgba(255, 255, 255, 0.26); }
+.ch-pickleball-link { text-decoration: none; }
 .ch-btn-primary { background: var(--ch-gradient); color: var(--ch-on-gradient); box-shadow: 0 6px 16px -8px var(--ch-primary); }
 .ch-btn-primary:hover:not(:disabled) { box-shadow: 0 10px 22px -8px var(--ch-primary); }
 .ch-btn-ghost { background: var(--ch-surface); border-color: var(--ch-border); color: var(--ch-text); }

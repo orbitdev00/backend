@@ -240,6 +240,7 @@ export default function ChoreApp() {
             </select>
           </label>
           <button className="ch-btn ch-btn-light" onClick={() => setModal({ type: 'library' })}>Chores Library</button>
+          <a className="ch-btn ch-btn-light ch-pickleball-link" href="/pickleball">Pickleball</a>
         </div>
       </header>
 

@@ -39,9 +39,9 @@ class FakeSupabase:
                       "starts_on": "2026-01-01", "frequency": "daily", "preferred_weekday": None, "month_day": None,
                       "allowed_member_ids": None},
         }
-        # (chore_id, date) → assignee, as the chore_schedule view would compute it
-        self.schedule = {(NOON, TODAY.isoformat()): ALEX, (NOON, YESTERDAY.isoformat()): NATHAN,
-                         (BATH, TODAY.isoformat()): NATHAN, (EVENING, TODAY.isoformat()): ALEX}
+        # (chore_id, date) pairs the chore_schedule view lists
+        self.schedule = {(NOON, TODAY.isoformat()), (NOON, YESTERDAY.isoformat()),
+                         (BATH, TODAY.isoformat()), (EVENING, TODAY.isoformat())}
         self.completions = {}
         self.writes = []
         self.messages = []
@@ -69,7 +69,9 @@ class FakeSupabase:
             key = (self._eq(p, "chore_id"), self._eq(p, "date"))
             if key not in self.schedule:
                 return httpx.Response(200, json=[])
-            return httpx.Response(200, json=[{"member_id": self.schedule[key], "done": key in self.completions}])
+            comp = self.completions.get(key)
+            return httpx.Response(200, json=[{"done": comp is not None,
+                                              "completed_by": comp["completed_by"] if comp else None}])
         if path == "chore_completions":
             if request.method == "GET":
                 key = (self._eq(p, "chore_id"), self._eq(p, "date"))
@@ -82,7 +84,9 @@ class FakeSupabase:
                 self.completions[key] = dict(body)
                 return httpx.Response(201, json=[self.completions[key]])
             if request.method == "DELETE":
-                self.completions.pop((self._eq(p, "chore_id"), self._eq(p, "date")), None)
+                key = (self._eq(p, "chore_id"), self._eq(p, "date"))
+                if self.completions.get(key, {}).get("completed_by") == self._eq(p, "completed_by"):
+                    self.completions.pop(key)
                 return httpx.Response(204)
         if path == "chat_messages" and request.method == "POST":
             row = {"id": f"msg-{len(self.messages)}", "created_at": "2026-10-20T12:00:00+00:00", **body}
@@ -189,11 +193,19 @@ def test_checking_twice_does_not_double_award(fake, client):
 
 # ── Completion rules ─────────────────────────────────────────────────────────
 
-def test_other_peoples_tasks_are_locked(fake, client):
-    r = complete(client, BATH, TODAY, ALEX)   # assigned to Nathan
-    assert r.status_code == 403
-    assert fake.completions == {}
-    assert complete(client, BATH, TODAY, NATHAN).json()["points"] == 60
+def test_anyone_can_claim_an_open_chore(fake, client):
+    assert complete(client, BATH, TODAY, ALEX).json()["points"] == 60
+    assert fake.completions[(BATH, TODAY.isoformat())]["completed_by"] == ALEX
+
+
+def test_claimed_chore_is_taken(fake, client):
+    complete(client, BATH, TODAY, NATHAN)
+    assert complete(client, BATH, TODAY, ALEX).status_code == 403
+    assert fake.completions[(BATH, TODAY.isoformat())]["completed_by"] == NATHAN
+
+
+def test_unknown_member_cannot_claim(fake, client):
+    assert complete(client, NOON, TODAY, "66666666-6666-4666-8666-666666666666").status_code == 400
 
 
 def test_cannot_uncheck_someone_elses_task(fake, client):
@@ -214,15 +226,10 @@ def test_unscheduled_day_rejected(fake, client):
 
 # ── Other changes apply immediately ──────────────────────────────────────────
 
-def test_reassign_applies_immediately_and_respects_rules(fake, client):
-    r = submit(client, "assignment_set", {"chore_id": BATH, "date": TODAY.isoformat(), "member_id": ALEX})
-    assert r.status_code == 200
-    assert ("POST", "chore_assignments") in [(m, p) for m, p, _, _ in fake.writes]
-    old = (TODAY - timedelta(days=2)).isoformat()
-    assert submit(client, "assignment_set", {"chore_id": BATH, "date": old, "member_id": ALEX}).status_code == 409
-    complete(client, NOON, TODAY, ALEX)
-    r = submit(client, "assignment_set", {"chore_id": NOON, "date": TODAY.isoformat(), "member_id": NATHAN})
-    assert r.status_code == 409   # uncheck first, so points can't end up on the wrong person
+def test_assignments_and_rotation_are_gone(fake, client):
+    assert submit(client, "assignment_set", {"chore_id": BATH, "date": TODAY.isoformat(),
+                                             "member_id": ALEX}).status_code == 400
+    assert submit(client, "rotation_toggle", {"rotation_enabled": False}).status_code == 400
 
 
 def test_delete_is_soft(fake, client):
@@ -257,19 +264,11 @@ def test_edit_schedule_starts_new_version_tomorrow(fake, client):
 def test_chore_validation(fake, client):
     assert submit(client, "chore_add", {**CHORE, "difficulty": "insane"}).status_code == 400
     assert submit(client, "chore_add", {**CHORE, "time_of_day": "25:00"}).status_code == 400
-    assert submit(client, "chore_add", {**CHORE, "allowed_member_ids": ["nope"]}).status_code == 400
-    unknown = "66666666-6666-4666-8666-666666666666"
-    assert submit(client, "chore_add", {**CHORE, "allowed_member_ids": [unknown]}).status_code == 400
     r = submit(client, "chore_add", {**CHORE, "time_of_day": "19:00", "allowed_member_ids": [ALEX]})
     assert r.status_code == 200, r.text
     insert = [b for m, p, _, b in fake.writes if m == "POST" and p == "chores"][0]
     assert insert["time_of_day"] == "19:00:00" and insert["starts_on"] == TODAY.isoformat()
-
-
-def test_rotation_toggle_takes_effect_tomorrow(fake, client):
-    assert submit(client, "rotation_toggle", {"rotation_enabled": False}).status_code == 200
-    log = [b for m, p, _, b in fake.writes if p == "chore_rotation_log"][0]
-    assert log == {"effective_on": (TODAY + timedelta(days=1)).isoformat(), "enabled": False}
+    assert insert["allowed_member_ids"] is None   # every chore is open to everyone
 
 
 def test_review_endpoint_is_gone(client):
@@ -277,7 +276,7 @@ def test_review_endpoint_is_gone(client):
 
 
 def test_rate_limit_per_ip(fake, client):
-    codes = [submit(client, "rotation_toggle", {"rotation_enabled": True}).status_code for _ in range(21)]
+    codes = [submit(client, "reset_defaults").status_code for _ in range(21)]
     assert codes[:20] == [200] * 20 and codes[20] == 429
 
 

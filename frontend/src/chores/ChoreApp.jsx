@@ -4,12 +4,12 @@ import {
   WEEKDAYS, MONTHS, FREQ_LABEL, monthGrid, nyNow, addDays, buildView, pct, pointsFor,
 } from './schedule.js'
 import {
-  DayModal, LibraryModal, ChoreFormModal, TaskMeta, Avatar, Flame, BannerFx, CheckMark, ExtremeBadge,
+  DayModal, LibraryModal, ChoreFormModal, TaskMeta, Avatar, Flame, BannerFx, CheckMark, ExtremeBadge, Reward,
 } from './ChoreModals.jsx'
 import ShopView, { Coin } from './ShopView.jsx'
 import { ChatPanel, useChat } from './ChatPanel.jsx'
 import { CountUp, useFlip } from './Fx.jsx'
-import { dress, nameProps, themeName, ensureShopFonts } from './shop.js'
+import { dress, nameProps, themeName, ensureShopFonts, POINTS_PER_COIN } from './shop.js'
 import { burst, scaleBurst, flash, floatText, confetti, centerOf } from './motion.js'
 import './chores.css'
 
@@ -29,7 +29,6 @@ export default function ChoreApp() {
   const [meId, setMeId] = useState(readUserCookie)
   const [tab, setTab] = useState('day')
   const [search, setSearch] = useState('')
-  const [assigneeFilter, setAssigneeFilter] = useState('all')
   const [freqFilter, setFreqFilter] = useState('all')
   const [modal, setModal] = useState(null)
   const [toast, setToast] = useState(null)
@@ -130,7 +129,8 @@ export default function ChoreApp() {
   }, [])
 
   const toggle = useCallback(async (task, rowEl, checkEl) => {
-    if (!me || task.assignee?.id !== me.id || !task.checkable) return
+    // Anyone can claim an open chore; only whoever claimed it can unclaim it.
+    if (!me || !task.checkable || (task.done && task.completedBy?.id !== me.id)) return
     const done = !task.done
     // Optimistic: flip it now, the reload after submit brings the real row.
     setLive(l => {
@@ -148,7 +148,7 @@ export default function ChoreApp() {
       const extreme = task.chore.difficulty === 'extreme'
       if (rowEl) {
         flash(rowEl, extreme ? '#b91c1c' : me.color)
-        floatText(rowEl, `+${pointsFor(task.chore)} pts`, extreme ? '#f97316' : me.color)
+        floatText(rowEl, `+${pointsFor(task.chore)} pts · +${pointsFor(task.chore) / POINTS_PER_COIN} coins`, extreme ? '#f97316' : me.color)
       }
       if (checkEl) {
         const { x, y } = centerOf(checkEl)
@@ -156,9 +156,8 @@ export default function ChoreApp() {
           ? { colors: EXTREME_COLORS, count: 36, spread: 150, size: 10, duration: 1000 }
           : { colors: [me.color, '#facc15'], count: 10, spread: 60 })
       }
-      if (task.date === today) {
-        const mine = view.tasksFor(today).filter(t => t.assignee?.id === me.id)
-        if (mine.length && mine.every(t => t.done || t.key === task.key)) setTimeout(dayComplete, 350)
+      if (task.date === today && view.tasksFor(today).every(t => t.done || t.key === task.key)) {
+        setTimeout(dayComplete, 350)
       }
     }
     await submit('completion_set', {
@@ -181,12 +180,9 @@ export default function ChoreApp() {
 
   const matchesFilters = useCallback(task => {
     if (freqFilter !== 'all' && task.chore.frequency !== freqFilter) return false
-    if (assigneeFilter !== 'all' && task.assignee?.id !== assigneeFilter) return false
     const q = search.trim().toLowerCase()
-    if (q && !task.chore.title.toLowerCase().includes(q)
-      && !(task.assignee?.name || '').toLowerCase().includes(q)) return false
-    return true
-  }, [search, assigneeFilter, freqFilter])
+    return !q || task.chore.title.toLowerCase().includes(q)
+  }, [search, freqFilter])
 
   const shiftMonth = delta => setCursor(c => {
     const d = new Date(c.year, c.month + delta, 1)
@@ -258,7 +254,7 @@ export default function ChoreApp() {
             <div className={`ch-home${tab === 'board' ? ' show-board' : ''}`}>
               <MyDay
                 me={me}
-                tasks={view.tasksFor(today).filter(t => t.assignee?.id === me.id)}
+                tasks={view.tasksFor(today)}
                 row={myRow}
                 justDone={justDone}
                 onToggle={toggle}
@@ -280,43 +276,17 @@ export default function ChoreApp() {
                 <input
                   className="ch-input ch-search"
                   type="search"
-                  placeholder="Search tasks or assignees…"
+                  placeholder="Search chores…"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  aria-label="Search tasks or assignees"
+                  aria-label="Search chores"
                 />
-                <select className="ch-input" value={assigneeFilter} onChange={e => setAssigneeFilter(e.target.value)} aria-label="Filter by assignee">
-                  <option value="all">All Assignees</option>
-                  {view.members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                </select>
                 <select className="ch-input" value={freqFilter} onChange={e => setFreqFilter(e.target.value)} aria-label="Filter by frequency">
                   <option value="all">All Frequencies</option>
                   <option value="daily">Daily Only</option>
                   <option value="weekly">Weekly Only</option>
                   <option value="monthly">Monthly Only</option>
                 </select>
-                <div className="ch-rotation">
-                  <label className="ch-switch">
-                    <input
-                      type="checkbox"
-                      role="switch"
-                      checked={view.rotationEnabled}
-                      onChange={e => submit('rotation_toggle', {
-                        payload: { rotation_enabled: e.target.checked },
-                        message: `Task rotation turns ${e.target.checked ? 'on' : 'off'} starting tomorrow`,
-                      })}
-                    />
-                    <span className="ch-switch-track" aria-hidden="true"><span /></span>
-                    <span>Automated Task Rotation</span>
-                  </label>
-                  <span className="ch-tip">
-                    <button type="button" className="ch-tip-btn" aria-label="About task rotation" aria-describedby="rotation-tip">i</button>
-                    <span role="tooltip" id="rotation-tip" className="ch-tip-text">
-                      When on, daily and weekly chores shift across the people allowed to do them so the work
-                      stays fair. Changes take effect tomorrow, so today and past days never reshuffle.
-                    </span>
-                  </span>
-                </div>
               </section>
 
               <section className="ch-calendar" aria-label="Monthly calendar" style={{ '--i': 1 }}>
@@ -363,7 +333,7 @@ export default function ChoreApp() {
                         </div>
                         <div className="ch-dots" aria-hidden="true">
                           {tasks.map(t => (
-                            <span key={t.key} className={`${t.done ? 'is-done' : ''}${t.chore.difficulty === 'extreme' ? ' is-extreme' : ''}`} style={{ background: t.assignee?.color || '#94a3b8' }} />
+                            <span key={t.key} className={`${t.done ? 'is-done' : ''}${t.chore.difficulty === 'extreme' ? ' is-extreme' : ''}`} style={{ background: t.completedBy?.color || '#94a3b8' }} />
                           ))}
                         </div>
                         {tasks.length > 0 && (
@@ -423,7 +393,7 @@ export default function ChoreApp() {
           <span className="ch-day-complete-emoji" aria-hidden="true">🎉</span>
           <div>
             <strong>Day complete!</strong>
-            <span>Every task done. Nice work, {me.name}!</span>
+            <span>Every chore is claimed. Nice work, {me.name}!</span>
           </div>
         </div>
       )}
@@ -480,11 +450,12 @@ function WhoAreYou({ members, onPick }) {
 }
 
 function MyDay({ me, tasks, row, justDone, onToggle, onOpenDay }) {
-  const done = tasks.filter(t => t.done).length
+  const open = tasks.filter(t => !t.done).length
+  const mine = tasks.filter(t => t.completedBy?.id === me.id).length
   const streak = row?.streak || 0
   const name = nameProps(me)
   return (
-    <section className="ch-card ch-myday" aria-label="My Day" style={{ '--i': 0 }}>
+    <section className="ch-card ch-myday" aria-label="Today's chores" style={{ '--i': 0 }}>
       <div className="ch-myday-hero">
         <BannerFx member={me} />
         <Avatar member={me} size={52} />
@@ -492,12 +463,12 @@ function MyDay({ me, tasks, row, justDone, onToggle, onOpenDay }) {
           <span className="ch-muted">Welcome back</span>
           <h2><span className={name.className} style={name.style}>{me.name}</span></h2>
         </div>
-        <button className="ch-btn ch-btn-ghost ch-btn-sm" onClick={onOpenDay}>Everyone's tasks</button>
+        <button className="ch-btn ch-btn-ghost ch-btn-sm" onClick={onOpenDay}>Day details</button>
       </div>
       <div className="ch-summary">
         <div className="ch-summary-item">
-          <span className="ch-summary-value"><CountUp value={done} />/{tasks.length}</span>
-          <span className="ch-summary-label">tasks done today</span>
+          <span className="ch-summary-value"><CountUp value={mine} /></span>
+          <span className="ch-summary-label">claimed by you today</span>
         </div>
         <div className="ch-summary-item">
           <span className="ch-summary-value"><CountUp value={row?.points_today ?? 0} /></span>
@@ -508,19 +479,23 @@ function MyDay({ me, tasks, row, justDone, onToggle, onOpenDay }) {
           <span className="ch-summary-label">day streak</span>
         </div>
       </div>
-      <div className="ch-progress"><div style={{ transform: `scaleX(${pct(done, tasks.length) / 100})` }} /></div>
+      <div className="ch-progress"><div style={{ transform: `scaleX(${pct(tasks.length - open, tasks.length) / 100})` }} /></div>
 
-      {tasks.length === 0 && <p className="ch-muted ch-myday-empty">Nothing assigned to you today. Enjoy it!</p>}
-      {tasks.length > 0 && done === tasks.length && <p className="ch-myday-done">All done for today 🎉</p>}
+      {tasks.length === 0 && <p className="ch-muted ch-myday-empty">No chores today. Enjoy it!</p>}
+      {tasks.length > 0 && open === 0 && <p className="ch-myday-done">Every chore is claimed 🎉</p>}
+      {open > 0 && <p className="ch-muted ch-myday-empty">{open} open chore{open === 1 ? '' : 's'}. Tap one when you finish it to claim the reward.</p>}
       <ul className="ch-mytasks">
         {tasks.map((t, i) => {
           const extreme = t.chore.difficulty === 'extreme'
+          const taken = t.done && t.completedBy?.id !== me.id
+          const who = t.completedBy || me
           return (
             <li key={t.key} style={{ '--i': i + 1 }}>
               <button
                 className={`ch-mytask${t.done ? ' is-done' : ''}${t.overdue ? ' is-overdue' : ''}${extreme ? ' is-extreme' : ''}${justDone === t.key && t.done ? ' just-done' : ''}`}
-                style={{ '--who': me.color }}
+                style={{ '--who': who.color }}
                 onClick={e => onToggle(t, e.currentTarget, e.currentTarget.querySelector('.ch-check-circle'))}
+                disabled={taken}
                 role="checkbox"
                 aria-checked={t.done}
               >
@@ -529,8 +504,9 @@ function MyDay({ me, tasks, row, justDone, onToggle, onOpenDay }) {
                   <span className="ch-mytask-title">{extreme && <ExtremeBadge />}{t.chore.title}</span>
                   {t.chore.description && <span className="ch-mytask-desc">{t.chore.description}</span>}
                   <TaskMeta task={t} />
+                  {t.done && <span className="ch-claimed-by">Claimed by {t.completedBy?.id === me.id ? 'you' : t.completedBy?.name || 'someone'}</span>}
                 </span>
-                <span className="ch-points-badge">{t.points} pts</span>
+                <Reward points={t.points} />
               </button>
             </li>
           )
@@ -579,12 +555,12 @@ function Leaderboard({ rows, meId }) {
 }
 
 function TaskPill({ task }) {
-  const color = task.assignee?.color || '#94a3b8'
+  const color = task.completedBy?.color || '#94a3b8'
   return (
     <span
       className={`ch-pill${task.done ? ' is-done' : ''}${task.overdue ? ' is-overdue' : ''}${task.chore.difficulty === 'extreme' ? ' is-extreme' : ''}`}
       style={{ '--pill': color }}
-      title={`${task.chore.title} — ${task.assignee?.name || 'Unassigned'} (${FREQ_LABEL[task.chore.frequency]})`}
+      title={`${task.chore.title} — ${task.completedBy ? `claimed by ${task.completedBy.name}` : 'open'} (${FREQ_LABEL[task.chore.frequency]})`}
     >
       <span className="ch-avatar-dot" />
       <span className="ch-pill-text">{task.chore.title}</span>

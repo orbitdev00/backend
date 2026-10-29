@@ -25,22 +25,16 @@ const CHORE_FIELDS = 'id,title,frequency,zone,minutes,difficulty,points_override
  */
 export async function loadAll(from, to, yesterday, today) {
   const range = `or=(and(date.gte.${from},date.lte.${to}),date.in.(${yesterday},${today}))`
-  const [members, chores, assignments, completions, settings, rotationLog, leaderboard, cosmetics, purchases, wallet] = await Promise.all([
+  const [members, chores, completions, leaderboard, cosmetics, purchases, wallet] = await Promise.all([
     rest('chore_members?select=id,name,color,active,created_at&order=created_at.asc'),
     rest(`chores?select=${CHORE_FIELDS}&order=created_at.asc`),
-    rest(`chore_assignments?select=chore_id,date,member_id&${range}`),
     rest(`chore_completions?select=chore_id,date,completed_by,points_awarded&${range}`),
-    rest('chore_settings?select=rotation_enabled&id=eq.1'),
-    rest('chore_rotation_log?select=effective_on,enabled'),
     rest('chore_leaderboard?select=member_id,name,color,points_today,points_week,points_all,streak'),
     rest('chore_member_cosmetics?select=member_id,theme,avatar,color,name_font,name_color,banner'),
     rest('chore_purchases?select=member_id,item_id'),
     rest('chore_wallet?select=member_id,coins,coins_earned,coins_spent'),
   ])
-  return {
-    members, chores, assignments, completions, settings: settings[0] || null, rotationLog, leaderboard,
-    cosmetics, purchases, wallet,
-  }
+  return { members, chores, completions, leaderboard, cosmetics, purchases, wallet }
 }
 
 const CHAT_FIELDS = 'id,member_id,body,created_at'

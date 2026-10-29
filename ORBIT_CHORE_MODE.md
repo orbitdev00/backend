@@ -56,11 +56,14 @@ anyone with the link can use the app, and each visitor picks their name (saved i
 - Points = minutes × difficulty (easy 1x, medium 1.5x, hard 2x), rounded, unless the chore has `points_override`
   (every "extreme" chore gets 75). They are stamped on the completion row
   when it is inserted (a trigger recomputes them, whatever was sent) and rows can't be edited. Unchecking deletes the row.
-  Only the assigned person can check a task, and only for today or yesterday (America/New_York).
+  Chores aren't assigned: anyone can claim an open chore by checking it off, for today or yesterday
+  (America/New_York), and only whoever claimed it can uncheck it. Each chore shows its points and coins.
+- `supabase/migrations/20261025000000_open_chores.sql` clears `allowed_member_ids`, drops the bathroom limits from
+  `chore_reset_defaults()` and changes the streak to consecutive days on which you claimed at least one chore.
+  `chore_assignments`, `chore_settings` and `chore_rotation_log` stay but nothing reads them any more.
 - Leaderboard and streaks are computed by the `chore_leaderboard` view from `chore_completions`. Nothing stores or
   sets a score. Deleting a chore is a soft delete, and Reset Default Data never touches completions.
-- So past days never change, schedule edits (frequency, day, allowed members) and the rotation toggle take effect
-  tomorrow. Minutes/difficulty edits apply in place but only affect future completions.
+- So past days never change, schedule edits (frequency, day) take effect tomorrow. Minutes/difficulty edits apply in place but only affect future completions.
 
 ## Chat, coins and the shop
 

@@ -7,6 +7,9 @@ POST /chores/submit  Validates a change and applies it right away to the live
 POST /chores/chat    Posts a family chat message as the selected member.
 POST /chores/shop    Buys or equips a cosmetic with coins (1 coin per 10 points).
 
+Chores aren't assigned: any member can claim any chore scheduled today or
+yesterday, and only whoever claimed it can unclaim it.
+
 Score integrity: points are never accepted from the client. A completion's
 points_awarded is computed here from the chore's minutes and difficulty (and
 stamped again by a database trigger), completions can't be edited, and the
@@ -35,8 +38,7 @@ SUBMIT_LIMIT_PER_MIN = 20
 
 CHANGE_TYPES = {
     "chore_add", "chore_edit", "chore_delete",
-    "assignment_set", "completion_set",
-    "rotation_toggle", "reset_defaults",
+    "completion_set", "reset_defaults",
 }
 
 _FREQUENCIES = {"daily", "weekly", "monthly"}
@@ -44,8 +46,8 @@ DIFFICULTY_MULTIPLIER = {"easy": 1.0, "medium": 1.5, "hard": 2.0, "extreme": 2.5
 # Extreme chores are worth a fixed amount (stored as chores.points_override).
 EXTREME_POINTS = 75
 _TIME = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)(:00)?$")
-# Changing any of these changes which days (or whom) a chore lands on.
-_SCHEDULE_FIELDS = ("frequency", "preferred_weekday", "month_day", "allowed_member_ids")
+# Changing any of these changes which days a chore lands on.
+_SCHEDULE_FIELDS = ("frequency", "preferred_weekday", "month_day")
 
 
 class ChoreValidationError(ValueError):
@@ -53,7 +55,7 @@ class ChoreValidationError(ValueError):
 
 
 class ChoreRuleError(ValueError):
-    """A valid request that breaks a chore rule (wrong person, wrong day, …)."""
+    """A valid request that breaks a chore rule (already claimed, wrong day, …)."""
     def __init__(self, message: str, status: int = 409):
         super().__init__(message)
         self.status = status
@@ -138,16 +140,6 @@ def _time_of_day(payload: dict):
     return value[:5] + ":00"
 
 
-def _allowed(payload: dict):
-    value = payload.get("allowed_member_ids")
-    if value is None:
-        return None
-    if not isinstance(value, list) or len(value) > 50:
-        raise ChoreValidationError("allowed_member_ids must be a list of member ids or null")
-    ids = list(dict.fromkeys(_uuid(v, "allowed_member_ids") for v in value))
-    return ids or None
-
-
 def _chore_fields(payload: dict) -> dict:
     frequency = payload.get("frequency")
     if frequency not in _FREQUENCIES:
@@ -165,7 +157,7 @@ def _chore_fields(payload: dict) -> dict:
         "points_override": EXTREME_POINTS if difficulty == "extreme" else None,
         "description": sanitize_text(payload.get("description") or "", 500) or None,
         "time_of_day": _time_of_day(payload),
-        "allowed_member_ids": _allowed(payload),
+        "allowed_member_ids": None,  # every chore is open to everyone
         "preferred_weekday": _int(payload, "preferred_weekday", 0, 6) if frequency == "weekly" else None,
         "month_day": _int(payload, "month_day", 1, 31) if frequency == "monthly" else None,
     }
@@ -185,13 +177,6 @@ def validate_change(change_type: str, target_id, payload: dict) -> tuple[str | N
         return _uuid(target_id, "target_id"), _chore_fields(payload)
     if change_type == "chore_delete":
         return _uuid(target_id, "target_id"), {}
-    if change_type == "assignment_set":
-        chore_id = _uuid(payload.get("chore_id"), "chore_id")
-        return chore_id, {
-            "chore_id": chore_id,
-            "date": _date(payload),
-            "member_id": _uuid(payload.get("member_id"), "member_id"),
-        }
     if change_type == "completion_set":
         chore_id = _uuid(payload.get("chore_id"), "chore_id")
         return chore_id, {
@@ -200,8 +185,6 @@ def validate_change(change_type: str, target_id, payload: dict) -> tuple[str | N
             "done": _bool(payload, "done"),
             "member_id": _uuid(payload.get("member_id"), "member_id"),
         }
-    if change_type == "rotation_toggle":
-        return None, {"rotation_enabled": _bool(payload, "rotation_enabled")}
     return None, {}  # reset_defaults
 
 
@@ -220,11 +203,6 @@ async def _active_member_ids(client: httpx.AsyncClient) -> set[str]:
     return {m["id"] for m in await _get(client, "chore_members", {"select": "id", "active": "eq.true"})}
 
 
-async def _check_allowed(client: httpx.AsyncClient, fields: dict):
-    if fields["allowed_member_ids"] and not set(fields["allowed_member_ids"]) <= await _active_member_ids(client):
-        raise ChoreValidationError("allowed_member_ids contains an unknown member")
-
-
 async def _load_chore(client: httpx.AsyncClient, chore_id: str) -> dict:
     rows = await _get(client, "chores", {"id": f"eq.{chore_id}", "select": "*"})
     if not rows:
@@ -234,10 +212,7 @@ async def _load_chore(client: httpx.AsyncClient, chore_id: str) -> dict:
 
 def _same_schedule(current: dict, fields: dict) -> bool:
     for key in _SCHEDULE_FIELDS:
-        a, b = current.get(key), fields.get(key)
-        if key == "allowed_member_ids":
-            a, b = set(a or []), set(b or [])
-        if a != b:
+        if current.get(key) != fields.get(key):
             return False
     return True
 
@@ -246,7 +221,6 @@ async def _edit_chore(client: httpx.AsyncClient, chore_id: str, fields: dict, to
     current = await _load_chore(client, chore_id)
     if not current["active"]:
         raise ChoreRuleError("That chore was deleted")
-    await _check_allowed(client, fields)
     tomorrow = (today + timedelta(days=1)).isoformat()
 
     if _same_schedule(current, fields) or current["starts_on"] > today.isoformat():
@@ -263,10 +237,6 @@ async def _edit_chore(client: httpx.AsyncClient, chore_id: str, fields: dict, to
     r = await client.patch(f"{_REST}/chores", params={"id": f"eq.{chore_id}"},
                            json={"active": False, "retired_on": tomorrow}, headers=_MIN)
     r.raise_for_status()
-    r = await client.patch(f"{_REST}/chore_assignments",
-                           params={"chore_id": f"eq.{chore_id}", "date": f"gte.{tomorrow}"},
-                           json={"chore_id": new_id}, headers=_MIN)
-    r.raise_for_status()
     return {"id": new_id, "starts_on": tomorrow}
 
 
@@ -279,40 +249,26 @@ async def _delete_chore(client: httpx.AsyncClient, chore_id: str, today: date):
     r.raise_for_status()
 
 
-async def _set_assignment(client: httpx.AsyncClient, payload: dict, today: date):
-    if payload["date"] < (today - timedelta(days=1)).isoformat():
-        raise ChoreRuleError("Tasks before yesterday can't be reassigned")
-    if payload["member_id"] not in await _active_member_ids(client):
-        raise ChoreValidationError("member_id is not a family member")
-    await _load_chore(client, payload["chore_id"])
-    done = await _get(client, "chore_completions", {
-        "chore_id": f"eq.{payload['chore_id']}", "date": f"eq.{payload['date']}", "select": "chore_id"})
-    if done:
-        raise ChoreRuleError("Uncheck this task before reassigning it")
-    r = await client.post(
-        f"{_REST}/chore_assignments",
-        params={"on_conflict": "chore_id,date"},
-        json={**payload, "overridden": True},
-        headers={**_HEADERS, "Prefer": "return=minimal,resolution=merge-duplicates"},
-    )
-    r.raise_for_status()
-
-
 async def _set_completion(client: httpx.AsyncClient, payload: dict, today: date) -> dict:
     day = payload["date"]
     if day not in (today.isoformat(), (today - timedelta(days=1)).isoformat()):
         raise ChoreRuleError("Tasks can only be checked off for today or yesterday")
 
+    if payload["member_id"] not in await _active_member_ids(client):
+        raise ChoreValidationError("member_id is not a family member")
     rows = await _get(client, "chore_schedule", {
-        "chore_id": f"eq.{payload['chore_id']}", "date": f"eq.{day}", "select": "member_id,done"})
+        "chore_id": f"eq.{payload['chore_id']}", "date": f"eq.{day}", "select": "done,completed_by"})
     if not rows:
         raise ChoreRuleError("That chore isn't scheduled on this day")
-    if rows[0]["member_id"] != payload["member_id"]:
-        raise ChoreRuleError("Only the person assigned to this task can check it off", 403)
+    claimed_by = rows[0]["completed_by"] if rows[0]["done"] else None
+    if claimed_by and claimed_by != payload["member_id"]:
+        raise ChoreRuleError("Someone else already claimed this chore" if payload["done"]
+                             else "Only the person who claimed this chore can unclaim it", 403)
 
     where = {"chore_id": f"eq.{payload['chore_id']}", "date": f"eq.{day}"}
     if not payload["done"]:
-        r = await client.delete(f"{_REST}/chore_completions", params=where, headers=_MIN)
+        r = await client.delete(f"{_REST}/chore_completions",
+                                params={**where, "completed_by": f"eq.{payload['member_id']}"}, headers=_MIN)
         r.raise_for_status()
         return {"done": False}
 
@@ -331,8 +287,10 @@ async def _set_completion(client: httpx.AsyncClient, payload: dict, today: date)
     )
     r.raise_for_status()
     created = r.json()
-    if not created:  # already checked off
-        existing = await _get(client, "chore_completions", {**where, "select": "points_awarded"})
+    if not created:  # already claimed, maybe by someone else a moment ago
+        existing = await _get(client, "chore_completions", {**where, "select": "completed_by,points_awarded"})
+        if existing and existing[0]["completed_by"] != payload["member_id"]:
+            raise ChoreRuleError("Someone else already claimed this chore", 403)
         return {"done": True, "points": existing[0]["points_awarded"] if existing else 0, "already": True}
     return {"done": True, "points": created[0]["points_awarded"]}
 
@@ -341,7 +299,6 @@ async def apply_change(client: httpx.AsyncClient, change_type: str, target_id, p
                        today: date | None = None) -> dict:
     today = today or ny_today()
     if change_type == "chore_add":
-        await _check_allowed(client, payload)
         r = await client.post(f"{_REST}/chores", json={**payload, "starts_on": today.isoformat()},
                               headers={**_HEADERS, "Prefer": "return=representation"})
         r.raise_for_status()
@@ -351,29 +308,8 @@ async def apply_change(client: httpx.AsyncClient, change_type: str, target_id, p
     if change_type == "chore_delete":
         await _delete_chore(client, target_id, today)
         return {}
-    if change_type == "assignment_set":
-        await _set_assignment(client, payload, today)
-        return {}
     if change_type == "completion_set":
         return await _set_completion(client, payload, today)
-    if change_type == "rotation_toggle":
-        # Takes effect tomorrow so today's (and past) assignments don't reshuffle.
-        enabled = payload["rotation_enabled"]
-        r = await client.post(
-            f"{_REST}/chore_rotation_log",
-            params={"on_conflict": "effective_on"},
-            json={"effective_on": (today + timedelta(days=1)).isoformat(), "enabled": enabled},
-            headers={**_HEADERS, "Prefer": "return=minimal,resolution=merge-duplicates"},
-        )
-        r.raise_for_status()
-        r = await client.post(
-            f"{_REST}/chore_settings",
-            params={"on_conflict": "id"},
-            json={"id": 1, "rotation_enabled": enabled},
-            headers={**_HEADERS, "Prefer": "return=minimal,resolution=merge-duplicates"},
-        )
-        r.raise_for_status()
-        return {}
     # reset_defaults: chores and members only, never completions.
     r = await client.post(f"{_REST}/rpc/chore_reset_defaults", json={}, headers=_MIN)
     r.raise_for_status()

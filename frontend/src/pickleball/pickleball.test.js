@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
 import { createElement as h } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { BRACKET, BYE_SLOTS, allSlots, byeFor, sectionEdges, sourceLabel } from './bracket.js'
+import { BRACKET, allSlots, sectionEdges, sourceLabel } from './bracket.js'
 import { PROFESSIONAL, SKILLS, cleanName, formatEventDate, relativeTime, skillOf, teamErrors } from './teams.js'
 import { layout } from './drawBracket.js'
 import WallMessage from './WallMessage.js'
@@ -16,54 +16,55 @@ const sides = m => [m.a, m.b]
 
 test('round 1 and quarterfinal pairings', () => {
   const [r1, qf, sf] = BRACKET[0].rounds
-  assert.deepEqual(r1.matches.map(m => [m.a.slot, m.b.slot]), [[8, 9], [5, 12], [6, 11], [7, 10]])
-  // 1 v winner 8/9, 4 v winner 5/12, 3 v winner 6/11, 2 v winner 7/10
-  assert.deepEqual(qf.matches.map(m => [m.a.slot, byId[m.b.winner].a.slot, byId[m.b.winner].b.slot]),
-    [[1, 8, 9], [4, 5, 12], [3, 6, 11], [2, 7, 10]])
-  assert.deepEqual(sf.matches.map(m => [m.a.winner, m.b.winner]), [['W5', 'W6'], ['W7', 'W8']])
-  assert.deepEqual([0, 1, 2, 3].map(byeFor), BYE_SLOTS)
-  assert.deepEqual(BYE_SLOTS, [1, 4, 3, 2])
+  assert.deepEqual(r1.matches.map(m => [m.a.slot, m.b.slot]),
+    [[1, 16], [8, 9], [4, 13], [5, 12], [3, 14], [6, 11], [2, 15], [7, 10]])
+  // Slots 1–4 (the old byes) meet the old round-1 winners in the quarterfinals, as before.
+  const slotsOf = id => [byId[id].a.slot, byId[id].b.slot]
+  assert.deepEqual(qf.matches.map(m => [...slotsOf(m.a.winner), ...slotsOf(m.b.winner)]),
+    [[1, 16, 8, 9], [4, 13, 5, 12], [3, 14, 6, 11], [2, 15, 7, 10]])
+  assert.deepEqual(sf.matches.map(m => [m.a.winner, m.b.winner]), [['W9', 'W10'], ['W11', 'W12']])
 })
 
-test('every slot 1–12 appears exactly once', () => {
-  assert.deepEqual([...allSlots()].sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+test('every slot 1–16 appears exactly once', () => {
+  assert.deepEqual([...allSlots()].sort((a, b) => a - b), Array.from({ length: 16 }, (_, i) => i + 1))
 })
 
-test('double elimination: 22 games, every winners-bracket loser drops in once', () => {
-  assert.equal(matches.length, 2 * 12 - 2)
+test('double elimination: 30 games, every winners-bracket loser drops in once', () => {
+  assert.equal(matches.length, 2 * 16 - 2)
   const winnersIds = BRACKET[0].rounds.flatMap(r => r.matches).map(m => m.id).filter(id => id !== 'GF')
   const dropped = matches.flatMap(sides).filter(s => s.loser).map(s => s.loser).sort()
   assert.deepEqual(dropped, [...winnersIds].sort())
   // Every game but the grand final feeds its winner to exactly one later game.
   const fed = matches.flatMap(sides).filter(s => s.winner).map(s => s.winner)
   for (const m of matches) if (m.id !== 'GF') assert.equal(fed.filter(x => x === m.id).length, 1, m.id)
-  assert.deepEqual([byId.GF.a.winner, byId.GF.b.winner], ['W11', 'L10'])
+  assert.deepEqual([byId.GF.a.winner, byId.GF.b.winner], ['W15', 'L14'])
 })
 
 test('losers bracket crosses over so first-round opponents never meet again early', () => {
-  const l1 = BRACKET[1].rounds[0].matches.map(m => [m.a.loser, m.b.loser])
-  assert.deepEqual(l1, [['W1', 'W8'], ['W2', 'W7'], ['W3', 'W6'], ['W4', 'W5']])
-  for (const [a, b] of l1) {
-    const qf = byId[b]
-    assert.notEqual(qf.b.winner, a, `${a} and ${b} would be a rematch`)
+  // Quarterfinal losers drop in against the opposite half's round-1 losers.
+  const l2 = BRACKET[1].rounds[1].matches.map(m => [byId[m.a.winner].a.loser, byId[m.a.winner].b.loser, m.b.loser])
+  assert.deepEqual(l2, [['W1', 'W2', 'W12'], ['W3', 'W4', 'W11'], ['W5', 'W6', 'W10'], ['W7', 'W8', 'W9']])
+  for (const [a, b, qf] of l2) {
+    const fed = [byId[qf].a.winner, byId[qf].b.winner]
+    assert.ok(!fed.includes(a) && !fed.includes(b), `${qf} loser would get a rematch`)
   }
 })
 
 test('connector edges stay inside a section and reach real matches', () => {
   const winners = sectionEdges(BRACKET[0])
-  assert.ok(winners.some(e => e.from === 'bye-1' && e.to === 'W5' && e.side === 'a'))
-  assert.ok(winners.some(e => e.from === 'W11' && e.to === 'GF'))
+  assert.ok(winners.some(e => e.from === 'W1' && e.to === 'W9' && e.side === 'a'))
+  assert.ok(winners.some(e => e.from === 'W15' && e.to === 'GF'))
   assert.ok(!winners.some(e => e.from.startsWith('L')))
   const losers = sectionEdges(BRACKET[1])
   assert.ok(losers.every(e => e.from.startsWith('L') && e.to.startsWith('L')))
-  assert.equal(losers.length, 9)
+  assert.equal(losers.length, 13)
 })
 
 test('TBD captions', () => {
-  assert.equal(sourceLabel({ slot: 1 }), 'Slot 1 · bye')
   assert.equal(sourceLabel({ winner: 'W3' }), 'Winner W3')
   assert.equal(sourceLabel({ loser: 'W8' }), 'Loser W8')
-  assert.equal(sourceLabel({ winner: 'L10' }), "Losers' champion")
+  assert.equal(sourceLabel({ winner: 'L14' }), "Losers' champion")
+  assert.equal(sourceLabel({ winner: 'W15' }), "Winners' champion")
 })
 
 test('image layout: no boxes overlap', () => {
@@ -148,11 +149,11 @@ test('bracket notifications: joins, leaves, organizer edits and removals of your
 })
 
 test('many joins collapse, and a full bracket is announced', () => {
-  const twelve = Array.from({ length: 12 }, (_, i) => team(`t${i}`, i + 1, `Player ${i}`))
-  const events = bracketEvents({ entries: snapshotEntries(twelve.slice(0, 5)), settings: null },
-    { entries: snapshotEntries(twelve), settings: null })
+  const sixteen = Array.from({ length: 16 }, (_, i) => team(`t${i}`, i + 1, `Player ${i}`))
+  const events = bracketEvents({ entries: snapshotEntries(sixteen.slice(0, 5)), settings: null },
+    { entries: snapshotEntries(sixteen), settings: null })
   assert.deepEqual(events.map(e => e.kind), ['joined', 'full'])
-  assert.match(events[0].text, /7 new players joined/)
+  assert.match(events[0].text, /11 new players joined/)
 })
 
 test('chat notifications: mentions are personal, your own messages are skipped', () => {

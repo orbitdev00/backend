@@ -46,14 +46,14 @@ _HEADERS = {
 }
 _MIN = {**_HEADERS, "Prefer": "return=minimal"}
 
-MAX_TEAMS = 12
+MAX_TEAMS = 16
 # The one list of player colors. The page reads it from GET /pickleball/config.
 PICKLEBALL_COLORS = (
     "#ef4444", "#f97316", "#facc15", "#22c55e",
     "#14b8a6", "#3b82f6", "#8b5cf6", "#ec4899",
 )
 SKILL_LEVELS = ("beginner", "intermediate", "advanced")
-# Given only by migration (Marlito and Kyomo); never offered, never picked.
+# Given only by migration (Marlito and Chido_Gamer); never offered, never picked.
 RESERVED_SKILL = "professional"
 NAME_MIN, NAME_MAX = 2, 30
 MESSAGE_MAX = 200

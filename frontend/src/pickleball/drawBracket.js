@@ -1,13 +1,12 @@
 // "Save bracket image": draws both brackets on a <canvas> (no libraries) and
 // downloads it as a PNG.
-import { BRACKET, MAX_TEAMS, byeFor, bySlot, sectionEdges, sourceLabel, teamName } from './bracket.js'
+import { BRACKET, MAX_TEAMS, bySlot, sectionEdges, sourceLabel, teamName } from './bracket.js'
 import { formatEventDate, skillOf } from './teams.js'
 
-const W = 1400, PAD = 48, COL_W = 230, COLS = 5
+const W = 1680, PAD = 48, COL_W = 230, COLS = 6
 const GAP = (W - PAD * 2 - COL_W * COLS) / (COLS - 1)
 const ROW_H = 40, LABEL_H = 18, MATCH_H = LABEL_H + ROW_H * 2 + 6
-const BYE_GROUP_H = ROW_H + 14 + MATCH_H
-const SECTION_BODY = { winners: 4 * 176, losers: 4 * 126 }
+const SECTION_BODY = { winners: 8 * 124, losers: 4 * 126 }
 const HEADER_H = 160, TITLE_H = 44, ROUND_TITLE_H = 30, SECTION_GAP = 36, FOOTER_H = 56
 
 const C = {
@@ -51,7 +50,7 @@ function courtLines(ctx, h) {
   ctx.restore()
 }
 
-/** Positions of every match, side and bye box, in the same arrangement as the page. */
+/** Positions of every match and side, in the same arrangement as the page. */
 export function layout() {
   const nodes = {}
   const sections = []
@@ -65,12 +64,7 @@ export function layout() {
       round.matches.forEach((match, i) => {
         const center = bodyTop + (bodyH * (i + 0.5)) / n
         const firstRound = section.id === 'winners' && r === 0
-        let y = center - MATCH_H / 2
-        if (firstRound) {
-          const groupTop = center - BYE_GROUP_H / 2
-          nodes[`bye-${byeFor(i)}`] = { x, y: groupTop, w: COL_W, h: ROW_H, slot: byeFor(i) }
-          y = groupTop + ROW_H + 14
-        }
+        const y = center - MATCH_H / 2
         nodes[match.id] = { x, y, w: COL_W, h: MATCH_H, match, firstRound }
         nodes[`${match.id}:a`] = { x, y: y + LABEL_H, w: COL_W, h: ROW_H }
         nodes[`${match.id}:b`] = { x, y: y + LABEL_H + ROW_H + 6, w: COL_W, h: ROW_H }
@@ -204,21 +198,10 @@ export async function drawBracketImage({ entries, settings, scale = 2 }) {
     }
   }
 
-  // Byes
-  for (const [key, n] of Object.entries(nodes)) {
-    if (!key.startsWith('bye-')) continue
-    drawTeam(ctx, n.x, n.y, n.w - 52, n.h, n.slot, slots[n.slot])
-    roundRect(ctx, n.x + n.w - 46, n.y + 8, 46, n.h - 16, 12)
-    ctx.fillStyle = C.ball; ctx.fill()
-    ctx.fillStyle = C.ballInk; ctx.font = `800 13px ${DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-    ctx.fillText('BYE', n.x + n.w - 23, n.y + n.h / 2 + 1)
-    ctx.textAlign = 'left'
-  }
-
   ctx.textBaseline = 'alphabetic'
   ctx.fillStyle = C.muted
   ctx.font = `500 14px ${BODY}`
-  ctx.fillText('First to 11 · Switch sides at 6 · Slots 1–4 have first-round byes', PAD, height - 24)
+  ctx.fillText('First to 11 · Switch sides at 6', PAD, height - 24)
 
   const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
   const url = URL.createObjectURL(blob)

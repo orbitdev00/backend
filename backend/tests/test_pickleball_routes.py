@@ -30,6 +30,7 @@ _MIGRATIONS = Path(__file__).resolve().parents[2] / "supabase" / "migrations"
 MIGRATION = _MIGRATIONS / "20261022000000_pickleball.sql"
 SINGLES = _MIGRATIONS / "20261023000000_pickleball_singles.sql"
 PROFESSIONAL = _MIGRATIONS / "20261024000000_pickleball_professional.sql"
+SIXTEEN = _MIGRATIONS / "20261026000000_pickleball_sixteen.sql"
 
 
 class FakeSupabase:
@@ -62,12 +63,12 @@ class FakeSupabase:
             if body["p_skill"] == "professional":
                 return self._err("professional is reserved")
             async with self.lock:
-                if len(self.entries) >= 12:
+                if len(self.entries) >= 16:
                     return self._err("tournament full")
                 taken = self._names()
                 if body["p_player"].lower() in taken:
                     return self._err("name taken")
-                open_slots = [s for s in range(1, 13) if s not in {e["slot"] for e in self.entries.values()}]
+                open_slots = [s for s in range(1, 17) if s not in {e["slot"] for e in self.entries.values()}]
                 await asyncio.sleep(0)  # let other joins run while this one holds the lock
                 slot = random.choice(open_slots)
                 eid = str(uuid.uuid4())
@@ -163,7 +164,7 @@ def pin(value=FAKE_PIN, ip="203.0.113.9"):
 
 def test_join_returns_slot_and_token_and_stores_only_the_hash(fake, client):
     r = joined(client)
-    assert 1 <= r["slot"] <= 12
+    assert 1 <= r["slot"] <= 16
     assert len(r["token"]) >= 40
     stored = fake.entries[r["id"]]
     assert stored["edit_token_hash"] == hashlib.sha256(r["token"].encode()).hexdigest()
@@ -184,17 +185,17 @@ def test_concurrent_joins_never_share_a_slot(fake):
         ok = [r.json() for r in responses if r.status_code == 200]
         full = [r for r in responses if r.status_code == 409]
         slots = [r["slot"] for r in ok]
-        assert len(ok) == 12 and len(full) == 8
-        assert sorted(slots) == list(range(1, 13))
+        assert len(ok) == 16 and len(full) == 4
+        assert sorted(slots) == list(range(1, 17))
 
 
-def test_thirteenth_join_is_rejected(fake, client):
-    for i in range(12):
+def test_seventeenth_join_is_rejected(fake, client):
+    for i in range(16):
         joined(client, i)
     r = join(client, team(99))
     assert r.status_code == 409
     assert "full" in r.json()["error"]
-    assert len(fake.entries) == 12
+    assert len(fake.entries) == 16
 
 
 def test_join_rate_limit_is_three_per_hour_per_ip(fake, client):
@@ -267,7 +268,7 @@ def test_edit_and_leave_work_with_the_right_token(fake, client):
 
 
 def test_leaving_frees_the_slot(fake, client):
-    entries = [joined(client, i) for i in range(12)]
+    entries = [joined(client, i) for i in range(16)]
     gone = entries[4]
     assert client.delete(f"/pickleball/entry/{gone['id']}", headers={"x-entry-token": gone["token"]}).status_code == 200
     again = joined(client, 50)
@@ -468,7 +469,7 @@ def test_config_has_eight_colors(client):
     data = client.get("/pickleball/config").json()
     assert data["colors"] == list(PICKLEBALL_COLORS) and len(set(data["colors"])) == 8
     assert all(re.fullmatch(r"#[0-9a-f]{6}", c) for c in data["colors"])
-    assert data["max_teams"] == 12
+    assert data["max_teams"] == 16
 
 
 # ── Reserved "professional" skill ────────────────────────────────────────────
@@ -513,3 +514,14 @@ def test_professional_migration_reserves_the_role_and_guards_the_move():
     assert "v_marlito.slot <> 11 or v_kyomo.slot <> 6" in sql
     assert sql.index("disable trigger pickleball_entry_guard") < sql.index("enable trigger pickleball_entry_guard")
     assert "array[8, 9]" in sql
+
+
+def test_sixteen_migration_widens_slots_and_renames_kyomo():
+    sql = SIXTEEN.read_text(encoding="utf-8")
+    assert "check (slot between 1 and 16)" in sql
+    join_fn = re.search(r"create or replace function public\.pickleball_join.*?\$\$(.*?)\$\$", sql, re.S).group(1)
+    assert ">= 16" in join_fn and "generate_series(1, 16)" in join_fn
+    assert "raise exception 'professional is reserved'" in join_fn
+    # Rename only: the slot guard is never touched.
+    assert "set player_name = 'Chido_Gamer' where id = v_id" in sql
+    assert "trigger" not in sql

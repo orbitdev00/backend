@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { BRACKET, byeFor, bySlot, sectionEdges, sourceLabel, teamName } from './bracket.js'
+import { BRACKET, bySlot, sectionEdges, sourceLabel, teamName } from './bracket.js'
 import { skillOf } from './teams.js'
 import { reducedMotion } from './motion.js'
 
@@ -99,9 +99,8 @@ function Section({ section, colOffset, box, version }) {
               style={{ '--col': colOffset + r }}>
               <h3 className="pb-round-title">{round.title}</h3>
               <div className="pb-round-body">
-                {round.matches.map((match, i) => (
+                {round.matches.map(match => (
                   <div key={match.id} className="pb-cell">
-                    {section.id === 'winners' && r === 0 && <ByeBox slot={byeFor(i)} box={box} />}
                     <Match match={match} firstRound={section.id === 'winners' && r === 0} box={box} />
                   </div>
                 ))}
@@ -111,15 +110,6 @@ function Section({ section, colOffset, box, version }) {
         </div>
       </div>
     </section>
-  )
-}
-
-function ByeBox({ slot, box }) {
-  return (
-    <div className="pb-bye" data-node={`bye-${slot}`}>
-      <TeamBox slot={slot} box={box} />
-      <span className="pb-bye-tag">Bye</span>
-    </div>
   )
 }
 

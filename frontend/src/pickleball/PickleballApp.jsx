@@ -20,7 +20,7 @@ const RULES = [
   ['Games', 'First to 11 points.'],
   ['Sides', 'Switch sides when the first player reaches 6 points.'],
   ['Players', 'Singles: one player per slot. 12 players in all.'],
-  ['Seeding', 'Slots are drawn at random when you join. Slots 1 to 4 get a first-round bye.'],
+  ['Seeding', 'Slots are drawn at random when you join.'],
   ['Grand final', "The winners' bracket champion plays the losers' bracket champion."],
 ]
 

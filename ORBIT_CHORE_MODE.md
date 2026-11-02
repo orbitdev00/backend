@@ -84,12 +84,14 @@ anyone with the link can use the app, and each visitor picks their name (saved i
 - `supabase/migrations/20261022000000_pickleball.sql` adds `pickleball_entries` (backend only), `pickleball_settings`,
   `pickleball_messages`, the `pickleball_bracket` view (no token hashes) and `pickleball_join()`/`pickleball_update()`,
   which lock the table so simultaneous joins can't share a slot or a name. Anon can only read the view, settings and messages.
-- 12 singles players (one per slot; switched from doubles by `20261023000000_pickleball_singles.sql`,
-  which also cleared all signups), double elimination (winners' and losers' brackets, grand final). The bracket is display only: no scores
+- 16 singles players (one per slot; switched from doubles by `20261023000000_pickleball_singles.sql`,
+  which also cleared all signups; 12 became 16 in `20261026000000_pickleball_sixteen.sql`, where slots 1–4 lost
+  their byes and now play the new slots 13–16), double elimination (winners' and losers' brackets, grand final). The bracket is display only: no scores
   or advancing. Slots come only from the random draw and a trigger stops them from ever changing.
 - `20261024000000_pickleball_professional.sql` adds a reserved `professional` skill (black badge, white text) that
-  nobody can pick; only Marlito and Kyomo have it. It also made the only slot move ever: Marlito went from 11 to 8 or 9
-  so the two can't meet before the winners' final.
+  nobody can pick; only Marlito and Kyomo had it. It also made the only slot move ever: Marlito went from 11 to 8 or 9
+  so the two can't meet before the winners' final. `20261026000000_pickleball_sixteen.sql` renamed Kyomo's entry to
+  Chido_Gamer (same slot 6, role and edit token).
 - Joining returns an edit token once (only its SHA-256 is stored). The device keeps it in localStorage and a cookie
   and needs it to edit, leave or post on the wall.
 - Organizer tools need `PICKLEBALL_ADMIN_PIN` on Railway (503 when unset; 5 wrong tries per 5 minutes per IP, then 429).
